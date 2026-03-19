@@ -138,10 +138,9 @@
             }
         }
 
-        // 2. 呼叫後端 API 取得點數與歷史紀錄
+        // 2. 呼叫後端 API 取得點數與歷史紀錄 (防彈強化版)
         async function fetchUserData() {
             try {
-                // 🚀 下一步：我們需要在 index.js 寫一支 /api/member/profile 來回傳這些資料
                 const response = await fetch(`${API_URL}/api/member/profile`, {
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
@@ -168,14 +167,38 @@
                     const logContainer = document.getElementById('history-logs');
                     if (data.logs && data.logs.length > 0) {
                         logContainer.innerHTML = ''; // 清空預設
+                        
                         data.logs.forEach(log => {
-                            const serviceName = log.serviceType === 'ziwei' ? '🔮 紫微斗數' : '🃏 塔羅密訊';
-                            const dateStr = new Date(log.timestamp._seconds * 1000).toLocaleDateString('zh-TW');
-                            // 擷取前 50 個字當預覽
-                            const previewText = log.aiResult ? log.aiResult.substring(0, 50).replace(/#/g, '') + '...' : '讀取解析內容...';
+                            // 防彈處理 1：服務名稱 (相容新舊寫法 type vs serviceType)
+                            const isZiwei = (log.type === 'ziwei' || log.serviceType === 'ziwei');
+                            const serviceName = isZiwei ? '🔮 紫微斗數' : '🃏 塔羅密訊';
+                            
+                            // 防彈處理 2：時間轉換 (確保各種格式都能解析)
+                            let dateStr = "未知時間";
+                            if (log.timestamp) {
+                                try {
+                                    const d = log.timestamp._seconds 
+                                        ? new Date(log.timestamp._seconds * 1000) 
+                                        : new Date(log.timestamp);
+                                    dateStr = d.toLocaleDateString('zh-TW');
+                                } catch(e) { console.warn("時間解析錯誤", e); }
+                            }
+
+                            // 防彈處理 3：預覽文字 (確保 aiResult 或 summary 存在)
+                            let previewText = "讀取解析內容...";
+                            let fullTextForAlert = "詳細解析請稍後再試。";
+                            
+                            if (log.aiResult) {
+                                previewText = log.aiResult.substring(0, 50).replace(/#/g, '') + '...';
+                                // 為了避免字串中有換行符號弄壞 onclick 屬性，做個簡單編碼
+                                fullTextForAlert = log.aiResult.substring(0, 100).replace(/(\r\n|\n|\r)/gm, " ");
+                            } else if (log.summary) {
+                                previewText = log.summary;
+                                fullTextForAlert = log.summary;
+                            }
                             
                             const logHTML = `
-                                <div class="log-item" onclick="alert('詳細解析即將實裝：\\n\\n${log.aiResult.substring(0,100)}...')">
+                                <div class="log-item" onclick="alert('詳細解析即將實裝：\\n\\n${fullTextForAlert}...')">
                                     <div class="log-header">
                                         <span class="log-type">${serviceName}</span>
                                         <span class="log-date">${dateStr}</span>
