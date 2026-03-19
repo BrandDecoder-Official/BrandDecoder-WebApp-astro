@@ -1,1 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BrandDecoder - 會員專區</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="/env.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0A0B10;
+            --gold: #D4AF37;
+            --gold-light: #F9E498;
+            --gray: #333;
+            --card-bg: rgba(255, 255, 255, 0.03);
+        }
 
+        body {
+            margin: 0; padding: 20px; background-color: var(--bg-color); color: #E0E0E0;
+            font-family: 'Noto Serif TC', serif; 
+            min-height: 100vh;
+        }
+
+        /* 標題與返回 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 15px; }
+        .header h1 { color: var(--gold); font-size: 24px; margin: 0; font-weight: 300; letter-spacing: 2px; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
+        .btn-close { background: none; border: none; color: #888; font-size: 24px; cursor: pointer; }
+
+        /* 通用卡片設計 */
+        .card {
+            background: var(--card-bg); border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 12px; padding: 20px; margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .card-title { color: var(--gold-light); font-size: 16px; margin-bottom: 15px; border-left: 3px solid var(--gold); padding-left: 10px; letter-spacing: 1px; }
+
+        /* 👑 用戶基本資料區 */
+        .profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .profile-img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
+        .profile-info h2 { margin: 0 0 5px 0; font-size: 18px; color: #fff; }
+        .profile-info p { margin: 0; font-size: 14px; color: #888; }
+        
+        /* 靈力金庫 */
+        .wallet-box { background: rgba(0,0,0,0.5); border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--gray); }
+        .wallet-label { color: #aaa; font-size: 14px; }
+        .wallet-points { color: var(--gold); font-size: 24px; font-weight: bold; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
+
+        /* 📜 歷史紀錄清單 */
+        .log-list { display: flex; flex-direction: column; gap: 10px; }
+        .log-item {
+            background: rgba(0,0,0,0.4); border: 1px solid #444; border-radius: 8px; padding: 15px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .log-item:active { transform: scale(0.98); border-color: var(--gold); }
+        .log-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .log-type { color: var(--gold-light); font-size: 14px; font-weight: bold; }
+        .log-date { color: #888; font-size: 12px; }
+        .log-preview { color: #ccc; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* ✨ 載入動畫 */
+        #loading { text-align: center; color: var(--gold); padding: 50px 0; letter-spacing: 2px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        
+        /* 隱藏區塊 */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>專屬阿卡西紀錄</h1>
+        <button class="btn-close" onclick="liff.closeWindow()">✕</button>
+    </div>
+
+    <div id="loading">讀取靈魂檔案中...</div>
+
+    <div id="main-content" class="hidden">
+        
+        <div class="card">
+            <div class="profile-header">
+                <img id="user-img" class="profile-img" src="https://via.placeholder.com/60/333/D4AF37?text=U" alt="Profile">
+                <div class="profile-info">
+                    <h2 id="user-name">載入中...</h2>
+                    <p id="user-id" style="font-size: 10px;">ID: ...</p>
+                </div>
+            </div>
+            <div class="wallet-box">
+                <span class="wallet-label">⚡ 目前靈力餘額</span>
+                <span class="wallet-points"><span id="user-points">0</span> 點</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">鎖定之星辰座標 🔒</div>
+            <div style="font-size: 14px; color: #ccc; line-height: 1.6;" id="birth-data-display">
+                尚無星盤紀錄，請先前往紫微斗數進行解碼。
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">命運解碼軌跡</div>
+            <div class="log-list" id="history-logs">
+                </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 確保 API_URL 存在 (防呆)
+        const API_URL = typeof ENV !== 'undefined' ? ENV.API_BASE : "https://你的-cloud-run-網址.a.run.app";
+        let currentIdToken = "";
+
+        // 1. 初始化 LIFF 並取得使用者資訊
+        async function initPage() {
+            try {
+                await liff.init({ liffId: ENV.MEMBER_LIFF_ID }); // 使用你在 env.js 設好的 Member LIFF ID
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+                
+                currentIdToken = liff.getIDToken();
+                const profile = await liff.getProfile();
+                
+                // 填入 LINE 頭像與暱稱
+                document.getElementById('user-name').innerText = profile.displayName;
+                document.getElementById('user-img').src = profile.pictureUrl || 'https://via.placeholder.com/60/333/D4AF37?text=U';
+                document.getElementById('user-id').innerText = `ID: ${profile.userId.substring(0,8)}...`;
+
+                // 呼叫後端取得資料庫資料
+                await fetchUserData();
+
+            } catch (err) {
+                console.error("LIFF 初始化或讀取失敗：", err);
+                alert("無法驗證身分，請在 LINE 內部開啟。");
+            }
+        }
+
+        // 2. 呼叫後端 API 取得點數與歷史紀錄
+        async function fetchUserData() {
+            try {
+                // 🚀 下一步：我們需要在 index.js 寫一支 /api/member/profile 來回傳這些資料
+                const response = await fetch(`${API_URL}/api/member/profile`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    const data = result.data;
+                    
+                    // 更新靈力點數
+                    document.getElementById('user-points').innerText = data.points || 0;
+
+                    // 處理星辰座標 (取最新的一筆紫微紀錄的生辰)
+                    if (data.birthData) {
+                        const genderStr = data.birthData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
+                        const calStr = data.birthData.calendar === 'solar' ? '國曆' : '農曆';
+                        document.getElementById('birth-data-display').innerHTML = `
+                            陰陽：${genderStr} <br>
+                            曆法：${calStr} <br>
+                            降生：${data.birthData.date} ${data.birthData.time}時
+                        `;
+                    }
+
+                    // 處理歷史紀錄列表
+                    const logContainer = document.getElementById('history-logs');
+                    if (data.logs && data.logs.length > 0) {
+                        logContainer.innerHTML = ''; // 清空預設
+                        data.logs.forEach(log => {
+                            const serviceName = log.serviceType === 'ziwei' ? '🔮 紫微斗數' : '🃏 塔羅密訊';
+                            const dateStr = new Date(log.timestamp._seconds * 1000).toLocaleDateString('zh-TW');
+                            // 擷取前 50 個字當預覽
+                            const previewText = log.aiResult ? log.aiResult.substring(0, 50).replace(/#/g, '') + '...' : '讀取解析內容...';
+                            
+                            const logHTML = `
+                                <div class="log-item" onclick="alert('詳細解析即將實裝：\\n\\n${log.aiResult.substring(0,100)}...')">
+                                    <div class="log-header">
+                                        <span class="log-type">${serviceName}</span>
+                                        <span class="log-date">${dateStr}</span>
+                                    </div>
+                                    <div class="log-preview">${previewText}</div>
+                                </div>
+                            `;
+                            logContainer.innerHTML += logHTML;
+                        });
+                    } else {
+                        logContainer.innerHTML = '<div style="color:#888; text-align:center; padding: 10px;">目前尚無解碼紀錄</div>';
+                    }
+
+                    // 隱藏載入中，顯示主畫面
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('main-content').classList.remove('hidden');
+
+                } else {
+                    document.getElementById('loading').innerText = "讀取資料失敗：" + result.msg;
+                }
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').innerText = "系統連線異常";
+            }
+        }
+
+        window.onload = initPage;
+    </script>
+</body>
+</html>
