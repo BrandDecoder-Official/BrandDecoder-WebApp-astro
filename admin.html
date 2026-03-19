@@ -331,22 +331,52 @@
                 
                 let typeBadge = "";
                 let summary = "";
-                if(log.type === 'tarot') { typeBadge = '<span class="badge badge-tarot">🔮 塔羅解碼</span>'; summary = `領域：${log.topic}`; }
-                else if(log.type === 'daily_draw') { typeBadge = '<span class="badge badge-ai">✨ 每日一抽</span>'; summary = `抽中：${log.topic}`; }
-                else if(log.type === 'recharge') { typeBadge = '<span class="badge badge-pay">💰 金流紀錄</span>'; summary = `LINE Pay 儲值成功`; }
-                else { typeBadge = `<span class="badge">${log.type}</span>`; }
+                
+                // 1. 修正服務類型與摘要
+                if(log.type === 'tarot') { 
+                    typeBadge = '<span class="badge badge-tarot">🔮 塔羅解碼</span>'; 
+                    summary = `領域：${log.topic || '未指定'}`; 
+                }
+                // 👇 新增：判斷紫微斗數
+                else if(log.type === 'ziwei' || log.serviceType === 'ziwei') { 
+                    // 借用一點 CSS 讓紫微斗數的標籤有專屬顏色 (紫紅色)
+                    typeBadge = '<span class="badge" style="background:#F3E5F5; color:#8E24AA; border:1px solid #CE93D8;">🏮 紫微解碼</span>'; 
+                    summary = log.summary || '排盤解碼'; 
+                }
+                else if(log.type === 'daily_draw') { 
+                    typeBadge = '<span class="badge badge-ai">✨ 每日一抽</span>'; 
+                    summary = `抽中：${log.topic}`; 
+                }
+                else if(log.type === 'recharge') { 
+                    typeBadge = '<span class="badge badge-pay">💰 金流紀錄</span>'; 
+                    summary = `LINE Pay 儲值成功`; 
+                }
+                else { 
+                    typeBadge = `<span class="badge">${log.type || log.serviceType || '未知'}</span>`; 
+                }
 
+                // 2. 修正點數讀取 (相容舊的 points_change 跟新的 points)
+                let rawPoints = log.points_change !== undefined ? log.points_change : (log.points || 0);
                 let pointClass = "point-zero";
-                let pointText = log.points_change;
-                if (log.points_change > 0) { pointClass = "point-plus"; pointText = `+${log.points_change}`; }
-                else if (log.points_change < 0) { pointClass = "point-minus"; }
+                let pointText = rawPoints;
+                
+                if (rawPoints > 0) { 
+                    pointClass = "point-plus"; 
+                    pointText = `+${rawPoints}`; 
+                }
+                else if (rawPoints < 0) { 
+                    pointClass = "point-minus"; 
+                }
+
+                // 3. 修正使用者名稱讀取 (相容舊的 displayName 跟新的 userName)
+                let showName = log.displayName || log.userName || '未知用戶';
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>${timeStr}</td>
                     <td>${typeBadge}</td>
                     <td class="${pointClass}">${pointText}</td>
-                    <td><span style="color:var(--primary); font-weight:bold;">👤 ${log.displayName}</span> <br> <span style="color:#888; font-size:11px;">${log.userId}</span> <br> ${summary}</td>
+                    <td><span style="color:var(--primary); font-weight:bold;">👤 ${showName}</span> <br> <span style="color:#888; font-size:11px;">${log.userId}</span> <br> ${summary}</td>
                 `;
                 tbody.appendChild(tr);
             });
