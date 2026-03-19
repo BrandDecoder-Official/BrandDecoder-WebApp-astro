@@ -1,124 +1,215 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrandDecoder - 命運解碼</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BrandDecoder - 命運星盤</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        /* 🌌 宇宙深淵背景 */
+        :root {
+            --bg-color: #0A0B10;
+            --gold: #D4AF37;
+            --gold-light: #F9E498;
+            --gray: #333;
+        }
+
         body {
-            margin: 0; padding: 0;
-            background-color: #0A0B10; /* 極深藍/黑 */
-            color: #E0E0E0;
-            font-family: 'Noto Serif TC', serif; /* 帶有神祕感的明體/襯線體 */
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; overflow: hidden;
+            margin: 0; padding: 0; background-color: var(--bg-color); color: #E0E0E0;
+            font-family: 'Noto Serif TC', serif; 
+            overflow: hidden; /* 隱藏滾動條，確保沉浸感 */
+            height: 100vh; position: relative;
         }
 
-        /* ✨ 轉場特效核心設定 */
-        .step-container {
+        /* 🌌 背景星空裝飾 (可用 GIF 或 CSS 粒子替換) */
+        .stars-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: radial-gradient(circle at 50% 50%, #1a1c29 0%, #0A0B10 100%);
+            z-index: 0;
+        }
+
+        /* 🔮 每一個步驟的容器 (絕對定位，層疊在一起) */
+        .step-section {
             position: absolute;
-            text-align: center;
+            top: 50%; left: 50%;
             width: 90%; max-width: 400px;
-            /* 預設隱藏並往下沉 */
+            text-align: center;
+            z-index: 10;
+            
+            /* 預設狀態：在下方，透明不可見 */
+            transform: translate(-50%, -30%); 
             opacity: 0;
-            transform: translateY(30px);
+            pointer-events: none;
+            /* 神級轉場動畫：帶有呼吸感與阻尼 */
             transition: all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
-            pointer-events: none; /* 隱藏時不可點擊 */
         }
 
-        /* 🟢 當前啟動的步驟 (淡入並上浮) */
-        .step-container.active {
+        /* 🟢 當前啟動的步驟 (正中央，完全清晰) */
+        .step-section.active {
+            transform: translate(-50%, -50%);
             opacity: 1;
-            transform: translateY(0);
             pointer-events: auto;
         }
 
-        /* 🔴 離開的步驟 (淡出並往上飄) */
-        .step-container.exit {
+        /* 🔴 離開的步驟 (往上飄散消失) */
+        .step-section.exit-up {
+            transform: translate(-50%, -70%);
             opacity: 0;
-            transform: translateY(-30px);
+            pointer-events: none;
         }
 
-        /* 📜 儀式感排版 */
-        h2 { color: #D4AF37; font-weight: 300; letter-spacing: 2px; margin-bottom: 30px; line-height: 1.5; }
-        
-        .btn-option {
-            display: block; width: 100%; padding: 15px; margin: 10px 0;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid #D4AF37; border-radius: 8px;
-            color: #F9E498; font-size: 16px; letter-spacing: 1px;
-            cursor: pointer; transition: all 0.3s ease;
+        h2 { color: var(--gold); font-weight: 300; letter-spacing: 2px; margin-bottom: 30px; line-height: 1.6; }
+        .subtitle { font-size: 14px; color: #888; margin-bottom: 20px; letter-spacing: 1px; }
+
+        /* 大按鈕 (男女、國農曆) */
+        .btn-choice {
+            display: block; width: 100%; padding: 18px; margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 12px;
+            color: var(--gold-light); font-size: 18px; letter-spacing: 2px;
+            cursor: pointer; transition: all 0.3s;
+            position: relative; overflow: hidden;
         }
-        .btn-option:hover { background: rgba(212, 175, 55, 0.2); transform: scale(1.02); }
-        
-        input[type="date"] {
+        .btn-choice:active, .btn-choice.selected {
+            background: rgba(212, 175, 55, 0.2);
+            border-color: var(--gold);
+            transform: scale(0.98);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+        }
+
+        /* 濃縮表單 (日期與時辰) */
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-label { display: block; font-size: 14px; color: #aaa; margin-bottom: 8px; padding-left: 5px; }
+        input[type="date"], select {
             width: 100%; padding: 15px; box-sizing: border-box;
-            background: rgba(255, 255, 255, 0.05); border: 1px solid #D4AF37;
-            color: #F9E498; font-size: 18px; border-radius: 8px; text-align: center; color-scheme: dark;
+            background: rgba(0,0,0,0.6); border: 1px solid var(--gray);
+            color: var(--gold-light); font-size: 16px; border-radius: 8px;
+            color-scheme: dark; appearance: none;
         }
+        input[type="date"]:focus, select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
+
+        /* 🚀 終極啟動按鈕 */
+        .btn-submit {
+            width: 100%; padding: 18px; margin-top: 15px;
+            background: linear-gradient(135deg, #D4AF37, #AA7C11);
+            border: none; border-radius: 8px;
+            color: #000; font-size: 18px; font-weight: bold; letter-spacing: 2px;
+            cursor: pointer; box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+            transition: all 0.3s;
+        }
+        .btn-submit:active { transform: scale(0.96); }
+
+        /* ✨ 載入特效遮罩 */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 1s ease;
+        }
+        #loading-overlay.show { opacity: 1; pointer-events: auto; }
+        .loading-text { color: var(--gold); font-size: 16px; letter-spacing: 4px; margin-top: 20px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; text-shadow: 0 0 15px var(--gold); } 100% { opacity: 0.4; } }
     </style>
 </head>
 <body>
+    <div class="stars-bg"></div>
 
-    <div id="step-1" class="step-container active">
-        <h2>命運的齒輪，從陰陽開始轉動。<br>請選擇你的生理性別：</h2>
-        <button class="btn-option" onclick="nextStep(1, 'male')">陽 (男)</button>
-        <button class="btn-option" onclick="nextStep(1, 'female')">陰 (女)</button>
+    <div id="step-1" class="step-section active">
+        <h2>命運的齒輪<br>從陰陽開始轉動</h2>
+        <div class="subtitle">請選擇您的生理性別，以定大運順逆</div>
+        <button class="btn-choice" onclick="makeChoice(1, 'gender', 'M', this)">乾 (男性)</button>
+        <button class="btn-choice" onclick="makeChoice(1, 'gender', 'F', this)">坤 (女性)</button>
     </div>
 
-    <div id="step-2" class="step-container">
-        <h2>你習慣仰望太陽，<br>還是追隨月亮的軌跡？</h2>
-        <button class="btn-option" onclick="nextStep(2, 'solar')">太陽 (國曆)</button>
-        <button class="btn-option" onclick="nextStep(2, 'lunar')">月亮 (農曆)</button>
+    <div id="step-2" class="step-section">
+        <h2>您習慣仰望太陽<br>還是追隨月亮的軌跡？</h2>
+        <div class="subtitle">請選擇您的星辰曆法</div>
+        <button class="btn-choice" onclick="makeChoice(2, 'calendar', 'solar', this)">太陽 (國曆)</button>
+        <button class="btn-choice" onclick="makeChoice(2, 'calendar', 'lunar', this)">太陰 (農曆)</button>
     </div>
 
-    <div id="step-3" class="step-container">
-        <h2>請輸入你降生於這個世界的年月。</h2>
-        <input type="date" id="birth-date">
-        <button class="btn-option" style="margin-top: 20px; background: #D4AF37; color: #000; font-weight: bold;" onclick="nextStep(3, document.getElementById('birth-date').value)">確認星辰座標</button>
+    <div id="step-3" class="step-section">
+        <h2>鎖定您的時空座標</h2>
+        
+        <div class="form-group">
+            <label class="form-label">降生之日</label>
+            <input type="date" id="input-date" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">降生時辰</label>
+            <select id="input-time">
+                <option value="unknown">時辰不詳 (AI 輔助校正)</option>
+                <option value="子">子時 (23:00 - 00:59)</option>
+                <option value="丑">丑時 (01:00 - 02:59)</option>
+                <option value="寅">寅時 (03:00 - 04:59)</option>
+                <option value="卯">卯時 (05:00 - 06:59)</option>
+                <option value="辰">辰時 (07:00 - 08:59)</option>
+                <option value="巳">巳時 (09:00 - 10:59)</option>
+                <option value="午">午時 (11:00 - 12:59)</option>
+                <option value="未">未時 (13:00 - 14:59)</option>
+                <option value="申">申時 (15:00 - 16:59)</option>
+                <option value="酉">酉時 (17:00 - 18:59)</option>
+                <option value="戌">戌時 (19:00 - 20:59)</option>
+                <option value="亥">亥時 (21:00 - 22:59)</option>
+            </select>
+        </div>
+
+        <button class="btn-submit" onclick="submitAstrolabe()">注入靈力，啟動星盤</button>
     </div>
 
-    <div id="step-4" class="step-container">
-        <h2>星辰已就位。<br>即將為您注入靈力，解開專屬命運...</h2>
-        <div id="loading-text" style="color: #888; margin-top: 20px;">[ 收集到的資料將顯示於此，準備發送給 AI 大腦 ]</div>
+    <div id="loading-overlay">
+        <div style="font-size: 60px; filter: drop-shadow(0 0 20px #D4AF37);">🌌</div> 
+        <div class="loading-text" id="loading-msg">連結宇宙阿卡西紀錄...</div>
     </div>
 
     <script>
-        // 用來暫存使用者的八字資料
-        let birthData = {};
+        // 集中儲存使用者的命理資料
+        const userAstrolabeData = { gender: '', calendar: '', date: '', time: '' };
 
-        function nextStep(currentStepIndex, value) {
-            // 1. 儲存資料
-            if(currentStepIndex === 1) birthData.gender = value;
-            if(currentStepIndex === 2) birthData.calendar = value;
-            if(currentStepIndex === 3) {
-                if(!value) { alert("請輸入日期！"); return; }
-                birthData.date = value;
+        // 處理步驟切換與自動推進
+        function makeChoice(currentStep, key, value, btnElement) {
+            // 1. 記錄資料
+            userAstrolabeData[key] = value;
+            
+            // 2. 視覺回饋：讓按鈕亮起
+            btnElement.classList.add('selected');
+
+            // 3. 延遲 400 毫秒後，觸發轉場動畫 (讓使用者有時間看到點擊回饋)
+            setTimeout(() => {
+                const currentDiv = document.getElementById(`step-${currentStep}`);
+                const nextDiv = document.getElementById(`step-${currentStep + 1}`);
+
+                // 當前畫面往上飄散
+                currentDiv.classList.remove('active');
+                currentDiv.classList.add('exit-up');
+
+                // 下一個畫面從下方浮現
+                nextDiv.classList.add('active');
+            }, 400);
+        }
+
+        // 最終提交表單
+        function submitAstrolabe() {
+            const dateInput = document.getElementById('input-date').value;
+            if(!dateInput) {
+                alert("請輸入您的降生之日！");
+                return;
             }
 
-            // 2. 獲取當前與下一個容器
-            const currentStep = document.getElementById(`step-${currentStepIndex}`);
-            const nextStep = document.getElementById(`step-${currentStepIndex + 1}`);
+            // 補齊最後兩項資料
+            userAstrolabeData.date = dateInput;
+            userAstrolabeData.time = document.getElementById('input-time').value;
 
-            // 3. 觸發轉場動畫 (先讓當前畫面往上飄走)
-            currentStep.classList.remove('active');
-            currentStep.classList.add('exit');
+            // 啟動全螢幕星空遮罩
+            document.getElementById('loading-overlay').classList.add('show');
 
-            // 4. 等待 400 毫秒後，讓下一個畫面浮現
-            setTimeout(() => {
-                nextStep.classList.add('active');
-                
-                // 如果到了最後一步，秀出我們收集到的資料
-                if(currentStepIndex === 3) {
-                    document.getElementById('loading-text').innerText = 
-                        `性別: ${birthData.gender === 'male' ? '男' : '女'} \n ` +
-                        `曆法: ${birthData.calendar === 'solar' ? '國曆' : '農曆'} \n ` +
-                        `日期: ${birthData.date} \n\n ` +
-                        `🚀 (下一步：將這些資料與 30 點靈力打包，發送給我們剛寫好的 Gemini 3.1 Pro 大腦！)`;
-                }
-            }, 400); // 這個延遲時間創造了呼吸感
+            // 營造 AI 解算的文字氛圍
+            setTimeout(() => { document.getElementById('loading-msg').innerText = "排盤中：定紫微、安108星曜..."; }, 1500);
+            setTimeout(() => { document.getElementById('loading-msg').innerText = "啟動 AI 命運大腦深度解碼..."; }, 3500);
+
+            console.log("🚀 準備發送至 Cloud Run 的資料：", userAstrolabeData);
+            
+            // 下一步：在這裡放入呼叫 API 的 Fetch 邏輯
         }
     </script>
 </body>
