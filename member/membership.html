@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>靈魂儀表板 | 命運解碼室</title>
+    
+    <script src="/env.js?v=2"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --gold: #D4AF37; --gold-light: #F9E498; --bg-deep: #050508;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(212, 175, 55, 0.2);
+        }
+
+        * { box-sizing: border-box; font-family: 'PingFang TC', 'Noto Serif TC', serif; }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-deep); color: #fff;
+            min-height: 100vh; overflow-x: hidden;
+        }
+
+        /* 🌌 背景特效 */
+        #bg-canvas { position: fixed; inset: 0; z-index: -10; pointer-events: none; }
+        .vignette { position: fixed; inset: 0; background: radial-gradient(circle at center, transparent 30%, #000 120%); z-index: -9; pointer-events: none; }
+
+        /* 📱 主容器 */
+        .container {
+            max-width: 500px; margin: 0 auto; padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        /* 🏷️ 頂部導航 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .header h1 { margin: 0; font-size: 20px; color: var(--gold); letter-spacing: 2px; text-shadow: 0 0 10px rgba(212,175,55,0.5); }
+        .back-btn { background: none; border: 1px solid var(--gold); color: var(--gold); padding: 5px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+
+        /* 🪞 玻璃卡片共用樣式 */
+        .glass-card {
+            background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); border-radius: 15px; padding: 20px; margin-bottom: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        /* 👤 個人名片區 */
+        .profile-section { display: flex; align-items: center; gap: 15px; }
+        .avatar { width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; box-shadow: 0 0 15px rgba(212,175,55,0.4); }
+        .profile-info h2 { margin: 0 0 5px 0; font-size: 18px; letter-spacing: 1px; }
+        .soul-rank { display: inline-block; background: rgba(212,175,55,0.2); color: var(--gold-light); padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .join-date { font-size: 11px; color: #888; margin-top: 5px; }
+
+        /* ⚡ 能量核心區 */
+        .energy-section { text-align: center; position: relative; overflow: hidden; }
+        .energy-section::before { content: ''; position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%); z-index: -1; }
+        .energy-title { font-size: 12px; color: #aaa; letter-spacing: 2px; margin-bottom: 10px; }
+        .energy-points { font-size: 48px; font-weight: bold; color: var(--gold-light); text-shadow: 0 0 20px var(--gold); margin: 0; line-height: 1; }
+        .recharge-btn {
+            background: linear-gradient(135deg, var(--gold), #B8860B); color: #000; border: none;
+            padding: 10px 30px; border-radius: 25px; font-weight: bold; font-size: 14px; letter-spacing: 1px;
+            margin-top: 20px; cursor: pointer; box-shadow: 0 0 15px rgba(212,175,55,0.4); transition: 0.3s;
+        }
+        .recharge-btn:active { transform: scale(0.95); }
+
+        /* 📈 運勢圖表區 */
+        .chart-section h3 { margin: 0 0 15px 0; font-size: 14px; color: var(--gold); letter-spacing: 1px; }
+        .chart-container { position: relative; height: 200px; width: 100%; }
+
+        /* 📜 歷史紀錄區 */
+        .history-section h3 { margin: 0 0 15px 0; font-size: 14px; color: var(--gold); letter-spacing: 1px; }
+        
+        /* 🌟 優化：限制高度、開啟內部滑動 */
+        .history-list { 
+            display: flex; flex-direction: column; gap: 10px; 
+            max-height: 350px; /* 超過這個高度就會出現捲軸 */
+            overflow-y: auto; padding-right: 5px; 
+        }
+        
+        /* 🌟 優化：客製化極簡風的金色捲軸 */
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-track { background: transparent; }
+        .history-list::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.4); border-radius: 4px; }
+        .history-list::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.8); }
+
+        .history-item {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+            padding: 12px 15px; display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; transition: 0.2s;
+        }
+        .history-item:active { background: rgba(212,175,55,0.1); }
+        .history-left { display: flex; flex-direction: column; gap: 4px; }
+        .history-type { font-size: 12px; color: var(--gold-light); font-weight: bold; }
+        .history-topic { font-size: 14px; color: #ddd; }
+        .history-date { font-size: 10px; color: #666; }
+        .history-points { font-size: 18px; font-weight: bold; } /* 分數稍微放大一點 */
+        .points-plus { color: #4CAF50; } /* 儲值的綠色 */
+        .points-minus { color: #FF6B6B; }
+
+        /* 彈出視窗 (Modal) 共用 */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            z-index: 999; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: 0.3s; padding: 20px;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: #111; border: 1px solid var(--gold); border-radius: 15px; padding: 25px;
+            width: 100%; max-width: 400px; max-height: 80vh; overflow-y: auto; color: #eee; position: relative;
+        }
+        .modal-close-btn {
+            background: none; border: 1px solid #555; color: #aaa; padding: 8px 0; width: 100%;
+            border-radius: 8px; margin-top: 20px; cursor: pointer; font-size: 14px;
+        }
+
+        /* 🔮 儲值祭壇專屬樣式 */
+        .tier-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+        .tier-card {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); border-radius: 12px;
+            padding: 15px; display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; position: relative; overflow: hidden; transition: 0.3s;
+        }
+        .tier-card:active { transform: scale(0.98); background: rgba(212,175,55,0.1); }
+        .tier-card.popular { border-color: var(--gold); box-shadow: 0 0 15px rgba(212,175,55,0.3); }
+        .tier-card.popular::before {
+            content: '推薦主力'; position: absolute; top: 0; left: 0; background: var(--gold); color: #000;
+            font-size: 10px; font-weight: bold; padding: 2px 8px; border-bottom-right-radius: 8px;
+        }
+        .tier-info { display: flex; flex-direction: column; gap: 5px; }
+        .tier-points { font-size: 20px; font-weight: bold; color: var(--gold-light); }
+        .tier-bonus { font-size: 12px; color: #FF6B6B; font-weight: bold; display: none; } /* 預設隱藏，由JS控制 */
+        .tier-price { background: #222; border: 1px solid var(--gold); color: var(--gold); padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+        
+        /* ⏳ Loading 畫面 */
+        #loader, #pay-loader {
+            position: fixed; inset: 0; z-index: 9999; background: var(--bg-deep);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.5s;
+        }
+        #pay-loader { background: rgba(0,0,0,0.9); opacity: 0; pointer-events: none; }
+        #pay-loader.active { opacity: 1; pointer-events: auto; }
+        .spinner { width: 50px; height: 50px; border: 3px solid rgba(212,175,55,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+    <div class="vignette"></div>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="color: var(--gold); letter-spacing: 2px; margin-top: 20px; font-size: 14px;">同步星盤數據中...</p>
+    </div>
+
+    <div id="pay-loader">
+        <div class="spinner"></div>
+        <p style="color: #00C300; letter-spacing: 2px; margin-top: 20px; font-size: 14px;">正在連結 LINE Pay 結界...</p>
+    </div>
+
+    <div class="container" style="display: none;" id="main-content">
+        
+        <div class="header">
+            <h1>靈魂儀表板</h1>
+            <button class="back-btn" onclick="liff.closeWindow()">返回結界</button>
+        </div>
+
+        <div class="glass-card profile-section">
+            <img src="" alt="Avatar" class="avatar" id="ui-avatar">
+            <div class="profile-info">
+                <h2 id="ui-name">讀取中...</h2>
+                <div class="soul-rank" id="ui-rank">靈能感應中</div>
+                <div class="join-date" id="ui-date">入室時間：--</div>
+            </div>
+        </div>
+
+        <div class="glass-card energy-section">
+            <div class="energy-title">當前靈力儲備 (Points)</div>
+            <div class="energy-points" id="ui-points">--</div>
+            <button class="recharge-btn" onclick="openRechargeModal()">補充靈力</button>
+        </div>
+
+        <div class="glass-card chart-section">
+            <h3>📈 近期能量波動 <span style="cursor:pointer; font-size:12px; background:rgba(212,175,55,0.2); padding:2px 6px; border-radius:50%; margin-left:5px; vertical-align: middle;" onclick="document.getElementById('chart-info-modal').classList.add('active')">❓</span></h3>
+            <div class="chart-container">
+                <canvas id="energyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="glass-card history-section">
+            <h3>📜 命運回顧</h3>
+            <div class="history-list" id="ui-history-list">
+                </div>
+        </div>
+
+    </div>
+
+    <div id="detail-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;" id="modal-title">報告標題</h3>
+            <div id="modal-body" style="font-size: 14px; line-height: 1.6; color: #ccc; margin-top: 15px; white-space: pre-wrap;">
+                詳細內容...
+            </div>
+            <button class="modal-close-btn" onclick="closeModal('detail-modal')">關閉回顧</button>
+        </div>
+    </div>
+
+    <div id="recharge-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">靈力補充祭壇</h3>
+            <p style="text-align: center; font-size: 12px; color: #888; margin-top: 10px;">請選擇您要注入的能量級別</p>
+            
+            <div class="tier-grid" id="tier-grid">
+                </div>
+            
+            <button class="modal-close-btn" onclick="closeModal('recharge-modal')">離開祭壇</button>
+        </div>
+    </div>
+
+
+    <div id="chart-info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">📊 能量波動觀測指南</h3>
+            <div style="font-size: 14px; line-height: 1.6; color: #ccc; margin-top: 15px;">
+                
+                <p><span style="color: var(--gold); font-weight: bold;">🔮 塔羅深度運勢 (尊貴金線)：</span><br>
+                呈現您進行「塔羅解碼」時的綜合能量評分。若您在同一天內尋求多次指引，星盤將自動為您計算出<span style="color: #fff; font-weight: bold;">「當日平均值」</span>，以展現最平穩的運勢走向，避免單一波動干擾您的直覺判斷。</p>
+                
+                <p style="margin-top: 15px;"><span style="color: #4A90E2; font-weight: bold;">✨ 每日基礎能量 (星芒藍線)：</span><br>
+                反映您每日「簽到抽牌」所獲得的基礎靈能，是您當日運勢的基石。</p>
+
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #888;">
+                    <strong style="color: #eee; font-size: 13px;">⏳ 星軌觀測限制與說明：</strong>
+                    <ul style="margin: 5px 0 0 0; padding-left: 20px; font-size: 13px; color: #aaa;">
+                        <li><strong>觀測區間：</strong>圖表固定展現您<span style="color: #ddd;">近 7 日</span>的能量起伏。</li>
+                        <li><strong>承載上限：</strong>為維持儀表板的運作流暢，下方的「命運回顧」最多僅顯示<span style="color: #ddd;">最近 30 筆</span>動態。但請放心，圖表的平均值計算會包含您當日<strong>所有</strong>的占卜軌跡。</li>
+                    </ul>
+                </div>
+
+                <p style="margin-top: 15px; font-size: 13px; color: var(--gold-light); text-align: center; font-weight: bold;">
+                💡 觀測秘訣：點擊圖表上的發光節點，<br>即可揭曉當日匯聚了多少筆運勢能量喔！
+                </p>
+
+            </div>
+            <button class="modal-close-btn" onclick="closeModal('chart-info-modal')">關閉指南</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 🌌 背景特效 (輕量版) ---
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+        const stars = Array.from({length: 100}, () => ({x: Math.random()*width, y: Math.random()*height, r: Math.random()*1.5, a: Math.random()}));
+        function animate() {
+            ctx.clearRect(0,0,width,height);
+            ctx.fillStyle='#fff';
+            stars.forEach(s => { s.a += (Math.random()-0.5)*0.05; if(s.a<0.1)s.a=0.1; if(s.a>1)s.a=1; ctx.globalAlpha=s.a; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // --- ⚙️ 核心數據邏輯 ---
+        let rawHistoryData = [];
+        let userProfileData = null; // 儲存用戶資料，包含首充紀錄
+        let currentAccessToken = "";
+
+        // 定義計費方案
+        const pricingTiers = [
+            { price: 99, points: 990, isPopular: false },
+            { price: 199, points: 2000, isPopular: true },  // 主力
+            { price: 299, points: 3100, isPopular: true },  // 主力
+            { price: 599, points: 6300, isPopular: false },
+            { price: 999, points: 10600, isPopular: false }
+        ];
+
+        async function initDashboard() {
+            try {
+                await liff.init({ liffId: ENV.MEMBER_LIFF_ID });
+                
+                if (!liff.isLoggedIn()) {
+                    liff.login({ redirectUri: window.location.href });
+                    return;
+                }
+
+                currentAccessToken = liff.getAccessToken();
+                if(!currentAccessToken) throw new Error("無法取得安全通行證");
+
+                let currentProfile = null;
+                try { currentProfile = await liff.getProfile(); } catch(e) { console.error("Profile 失敗", e); }
+
+                const headers = { 'Authorization': `Bearer ${currentAccessToken}`, 'Content-Type': 'application/json' };
+                
+                const apiPromises = [
+                    fetch(`${ENV.API_BASE}/api/user/profile`, { headers }),
+                    fetch(`${ENV.API_BASE}/api/user/history?days=7`, { headers })
+                ];
+
+                if (currentProfile) {
+                    apiPromises.push(
+                        fetch(`${ENV.API_BASE}/api/user/sync-profile`, {
+                            method: 'POST', headers: headers,
+                            body: JSON.stringify({ displayName: currentProfile.displayName, pictureUrl: currentProfile.pictureUrl || "" })
+                        }).catch(e => console.error("背景同步失敗:", e))
+                    );
+                }
+
+                const responses = await Promise.all(apiPromises);
+                const profileRes = responses[0];
+                const historyRes = responses[1];
+
+                if (!profileRes.ok || !historyRes.ok) throw new Error("伺服器結界異常，請稍後再試");
+
+                const profileData = await profileRes.json();
+                const historyData = await historyRes.json();
+
+                if(profileData.success) {
+                    if (currentProfile) {
+                        profileData.data.displayName = currentProfile.displayName;
+                        profileData.data.pictureUrl = currentProfile.pictureUrl;
+                    }
+                    userProfileData = profileData.data; // 儲存至全域供首充判斷使用
+                    renderProfile(profileData.data);
+                }
+                
+                if(historyData.success) {
+                    rawHistoryData = historyData.data;
+                    renderHistory(historyData.data);
+                    renderChart(profileData.data.points, historyData.data);
+                }
+
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loader').style.display = 'none';
+                    document.getElementById('main-content').style.display = 'block';
+                }, 500);
+
+            } catch (error) {
+                console.error("初始化失敗:", error);
+                alert("🚨 " + error.message);
+            }
+        }
+
+        function renderProfile(data) {
+            document.getElementById('ui-avatar').src = data.pictureUrl || "https://static.line-scdn.net/liff/edge/2/images/logo.svg";
+            document.getElementById('ui-name').innerText = data.displayName || "神祕旅人";
+            document.getElementById('ui-points').innerText = data.points;
+            
+            let rank = "靈能學徒";
+            if (data.points >= 500) rank = "高階祭司";
+            else if (data.points >= 200) rank = "覺醒者";
+            else if (data.points < 20) rank = "靈能枯竭";
+            document.getElementById('ui-rank').innerText = rank;
+
+            if (data.createdAt) {
+                const d = new Date(data.createdAt);
+                document.getElementById('ui-date').innerText = `入室時間：${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+            }
+        }
+
+        // 📜 渲染歷史列表 (更新版：活潑的儲值紀錄 + 效能優化截斷)
+        function renderHistory(historyArray) {
+            const list = document.getElementById('ui-history-list');
+            list.innerHTML = "";
+
+            if (historyArray.length === 0) {
+                list.innerHTML = `<div style="text-align:center; color:#666; padding: 20px 0; font-size:12px;">星盤尚無軌跡，快去進行第一次占卜吧。</div>`;
+                return;
+            }
+
+            // 🌟 效能優化：即使圖表抓了 7 天，下方列表最多只顯示「最近 30 筆」，避免手機卡頓
+            const displayList = historyArray.slice(0, 30);
+
+            displayList.forEach((item, index) => {
+                let typeText, topicText, extraHtml = "";
+                const pointsClass = item.points_change > 0 ? "points-plus" : "points-minus";
+                const pointsText = item.points_change > 0 ? `+${item.points_change}` : item.points_change;
+                
+                // 🌟 分流判斷：如果是「儲值紀錄」
+                if (item.type === "recharge") {
+                    typeText = "💎 靈力充能";
+                    topicText = `💸 成功支付 NT$ ${item.amount_paid || 0}`;
+                    // 加上活潑的小標籤
+                    extraHtml = `<span style="font-size: 10px; color: #4CAF50; border: 1px solid rgba(76,175,80,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">🎉 能量注入</span>`;
+                } 
+                // 🌟 否則就是塔羅或每日一抽
+                else {
+                    const isTarot = item.type === "tarot";
+                    typeText = isTarot ? "🔮 塔羅解碼" : "✨ 每日一抽";
+                    topicText = isTarot ? `領域：${item.topic}` : `指引：${item.result_card}`;
+                    
+                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
+                    extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${score} 分</span>`;
+                }
+                
+                const dateObj = new Date(item.timestamp);
+                const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()} ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
+
+                // 儲值紀錄點擊沒有 Modal (占卜才有)，並把儲值的卡片外框染上一點綠光
+                const clickAction = item.type === "recharge" ? "" : `onclick="showHistoryModal(${index})"`;
+                const activeStyle = item.type === "recharge" ? "style='cursor:default; border-color: rgba(76,175,80,0.3);'" : "";
+
+                const html = `
+                    <div class="history-item" ${clickAction} ${activeStyle}>
+                        <div class="history-left">
+                            <div class="history-type">${typeText} ${extraHtml}</div>
+                            <div class="history-topic">${topicText}</div>
+                            <div class="history-date">${dateStr}</div>
+                        </div>
+                        <div class="history-points ${pointsClass}">${pointsText}</div>
+                    </div>
+                `;
+                list.insertAdjacentHTML('beforeend', html);
+            });
+
+            // 🌟 如果用戶真的算超過 30 筆，在最底下給個小提示
+            if (historyArray.length > 30) {
+                 list.insertAdjacentHTML('beforeend', `<div style="text-align:center; font-size:10px; color:#666; margin-top:5px; padding-bottom:10px;">僅顯示最近 30 筆動態...</div>`);
+            }
+        }
+
+        // 📈 渲染雙線運勢圖 (改版：近 7 日平均演算法)
+        function renderChart(currentPoints, historyArray) {
+            const ctx = document.getElementById('energyChart').getContext('2d');
+            
+            // 1. 產生近 7 天的日期標籤 (格式: MM/DD)
+            const labels = [];
+            const dateMap = {}; // 用來統計每天的數據
+            
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                labels.push(dateStr);
+                // 初始化每一天的累加器
+                dateMap[dateStr] = { tarotSum: 0, tarotCount: 0, dailyScore: null };
+            }
+
+            // 2. 將歷史紀錄歸類到對應的日期中
+            historyArray.forEach(item => {
+                const d = new Date(item.timestamp);
+                const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                
+                // 如果這筆紀錄在近 7 天內
+                if (dateMap[dateStr]) {
+                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : 50;
+                    
+                    if (item.type === 'tarot') {
+                        dateMap[dateStr].tarotSum += score;
+                        dateMap[dateStr].tarotCount += 1;
+                    } else {
+                        dateMap[dateStr].dailyScore = score;
+                    }
+                }
+            });
+
+            // 3. 計算平均值並產出 Chart 陣列
+            const tarotData = [];
+            const dailyData = [];
+            const tooltipMeta = []; // 專門給點擊/懸浮時顯示的額外資訊
+
+            labels.forEach(dateStr => {
+                const dayData = dateMap[dateStr];
+                
+                // 計算塔羅平均分
+                let tarotAvg = null;
+                if (dayData.tarotCount > 0) {
+                    tarotAvg = Math.round(dayData.tarotSum / dayData.tarotCount);
+                }
+                
+                tarotData.push(tarotAvg);
+                dailyData.push(dayData.dailyScore);
+                
+                // 儲存筆數資訊給 Tooltip 用
+                tooltipMeta.push({
+                    tarotCount: dayData.tarotCount
+                });
+            });
+
+            if(window.energyChartInstance) window.energyChartInstance.destroy();
+
+            window.energyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    tooltipMeta: tooltipMeta, // 🌟 偷偷塞入中繼資料
+                    datasets: [
+                        {
+                            label: '🔮 塔羅深度運勢',
+                            data: tarotData,
+                            borderColor: '#D4AF37', 
+                            backgroundColor: 'rgba(212,175,55,0.1)',
+                            borderWidth: 3, pointBackgroundColor: '#FFF', pointBorderColor: '#D4AF37', pointRadius: 5,
+                            spanGaps: true, tension: 0.3, pointHitRadius: 10
+                        },
+                        {
+                            label: '✨ 每日基礎能量',
+                            data: dailyData,
+                            borderColor: '#4A90E2', 
+                            borderWidth: 2, borderDash: [5, 5], 
+                            pointBackgroundColor: '#4A90E2', pointRadius: 4,
+                            spanGaps: true, tension: 0.4, pointHitRadius: 10
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'nearest',
+                        intersect: true,
+                    },
+                    plugins: { 
+                        legend: { display: true, labels: { color: '#CCC', font: { size: 10 } } },
+                        // 🌟 客製化點擊/懸浮的提示框
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#D4AF37',
+                            bodyFont: { size: 13 },
+                            padding: 10,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    
+                                    if (context.parsed.y !== null) {
+                                        label += context.parsed.y + ' 分';
+                                    }
+
+                                    // 如果點擊的是塔羅牌的線 (datasetIndex === 0)
+                                    if (context.datasetIndex === 0) {
+                                        const meta = context.chart.data.tooltipMeta[context.dataIndex];
+                                        if (meta && meta.tarotCount > 0) {
+                                            label += ` (綜合 ${meta.tarotCount} 筆運勢)`;
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888' } },
+                        x: { grid: { display: false }, ticks: { color: '#888', font: {size: 10} } }
+                    }
+                }
+            });
+        }
+
+        // --- 🪟 Modal 控制區 ---
+        
+        function showHistoryModal(index) {
+            const item = rawHistoryData[index];
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+
+            if (item.type === 'tarot') {
+                title.innerText = `🔮 塔羅解碼：${item.topic}`;
+                body.innerHTML = `<b>牌陣：</b>${item.cards.join('、')}<br><br>${item.aiText || "（資料同步中...）"}`;
+            } else {
+                title.innerText = `✨ 每日一抽：${item.result_card}`;
+                body.innerText = item.aiText || "（資料同步中...）";
+            }
+            document.getElementById('detail-modal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // --- 💰 靈力儲值與金流邏輯 ---
+
+        // 1. 計算當前「2個月為一期」的週期代碼 (例：2026年3月 -> "2026-2")
+        function getCurrentRechargePeriod() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const periodNum = Math.ceil((now.getMonth() + 1) / 2);
+            return `${year}-${periodNum}`;
+        }
+
+        // 2. 打開儲值祭壇並渲染方案
+        function openRechargeModal() {
+            const currentPeriod = getCurrentRechargePeriod();
+            // 如果後端還沒存 lastFirstRechargePeriod，預設為 null，代表從未首充過
+            const lastPeriod = userProfileData.lastFirstRechargePeriod || null;
+            
+            // 判斷是否享有「本週期首充 +10%」資格
+            const isFirstRechargeAvailable = (currentPeriod !== lastPeriod);
+
+            const grid = document.getElementById('tier-grid');
+            grid.innerHTML = ""; // 清空
+
+            pricingTiers.forEach(tier => {
+                let finalPoints = tier.points;
+                let bonusHtml = "";
+                
+                // 首充加碼邏輯
+                if (isFirstRechargeAvailable) {
+                    const bonusPoints = Math.floor(tier.points * 0.1); // +10%
+                    finalPoints += bonusPoints;
+                    bonusHtml = `<span class="tier-bonus" style="display:inline;">首充 +${bonusPoints} 點</span>`;
+                }
+
+                const popularClass = tier.isPopular ? "popular" : "";
+                
+                const html = `
+                    <div class="tier-card ${popularClass}" onclick="requestLinePay(${tier.price}, ${finalPoints}, '${currentPeriod}')">
+                        <div class="tier-info">
+                            <span class="tier-points">💎 ${finalPoints} 靈力</span>
+                            ${bonusHtml}
+                        </div>
+                        <div class="tier-price">NT$ ${tier.price}</div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', html);
+            });
+
+            document.getElementById('recharge-modal').classList.add('active');
+        }
+
+        // 3. 發起 LINE Pay 請求
+        async function requestLinePay(amount, pointsToGive, periodCode) {
+            const confirmMsg = `即將透過 LINE Pay 支付 NT$ ${amount} 元\n獲取 ${pointsToGive} 點靈力。\n\n確定前往結帳嗎？`;
+            if(!confirm(confirmMsg)) return;
+
+            // 顯示暗黑版 Loading
+            document.getElementById('pay-loader').classList.add('active');
+
+            try {
+                const response = await fetch(`${ENV.API_BASE}/api/pay/request`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentAccessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        amount: amount, 
+                        productName: `${pointsToGive} 點靈力儲值`,
+                        pointsGiven: pointsToGive, // 後端可以根據這個決定要發多少點
+                        periodCode: periodCode     // 後端確認付款後，把這個寫入資料庫的 lastFirstRechargePeriod
+                    })
+                });
+
+                const data = await response.json();
+                
+                if(data.success && data.url) {
+                    // 跳轉至 LINE Pay 綠色付款頁
+                    window.location.href = data.url;
+                } else {
+                    alert("🚨 呼叫 LINE Pay 結界失敗：" + (data.msg || "未知錯誤"));
+                    document.getElementById('pay-loader').classList.remove('active');
+                }
+
+            } catch(e) {
+                console.error(e);
+                alert("🚨 網路結界不穩定，請重試。");
+                document.getElementById('pay-loader').classList.remove('active');
+            }
+        }
+
+        // 🚀 啟動
+        document.addEventListener('DOMContentLoaded', initDashboard);
+
+    </script>
+</body>
+</html>

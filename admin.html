@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrandDecoder | Super Admin 戰情室</title>
+    <script src="/env.js?v=2"></script>
+    <style>
+        :root {
+            --primary: #1a73e8; --primary-hover: #1557b0;
+            --bg-color: #f8f9fa; --surface: #ffffff;
+            --text-main: #202124; --text-muted: #5f6368;
+            --border: #dadce0; --gold: #D4AF37;
+            --success: #34a853; --danger: #ea4335;
+        }
+
+        * { box-sizing: border-box; font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; }
+        body { margin: 0; background-color: var(--bg-color); color: var(--text-main); }
+
+        /* 🔐 登入畫面 */
+        #login-screen {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 100vh; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+        }
+        .login-card {
+            background: var(--surface); padding: 40px; border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; max-width: 400px; width: 90%;
+        }
+        .login-card h1 { color: var(--gold); margin-bottom: 10px; font-size: 24px; }
+        .google-btn {
+            background: #fff; border: 1px solid var(--border); padding: 10px 20px;
+            border-radius: 24px; font-size: 14px; font-weight: bold; color: #3c4043;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            gap: 10px; width: 100%; margin-top: 30px; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .google-btn:hover { background: #f8f9fa; box-shadow: 0 1px 5px rgba(0,0,0,0.15); }
+        .google-btn img { width: 18px; height: 18px; }
+
+        /* 📊 儀表板主體 */
+        #dashboard-screen { display: none; flex-direction: column; height: 100vh; }
+        
+        /* 頂部導航 */
+        .navbar {
+            background: var(--surface); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; padding: 0 20px; height: 60px;
+        }
+        .navbar-brand { font-weight: bold; font-size: 18px; color: var(--gold); margin-right: 40px; }
+        .nav-tabs { display: flex; gap: 20px; height: 100%; }
+        .nav-tab {
+            background: none; border: none; font-size: 14px; color: var(--text-muted);
+            cursor: pointer; height: 100%; border-bottom: 3px solid transparent; padding: 0 10px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .nav-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: bold; }
+        .user-profile { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+        .user-profile img { width: 32px; height: 32px; border-radius: 50%; }
+        .logout-btn { border: 1px solid var(--border); background: #fff; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+        /* 內容區塊 */
+        .content-area { padding: 20px; flex: 1; overflow-y: auto; }
+        .tab-content { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .tab-content.active { display: block; }
+
+        /* 📝 日誌表格專用區 */
+        .toolbar { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
+        .filters { display: flex; gap: 10px; align-items: center; }
+        .filters input, .filters select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; }
+        .btn-primary { background: var(--primary); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-weight: 600; background: #f8f9fa; }
+        tbody tr:hover { background: #f1f3f4; }
+        
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .badge-ai { background: #e8f0fe; color: #1967d2; }
+        .badge-tarot { background: #fce8e6; color: #c5221f; }
+        .badge-pay { background: #e6f4ea; color: #137333; }
+        
+        .point-plus { color: var(--success); font-weight: bold; }
+        .point-minus { color: var(--danger); font-weight: bold; }
+        .point-zero { color: var(--text-muted); }
+
+        /* 🧠 AI 大腦設定區 */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; }
+        .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+        .form-group textarea { height: 150px; resize: vertical; }
+
+        #loading-overlay {
+            position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 9999;
+            display: none; justify-content: center; align-items: center; font-weight: bold; color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-overlay">資料傳輸中...</div>
+
+    <div id="login-screen">
+        <div class="login-card">
+            <h1>命運解碼室 Admin</h1>
+            <p style="color: var(--text-muted); font-size: 14px;">請使用最高管理員帳號登入</p>
+            <button class="google-btn" id="btn-login">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G">
+                Sign in with Google
+            </button>
+            <p id="login-error" style="color: var(--danger); font-size: 12px; margin-top: 15px; display: none;">權限不足或登入失敗</p>
+        </div>
+    </div>
+
+    <div id="dashboard-screen">
+        <nav class="navbar">
+            <div class="navbar-brand">BrandDecoder</div>
+            <div class="nav-tabs">
+                <button class="nav-tab" onclick="switchTab('tab-overview')">📈 戰情中心</button>
+                <button class="nav-tab active" onclick="switchTab('tab-logs')">🗂️ 日誌</button>
+                <button class="nav-tab" onclick="switchTab('tab-ai')">🧠 AI 大腦</button>
+                <button class="nav-tab" onclick="alert('建設中...')">🏪 O2O 門市</button>
+            </div>
+            <div class="user-profile">
+                <span id="admin-name">管理員</span>
+                <img id="admin-avatar" src="" alt="Avatar">
+                <button class="logout-btn" id="btn-logout">登出</button>
+            </div>
+        </nav>
+
+        <div class="content-area">
+            
+            <div id="tab-overview" class="tab-content">
+                <h2 style="margin-top: 0;">戰情中心總覽</h2>
+                <p style="color: #666;">營運圖表與 KPI 數據模組準備中...</p>
+            </div>
+
+            <div id="tab-logs" class="tab-content active">
+                <div class="toolbar">
+                    <h3 style="margin: 0;">系統操作與服務軌跡</h3>
+                    <div class="filters">
+                        <input type="date" id="filter-start">
+                        <span>至</span>
+                        <input type="date" id="filter-end">
+                        <select id="filter-type">
+                            <option value="all">📁 全部類型</option>
+                            <option value="tarot">🔮 塔羅解碼</option>
+                            <option value="daily_draw">✨ 每日一抽</option>
+                            <option value="recharge">💰 金流紀錄</option>
+                        </select>
+                        <button class="btn-primary" onclick="loadLogs()">🔍 查詢</button>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>服務類型</th>
+                            <th>點數異動</th>
+                            <th>摘要 / 用戶 ID</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-table-body">
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="tab-ai" class="tab-content">
+                <h3 style="margin-top: 0;">AI 大腦核心參數設定</h3>
+                <div class="form-group">
+                    <label>啟用中模型 (Active Model)</label>
+                    <select id="ai-model-select">
+                        <option value="gemini-3-flash-preview">Gemini 3 Flash (快速)</option>
+                        <option value="gemini-3-pro">Gemini 3 Pro (深度推論)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>塔羅解碼 System Prompt</label>
+                    <textarea id="ai-tarot-prompt" placeholder="請輸入塔羅系統指令..."></textarea>
+                </div>
+                <button class="btn-primary" onclick="saveAISettings()">💾 儲存設定</button>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+
+        // 🚨 這是公開的專案識別碼，放在前端是 100% 安全且標準的做法
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQ9vBNu6amWmOG9o-fQa0ft6dO1kumt5c",
+            authDomain: "lllcnd.firebaseapp.com",
+            projectId: "lllcnd",
+            storageBucket: "lllcnd.appspot.com",
+            messagingSenderId: "217800246535",
+            appId: "1:217800246535:web:ecb1f386c5bbf4ed6771a2"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        let currentIdToken = "";
+        const API_URL = ENV.API_BASE || "https://bastro-bot-217800246535.asia-east1.run.app"; 
+
+        // --- 登入狀態監聽 ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // 已登入
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('dashboard-screen').style.display = 'flex';
+                document.getElementById('admin-name').innerText = user.displayName;
+                document.getElementById('admin-avatar').src = user.photoURL;
+                
+                // 取得 Token 用於呼叫後端 API
+                currentIdToken = await user.getIdToken();
+                
+                // 載入預設資料
+                loadLogs();
+            } else {
+                // 未登入
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('dashboard-screen').style.display = 'none';
+                currentIdToken = "";
+            }
+        });
+
+        // --- 登入/登出按鈕事件 ---
+        document.getElementById('btn-login').addEventListener('click', () => {
+            document.getElementById('login-error').style.display = 'none';
+            signInWithPopup(auth, provider).catch((error) => {
+                console.error("登入失敗", error);
+                document.getElementById('login-error').style.display = 'block';
+            });
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // --- 🗂️ 載入日誌資料 ---
+        window.loadLogs = async function() {
+            if (!currentIdToken) return;
+            showLoading(true);
+            try {
+                const type = document.getElementById('filter-type').value;
+                const startDate = document.getElementById('filter-start').value;
+                const endDate = document.getElementById('filter-end').value;
+                
+                let query = `?limit=50&type=${type}`;
+                if (startDate && endDate) query += `&startDate=${startDate}&endDate=${endDate}`;
+
+                const response = await fetch(`${API_URL}/api/admin/logs${query}`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+                
+                const result = await response.json();
+                
+                if (response.status === 403) {
+                    alert("🚨 您使用的 Google 帳號不在超級管理員白名單內！");
+                    signOut(auth);
+                    return;
+                }
+
+                if (result.success) {
+                    renderLogTable(result.data);
+                }
+            } catch (e) {
+                console.error("載入日誌錯誤", e);
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        function renderLogTable(logs) {
+            const tbody = document.getElementById('log-table-body');
+            tbody.innerHTML = "";
+
+            logs.forEach(log => {
+                const d = new Date(log.timestamp);
+                const timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                
+                let typeBadge = "";
+                let summary = "";
+                if(log.type === 'tarot') { typeBadge = '<span class="badge badge-tarot">🔮 塔羅解碼</span>'; summary = `領域：${log.topic}`; }
+                else if(log.type === 'daily_draw') { typeBadge = '<span class="badge badge-ai">✨ 每日一抽</span>'; summary = `抽中：${log.topic}`; }
+                else if(log.type === 'recharge') { typeBadge = '<span class="badge badge-pay">💰 金流紀錄</span>'; summary = `LINE Pay 儲值成功`; }
+                else { typeBadge = `<span class="badge">${log.type}</span>`; }
+
+                let pointClass = "point-zero";
+                let pointText = log.points_change;
+                if (log.points_change > 0) { pointClass = "point-plus"; pointText = `+${log.points_change}`; }
+                else if (log.points_change < 0) { pointClass = "point-minus"; }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${timeStr}</td>
+                    <td>${typeBadge}</td>
+                    <td class="${pointClass}">${pointText}</td>
+                    <td><span style="color:var(--primary); font-weight:bold;">👤 ${log.displayName}</span> <br> <span style="color:#888; font-size:11px;">${log.userId}</span> <br> ${summary}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- 🧠 AI 設定相關 (留作後續擴充) ---
+        window.saveAISettings = function() {
+            alert("AI 大腦設定 API 已預留，待後端接通即可寫入資料庫！");
+        }
+
+        // --- 輔助工具 ---
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+    </script>
+</body>
+</html>

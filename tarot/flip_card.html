@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>命運解碼室-靈能調頻</title>
+    
+    <script src="/env.js?v=2"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+    <style>
+        :root {
+            --gold: #D4AF37; --gold-light: #F9E498; --bg-deep: #050508;
+            --slot-w: 80px; --slot-h: 128px;
+            --core-w: 147px; --core-h: 235px;
+        }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-deep); color: #fff; 
+            font-family: 'PingFang TC', 'Noto Serif TC', serif; 
+            overflow: hidden; height: 100vh; display: flex; flex-direction: column;
+            user-select: none; -webkit-user-select: none;
+        }
+
+        /* 🌌 永恆銀河背景 */
+        #space-canvas { position: fixed; inset: 0; z-index: -10; pointer-events: none; }
+        .vignette { position: fixed; inset: 0; background: radial-gradient(circle at center, transparent 30%, #000 120%); z-index: -9; pointer-events: none; }
+
+        /* --- 大廳 (Lobby) --- */
+        #lobby {
+            position: fixed; inset: 0; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; z-index: 50; 
+            background: rgba(5, 5, 8, 0.2); 
+            backdrop-filter: blur(2px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        #lobby.hidden { opacity: 0; pointer-events: none; transform: scale(1.1); }
+        .lobby-title { color: var(--gold); font-size: 32px; font-weight: 900; letter-spacing: 6px; margin-bottom: 40px; text-shadow: 0 0 25px var(--gold); }
+        .topic-btn {
+            background: rgba(0, 0, 0, 0.4); border: 1.5px solid rgba(212,175,55,0.6); color: var(--gold-light); 
+            width: 80%; max-width: 300px; padding: 20px; margin: 12px 0; border-radius: 50px; 
+            font-size: 18px; font-weight: bold; letter-spacing: 4px; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 0 10px rgba(212,175,55,0.1);
+        }
+        .topic-btn:active { background: rgba(212,175,55,0.3); transform: scale(0.97); }
+
+        /* --- 塔羅房 (Tarot Room) --- */
+        #tarot-room { display: flex; flex-direction: column; height: 100%; opacity: 0; transition: 0.8s 0.3s; pointer-events: none; }
+        #tarot-room.active { opacity: 1; pointer-events: auto; }
+
+        .top-section { padding-top: 6vh; text-align: center; z-index: 20; }
+        .slots { display: flex; justify-content: center; gap: 18px; margin: 20px 0; }
+        .slot {
+            width: var(--slot-w); height: var(--slot-h); border: 1.5px dashed rgba(255,255,255,0.3); border-radius: 8px;
+            position: relative; background-color: rgba(0,0,0,0.5); transition: 0.4s;
+            background-size: cover; background-position: center;
+        }
+        .slot-label { position: absolute; bottom: -28px; width: 100%; text-align: center; font-size: 13px; color: #999; letter-spacing: 3px; }
+
+        @keyframes impact-flash {
+            0% { box-shadow: 0 0 0px #fff; border-color: #555; filter: brightness(1); transform: scale(1); }
+            20% { box-shadow: 0 0 60px #fff, 0 0 100px var(--gold); border-color: #fff; filter: brightness(2); transform: scale(1.1); background-color: #fff; }
+            100% { box-shadow: 0 0 15px rgba(212,175,55,0.6); border-color: var(--gold); filter: brightness(1); transform: scale(1); }
+        }
+        @keyframes persistent-simmer {
+            0%, 100% { box-shadow: 0 0 10px rgba(212,175,55,0.3); }
+            50% { box-shadow: 0 0 20px rgba(212,175,55,0.6); }
+        }
+        .slot.impact { animation: impact-flash 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; border-style: solid; border-width: 2px; }
+        .slot.simmer { animation: persistent-simmer 3s infinite ease-in-out; border-style: solid; border-width: 2px; border-color: var(--gold);}
+
+        .card-front-content {
+            position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #5C4033; text-shadow: 0 0 5px rgba(255,255,255,0.9); padding: 5px; text-align: center;
+        }
+        .front-emoji { font-size: 22px; margin-bottom: 5px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3)); }
+        .front-name { font-size: 16px; font-weight: 900; letter-spacing: 1px; margin-bottom: 8px; font-family: 'Noto Serif TC', serif; }
+        .front-keyword { font-size: 11px; font-weight: bold; background: rgba(255,255,255,0.6); padding: 2px 6px; border-radius: 10px; border: 1px solid rgba(92,64,51,0.3); }
+
+        .core-area { flex: 1; display: flex; justify-content: center; align-items: center; position: relative; padding-top: 20px;}
+        
+        #energy-core {
+            width: var(--core-w); height: var(--core-h); border-radius: 12px;
+            background-size: cover; background-position: center; border: 1.5px solid var(--gold);
+            box-shadow: 0 0 30px rgba(212,175,55,0.3), 0 15px 40px rgba(0,0,0,0.8);
+            position: relative; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            display: flex; justify-content: center; align-items: center; z-index: 10;
+        }
+
+        #energy-core::before, #energy-core::after {
+            content: ''; position: absolute; inset: 0;
+            background-size: cover; background-position: center;
+            border-radius: 12px; border: 1.5px solid rgba(212,175,55,0.3);
+            z-index: -1; transition: 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+            opacity: 0; transform: scale(0.95);
+        }
+
+        #energy-core.shuffling {
+            animation: card-jitter 0.08s infinite alternate;
+            filter: brightness(1.2) contrast(1.1);
+            box-shadow: 0 0 40px rgba(212,175,55,0.8), 0 0 80px rgba(255,255,255,0.3);
+        }
+        #energy-core.shuffling::before { opacity: 0.7; transform: translateX(-20px) scale(0.92) rotate(-5deg); }
+        #energy-core.shuffling::after { opacity: 0.7; transform: translateX(20px) scale(0.92) rotate(5deg); }
+
+        @keyframes card-jitter { 0% { transform: translateY(-3px); } 100% { transform: translateY(3px); } }
+        @keyframes core-pulse { 0%, 100% { box-shadow: 0 0 30px rgba(212,175,55,0.3); border-color: rgba(212,175,55,0.5); } 50% { box-shadow: 0 0 50px rgba(212,175,55,0.7); border-color: var(--gold-light); } }
+        
+        #energy-core.pulse { animation: core-pulse 3s infinite; }
+        #energy-core:active { transform: scale(0.95); }
+        
+        #core-number {
+            font-size: 80px; font-family: 'Times New Roman', serif; font-weight: bold;
+            color: var(--gold-light); text-shadow: 0 0 15px rgba(0,0,0,1), 0 0 30px var(--gold);
+            pointer-events: none; transition: 0.1s; z-index: 2;
+        }
+
+        .tuning-area { padding: 0 30px 40px 30px; text-align: center; z-index: 20; transition: 0.5s; }
+        .tuning-label { color: #aaa; font-size: 13px; letter-spacing: 2px; margin-bottom: 15px; }
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; height: 40px; }
+        input[type=range]:focus { outline: none; }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer;
+            background: linear-gradient(90deg, transparent, rgba(212,175,55,0.8), transparent); border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 24px; width: 24px; border-radius: 50%; background: #fff;
+            box-shadow: 0 0 15px var(--gold), inset 0 0 5px #000; cursor: pointer;
+            -webkit-appearance: none; margin-top: -10px; transition: 0.2s;
+        }
+        input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); box-shadow: 0 0 25px #fff; }
+
+        #submitBtn {
+            background: linear-gradient(135deg, var(--gold), #B8860B); color: #000; border: none; 
+            padding: 15px 50px; border-radius: 50px; font-weight: 900; font-size: 18px; letter-spacing: 2px;
+            opacity: 0; transform: translateY(20px); transition: 0.5s; box-shadow: 0 0 20px rgba(212,175,55,0.5); 
+            position: absolute; bottom: 40px; left: 50%; margin-left: -105px; pointer-events: none;
+            z-index: 999;
+        }
+        #submitBtn.active { opacity: 1; transform: translateY(0); pointer-events: auto; animation: pulse-btn 2s infinite; cursor: pointer; }
+        #submitBtn:disabled { filter: grayscale(1); animation: none; pointer-events: none; }
+        @keyframes pulse-btn { 0%,100% { box-shadow: 0 0 15px rgba(212,175,55,0.5); } 50% { box-shadow: 0 0 30px var(--gold); } }
+
+        #particle-container { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
+        .particle { position: absolute; border-radius: 50%; background: #fff; box-shadow: 0 0 10px var(--gold); }
+
+        #ritual-loader {
+            position: fixed; inset: 0; z-index: 9999; background: rgba(5,5,8,0.85);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: 0.5s ease; backdrop-filter: blur(6px);
+        }
+        #ritual-loader.active { opacity: 1; pointer-events: auto; }
+        .loader-ring {
+            width: 80px; height: 80px; border: 3px solid transparent;
+            border-top-color: var(--gold); border-bottom-color: var(--gold);
+            border-radius: 50%; animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+            margin-bottom: 25px; box-shadow: 0 0 20px rgba(212,175,55,0.3);
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loader-text { color: var(--gold-light); font-size: 16px; font-weight: bold; letter-spacing: 4px; animation: pulse-text 2s infinite; }
+        @keyframes pulse-text { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; text-shadow: 0 0 15px var(--gold); } }
+    </style>
+</head>
+<body>
+
+    <canvas id="space-canvas"></canvas>
+    <div class="vignette"></div>
+
+    <div id="lobby">
+        <div class="lobby-title">命運解碼室</div>
+        <p style="color: #a0a0a0; margin-bottom: 40px; letter-spacing: 2px;">請鎖定欲窺探之領域</p>
+        <button class="topic-btn" data-topic="感情">💖 感情與糾葛</button>
+        <button class="topic-btn" data-topic="事業">💼 事業與財富</button>
+        <button class="topic-btn" data-topic="綜合">🌟 綜合與指引</button>
+    </div>
+
+    <div id="tarot-room">
+        <div class="top-section">
+            <div id="room-title" style="color:var(--gold); font-size: 1.1rem; font-weight: bold; letter-spacing: 4px;">領域感應中</div>
+            <div class="slots">
+                <div class="slot" id="slot-0"><div class="slot-label">過去</div></div>
+                <div class="slot" id="slot-1"><div class="slot-label">現在</div></div>
+                <div class="slot" id="slot-2"><div class="slot-label">未來</div></div>
+            </div>
+        </div>
+
+        <div class="core-area">
+            <div id="energy-core" class="pulse">
+                <div id="core-number">39</div>
+            </div>
+        </div>
+
+        <div class="tuning-area" id="tuning-ui">
+            <div class="tuning-label" id="instruction">滑動儀表，注入靈力感應號碼</div>
+            <input type="range" id="frequency-slider" min="1" max="78" value="39">
+        </div>
+        
+        <button id="submitBtn">解開結界</button>
+    </div>
+
+    <div id="ritual-loader">
+        <div class="loader-ring"></div>
+        <div class="loader-text">靈力運作中，請稍待...</div>
+    </div>
+
+    <div id="particle-container"></div>
+
+    <script>
+        // --- 🚩 2. 動態套用 ENV 變數中的圖片資源 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof ENV !== 'undefined') {
+                const styleSheet = document.createElement("style");
+                styleSheet.innerText = `
+                    #energy-core { background-image: url('${ENV.IMG_BACK}'); }
+                    #energy-core::before, #energy-core::after { background-image: url('${ENV.IMG_BACK}'); }
+                `;
+                document.head.appendChild(styleSheet);
+            } else {
+                alert("🚨 無法載入 env.js，請檢查配置檔路徑！");
+            }
+        });
+
+        // --- 🌌 3. 永恆銀河引擎 ---
+        const canvas = document.getElementById('space-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+        
+        const stars = []; const nebulas = []; const meteors = [];
+        for(let i=0; i<200; i++) stars.push({x: Math.random()*width, y: Math.random()*height, r: Math.random()*1.0, a: Math.random()});
+        for(let i=0; i<300; i++) { 
+            nebulas.push({ angle: Math.random()*Math.PI*2, radius: Math.random()*width*0.8, speed: (Math.random()*0.009)+0.0005, size: Math.random()*3, color: `rgba(${Math.random()>0.5?'212,175,55':'138,43,226'},${Math.random()*0.45})` });
+        }
+        meteors.push({x: width * 0.8, y: -50, vx: -4, vy: 5, life: 1.2});
+
+        function animateSpace() {
+            ctx.clearRect(0,0,width,height);
+            ctx.fillStyle='#fff';
+            stars.forEach(s => { s.a += (Math.random()-0.5)*0.1; if(s.a<0.1)s.a=0.1; if(s.a>1)s.a=1; ctx.globalAlpha=s.a; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
+            ctx.globalAlpha=1;
+            const cx = width/2, cy = height/2;
+            nebulas.forEach(n => { n.angle += n.speed; const x = cx + Math.cos(n.angle)*n.radius; const y = cy + Math.sin(n.angle)*n.radius; ctx.fillStyle = n.color; ctx.beginPath(); ctx.arc(x,y,n.size,0,Math.PI*2); ctx.fill(); });
+            if(Math.random()<0.025) meteors.push({x: Math.random()*width, y: -50, vx: Math.random()*2+3, vy: 5, life: 1});
+            for(let i=meteors.length-1; i>=0; i--) {
+                let m = meteors[i]; m.x+=m.vx; m.y+=m.vy; m.life-=0.020;
+                const grad = ctx.createLinearGradient(m.x, m.y, m.x-m.vx*15, m.y-m.vy*15);
+                grad.addColorStop(0, `rgba(255,255,255,${m.life})`); grad.addColorStop(1, 'rgba(212,175,55,0)');
+                ctx.strokeStyle=grad; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(m.x,m.y); ctx.lineTo(m.x-m.vx*15, m.y-m.vy*15); ctx.stroke();
+                if(m.life<=0) meteors.splice(i,1);
+            }
+            requestAnimationFrame(animateSpace);
+        }
+        animateSpace();
+
+        // --- 🔮 4. 靈魂標籤庫與宇宙洗牌 ---
+        const majorArcana = [ "愚者|🌀|無限潛能", "魔術師|🪄|顯化奇蹟", "女祭司|🌙|直覺奧秘", "女皇|👑|豐盛孕育", "皇帝|🦅|秩序建立", "教皇|⛪|精神指引", "戀人|👩‍❤️‍👨|靈魂契合", "戰車|🐎|意志征服", "力量|🦁|柔性堅韌", "隱士|🏮|內在尋道", "命運之輪|🎡|業力輪轉", "正義|⚖️|平衡裁決", "倒吊人|🪢|換位思考", "死神|🦋|毀滅重生", "節制|🌈|和諧煉金", "惡魔|⛓️|物質枷鎖", "高塔|⚡|粉碎重建", "星星|✨|希望指引", "月亮|🐺|潛意識恐懼", "太陽|☀️|生命喜悅", "審判|🎺|靈魂覺醒", "世界|🌍|圓滿達成" ];
+        const suits = [ {s:"權杖", e:"🔥", k:["新行動","抉擇","擴展","穩固","衝突","勝利","防禦","速達","疲憊","重擔","熱情","衝動","魅力","權威"]}, {s:"聖杯", e:"💧", k:["新情感","結合","慶祝","倦怠","失落","回憶","幻象","追尋","滿願","圓滿","溫柔","浪漫","直覺","包容"]}, {s:"寶劍", e:"⚔️", k:["新思想","盲點","悲痛","休養","爭執","渡過","欺瞞","束縛","焦慮","終結","機警","衝鋒","理智","嚴肅"]}, {s:"錢幣", e:"🪙", k:["新資源","波動","合作","守成","匱乏","施受","靜待","精進","豐收","傳承","務實","穩健","富足","基業"]} ];
+        const tarotData = majorArcana.map(str => { const [n,e,k] = str.split('|'); return {name: n, emoji: e, keyword: k}; });
+        suits.forEach(suit => { suit.k.forEach((kw, i) => { const ranks = ["一","二","三","四","五","六","七","八","九","十","侍者","騎士","王后","國王"]; tarotData.push({ name: `${suit.s}${ranks[i]}`, emoji: suit.e, keyword: kw }); }); });
+        for (let i = tarotData.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [tarotData[i], tarotData[j]] = [tarotData[j], tarotData[i]];
+        }
+        
+        // --- 🕹️ 5. 核心互動變數 ---
+        const slider = document.getElementById('frequency-slider');
+        const coreNum = document.getElementById('core-number');
+        const particleContainer = document.getElementById('particle-container');
+        const coreCard = document.getElementById('energy-core'); // 🚨 就是這行！我把靈魂核心加回來了！
+        let currentTopic = "";
+        let drawnCount = 0;
+        let selectedCards = [];
+        let isAnimating = false;
+        let isSubmitting = false;
+
+        // ==========================================
+        // 🚀 6. 初始化 LIFF 與 門禁防護系統
+        // ==========================================
+        liff.init({ liffId: ENV.TAROT_LIFF_ID }).then(async () => {
+            
+            if (!liff.isInClient()) {
+                document.body.innerHTML = `
+                    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #0A0B10; color: #D4AF37; text-align: center; padding: 20px; font-family: 'Noto Serif TC', serif, sans-serif;">
+                        <div style="font-size: 60px; margin-bottom: 20px; animation: float 3s ease-in-out infinite;">🔮</div>
+                        <h2 style="margin-bottom: 15px; letter-spacing: 2px;">結界能量不穩</h2>
+                        <p style="color: #E0E0E0; line-height: 1.8; font-size: 16px;">
+                            為了維持靈能結界的純粹與穩定，<br>
+                            請關閉此網頁，並回到 <b>LINE 官方帳號</b> 內<br>
+                            點擊圖文選單重新開啟此空間。
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (!liff.isLoggedIn()) {
+                liff.login();
+                return;
+            }
+
+            // 🚀 已確保登入，執行 Stage 1 埋點
+            const profile = await liff.getProfile();
+            fetch(`${ENV.API_BASE}/api/log/stage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    userId: profile.userId, 
+                    stage: "Stage 1: Open LIFF",
+                    type: ENV.TYPE
+                })
+            }).catch(e => console.log("埋點發送忽略"));
+            
+        }).catch((err) => {
+            console.error("LIFF 初始化失敗", err);
+            alert("⚠️ 系統初始化失敗，請確認網路連線或稍後再試。");
+        });
+
+        // 進入塔羅房
+        document.querySelectorAll('.topic-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                currentTopic = e.target.dataset.topic;
+                document.getElementById('room-title').innerText = `【${currentTopic}】靈能調頻中`;
+                document.getElementById('lobby').classList.add('hidden');
+                document.getElementById('tarot-room').classList.add('active');
+            });
+        });
+
+        // 🎛️ 數字調頻感應
+        let shuffleTimeout;
+        slider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            const isUsed = selectedCards.some(c => c.index === (val - 1));
+
+            if (isUsed) {
+                coreNum.innerText = ""; 
+                coreCard.style.opacity = "0.35"; 
+                coreCard.style.filter = "grayscale(1) blur(1px)"; 
+                coreCard.style.pointerEvents = "none"; 
+                coreCard.classList.remove('shuffling', 'pulse');
+            } else {
+                coreNum.innerText = val;
+                coreCard.style.opacity = "1";
+                coreCard.style.filter = "grayscale(0) blur(0px)"; 
+                coreCard.style.pointerEvents = "auto";
+                coreCard.classList.remove('pulse');
+                coreCard.classList.add('shuffling');
+                coreNum.style.transform = `scale(${1 + Math.random()*0.15})`;
+                coreNum.style.textShadow = `0 0 ${15+Math.random()*30}px #fff, 0 0 60px var(--gold)`;
+            }
+
+            clearTimeout(shuffleTimeout);
+            shuffleTimeout = setTimeout(() => {
+                if (!isUsed) {
+                    coreCard.classList.remove('shuffling');
+                    coreCard.classList.add('pulse');
+                    coreNum.style.transform = 'scale(1)';
+                }
+            }, 150);
+        });
+
+        // 💥 靈力具現化
+        coreCard.addEventListener('click', () => {
+            if(isAnimating || drawnCount >= 3) return;
+            const selectedIdx = parseInt(slider.value) - 1;
+            if(selectedCards.some(c => c.index === selectedIdx)) return;
+
+            isAnimating = true;
+            const cardData = tarotData[selectedIdx];
+            selectedCards.push({ index: selectedIdx, name: cardData.name });
+            
+            const targetSlot = document.getElementById(`slot-${drawnCount}`);
+            const coreRect = coreCard.getBoundingClientRect();
+            const slotRect = targetSlot.getBoundingClientRect();
+
+            coreCard.style.opacity = '0';
+            coreCard.style.transform = 'scale(0.8)';
+
+            const numParticles = 40;
+            let completedParticles = 0;
+            
+            for(let i=0; i<numParticles; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                const size = Math.random() * 4 + 2;
+                p.style.width = `${size}px`; p.style.height = `${size}px`;
+                particleContainer.appendChild(p);
+
+                const startX = coreRect.left + coreRect.width/2;
+                const startY = coreRect.top + coreRect.height/2;
+                const endX = slotRect.left + slotRect.width/2 + (Math.random()-0.5)*20;
+                const endY = slotRect.top + slotRect.height/2 + (Math.random()-0.5)*20;
+                
+                const cpX = startX + (Math.random()-0.5) * 300;
+                const cpY = startY + (Math.random()-0.5) * 300;
+                const duration = 600 + Math.random() * 400;
+                
+                const anim = p.animate([
+                    { transform: `translate(${startX}px, ${startY}px) scale(1)`, opacity: 1, backgroundColor: '#fff' },
+                    { transform: `translate(${cpX}px, ${cpY}px) scale(1.5)`, opacity: 0.8, backgroundColor: '#D4AF37', offset: 0.3 },
+                    { transform: `translate(${endX}px, ${endY}px) scale(0)`, opacity: 0 }
+                ], { duration: duration, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' });
+
+                anim.onfinish = () => {
+                    p.remove();
+                    completedParticles++;
+                    if(completedParticles === numParticles) {
+                        targetSlot.classList.add('impact');
+                        setTimeout(() => { targetSlot.classList.add('simmer'); }, 600);
+                        
+                        targetSlot.style.backgroundImage = `url('${ENV.IMG_FRONT}')`;
+                        targetSlot.innerHTML = `
+                            <div class="card-front-content">
+                                <div class="front-emoji">${cardData.emoji}</div>
+                                <div class="front-name">${cardData.name}</div>
+                                <div class="front-keyword">${cardData.keyword}</div>
+                            </div>
+                        `;
+                        
+                        drawnCount++;
+                        isAnimating = false;
+                        
+                        if(drawnCount < 3) {
+                            setTimeout(() => {
+                                slider.dispatchEvent(new Event('input'));
+                                coreCard.style.transform = 'scale(1)';
+                                document.getElementById('instruction').innerText = `請調頻尋找第 ${drawnCount+1} 枚印記...`;
+                            }, 500);
+                        } else {
+                            document.getElementById('tuning-ui').style.opacity = '0';
+                            document.getElementById('tuning-ui').style.pointerEvents = 'none';
+                            const sBtn = document.getElementById('submitBtn');
+                            sBtn.classList.add('active');
+                            document.getElementById('room-title').innerText = "🔮 結界已成，請啟動解碼";
+                        }
+                    }
+                };
+            }
+        });
+
+        // ==========================================
+        // 🚀 API 背景傳送邏輯 (具備嚴格 AccessToken 防護)
+        // ==========================================
+        document.getElementById('submitBtn').addEventListener('click', async () => {
+            if (isSubmitting) return;
+            isSubmitting = true;
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = "結界凝聚中...";
+
+            const loader = document.getElementById('ritual-loader');
+            loader.classList.add('active');
+
+            try {
+                // 🛡️ 嚴格防禦：必須確認登入狀態，否則直接拋出錯誤
+                if (!liff.isLoggedIn()) {
+                    throw new Error("尚未登入 LINE，請重新開啟此視窗");
+                }
+
+                const profile = await liff.getProfile();
+                const userId = profile.userId;
+                const accessToken = liff.getAccessToken();
+
+                if (!accessToken) {
+                    throw new Error("無法取得安全通行證 (Access Token)");
+                }
+
+                const cardNames = selectedCards.map(c => c.name);
+
+                // 🌟 使用 ENV.API_BASE 呼叫後端
+                const response = await fetch(`${ENV.API_BASE}/api/tarot/ticket`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}` 
+                    },
+                    body: JSON.stringify({
+                        userId: userId,
+                        topic: currentTopic,
+                        cards: cardNames
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const spell = `🔮 祈求宇宙指引：[${currentTopic}] 領域`;
+                    await liff.sendMessages([{ type: 'text', text: spell }]);
+                    liff.closeWindow(); 
+                } else {
+                    throw new Error(data.message || "結界異常，票根核發失敗");
+                }
+
+            } catch (error) {
+                // 🚨 捕捉到任何錯誤，優雅地關閉動畫並印出實話
+                alert("🚨 系統錯誤: " + error.message);
+                console.error("詳細錯誤:", error);
+                
+                loader.classList.remove('active');
+                btn.disabled = false;
+                btn.innerText = "解開結界";
+                isSubmitting = false;
+            }
+        });
+    </script>
+</body>
+</html>
