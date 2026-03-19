@@ -250,7 +250,8 @@
         const provider = new GoogleAuthProvider();
 
         let currentIdToken = "";
-        const API_URL = ENV.API_BASE || "https://bastro-bot-217800246535.asia-east1.run.app"; 
+        // Define API_URL safely. Note: ENV must be loaded before this script runs.
+        const API_URL = typeof ENV !== 'undefined' && ENV.API_BASE ? ENV.API_BASE : "https://bastro-bot-217800246535.asia-east1.run.app"; 
 
         // --- 登入狀態監聽 ---
         onAuthStateChanged(auth, async (user) => {
@@ -264,8 +265,9 @@
                 // 取得 Token 用於呼叫後端 API
                 currentIdToken = await user.getIdToken();
                 
-                // 載入預設資料
+                // 載入預設資料 (Logs and AI Settings)
                 loadLogs();
+                loadAISettings(); 
             } else {
                 // 未登入
                 document.getElementById('login-screen').style.display = 'flex';
@@ -337,9 +339,7 @@
                     typeBadge = '<span class="badge badge-tarot">🔮 塔羅解碼</span>'; 
                     summary = `領域：${log.topic || '未指定'}`; 
                 }
-                // 👇 新增：判斷紫微斗數
                 else if(log.type === 'ziwei' || log.serviceType === 'ziwei') { 
-                    // 借用一點 CSS 讓紫微斗數的標籤有專屬顏色 (紫紅色)
                     typeBadge = '<span class="badge" style="background:#F3E5F5; color:#8E24AA; border:1px solid #CE93D8;">🏮 紫微解碼</span>'; 
                     summary = log.summary || '排盤解碼'; 
                 }
@@ -355,7 +355,7 @@
                     typeBadge = `<span class="badge">${log.type || log.serviceType || '未知'}</span>`; 
                 }
 
-                // 2. 修正點數讀取 (相容舊的 points_change 跟新的 points)
+                // 2. 修正點數讀取
                 let rawPoints = log.points_change !== undefined ? log.points_change : (log.points || 0);
                 let pointClass = "point-zero";
                 let pointText = rawPoints;
@@ -368,7 +368,7 @@
                     pointClass = "point-minus"; 
                 }
 
-                // 3. 修正使用者名稱讀取 (相容舊的 displayName 跟新的 userName)
+                // 3. 修正使用者名稱讀取
                 let showName = log.displayName || log.userName || '未知用戶';
 
                 const tr = document.createElement('tr');
@@ -393,13 +393,11 @@
                 });
                 const result = await response.json();
                 
-                // 💡 可以在瀏覽器按 F12 (Console) 看到底抓到什麼資料
                 console.log("📥 從資料庫讀取到的設定：", result); 
 
                 if (result.success && result.data) {
                     const data = result.data;
                     
-                    // 🔮 載入塔羅設定
                     if(data.tarot) {
                         const tarotModel = document.getElementById('tarot-model');
                         const tarotCost = document.getElementById('tarot-cost');
@@ -409,7 +407,6 @@
                         if(tarotPrompt) tarotPrompt.value = data.tarot.prompt || '';
                     }
                     
-                    // 🏮 載入紫微設定
                     if(data.ziwei) {
                         const ziweiModel = document.getElementById('ziwei-model');
                         const ziweiCost = document.getElementById('ziwei-cost');
@@ -419,7 +416,6 @@
                         if(ziweiPrompt) ziweiPrompt.value = data.ziwei.prompt || '';
                     }
                     
-                    // ✨ 載入每日一抽設定
                     if(data.daily) {
                         const dailyModel = document.getElementById('daily-model');
                         if(dailyModel) dailyModel.value = data.daily.model;
@@ -466,7 +462,6 @@
                 const result = await response.json();
                 if (result.success) {
                     alert("✅ 各項命理服務的模型與定價已更新成功！");
-                    // 儲存成功後，強制重新讀取一次，確保畫面與資料庫同步！
                     await loadAISettings(); 
                 } else {
                     alert("❌ 儲存失敗：" + result.msg);
@@ -483,7 +478,11 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
+            
+            // Allow calling switchTab without an event object (e.g., programmatic switching)
+            if (window.event && window.event.currentTarget) {
+                 window.event.currentTarget.classList.add('active');
+            }
         }
 
         function showLoading(show) {
