@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BrandDecoder - 命運星盤</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="../env.js"></script>
+    <script src="/env.js"></script>
     
     <style>
         :root {
@@ -183,12 +183,9 @@
 
         async function initLIFF() {
             try {
-                // 確保 env.js 有載入
-                if (typeof LIFF_ID === 'undefined') {
-                    throw new Error("找不到 env.js 中的 LIFF_ID");
-                }
+                // 👇 把原本的 LIFF_ID 改成 ENV.ZIWEI_LIFF_ID
+                await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
                 
-                await liff.init({ liffId: LIFF_ID });
                 if (!liff.isLoggedIn()) {
                     liff.login();
                     return;
