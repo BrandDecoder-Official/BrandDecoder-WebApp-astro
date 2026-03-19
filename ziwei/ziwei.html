@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BrandDecoder - 命運星盤</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="../env.js"></script>
+    
     <style>
         :root {
-            --bg-color: #0A0B10; /* 基底色 */
-            --bg-purple: #150525; /* 深紫暈 */
+            --bg-color: #0A0B10;
+            --bg-purple: #150525;
             --gold: #D4AF37;
             --gold-light: #F9E498;
             --gray: #333;
@@ -17,25 +19,19 @@
         body {
             margin: 0; padding: 0; background-color: var(--bg-color); color: #E0E0E0;
             font-family: 'Noto Serif TC', serif; 
-            overflow: hidden; /* 隱藏滾動條，確保沉浸感 */
-            height: 100vh; position: relative;
+            overflow: hidden; height: 100vh; position: relative;
         }
 
-        /* ----------------------------------------------------------- */
-        /* 🌌 沉浸式背景層 (沉浸式深空) */
-        /* ----------------------------------------------------------- */
+        /* 🌌 沉浸式深空背景 */
         .universal-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            /* 極深藍與極深紫的緩慢漸層，創造深邃感 */
             background: radial-gradient(circle at 50% 50%, var(--bg-purple) 0%, var(--bg-color) 100%);
-            z-index: 0;
-            opacity: 0.8;
-            /* 緩慢的旋轉動畫，增加高級感 */
+            z-index: 0; opacity: 0.8;
             animation: rotateGalaxy 120s linear infinite;
         }
         @keyframes rotateGalaxy { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        /* 🔮 每一個步驟的容器 (沉浸式對話流架構) */
+        /* 🔮 步驟容器 */
         .step-section {
             position: absolute; top: 50%; left: 50%; width: 90%; max-width: 400px; text-align: center; z-index: 10;
             transform: translate(-50%, -30%); opacity: 0; pointer-events: none;
@@ -44,9 +40,10 @@
         .step-section.active { transform: translate(-50%, -50%); opacity: 1; pointer-events: auto; }
         .step-section.exit-up { transform: translate(-50%, -70%); opacity: 0; pointer-events: none; }
 
-        h2 { color: var(--gold); font-weight: 300; letter-spacing: 2px; margin-bottom: 30px; line-height: 1.6; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
+        h2 { color: var(--gold); font-weight: 300; letter-spacing: 2px; margin-bottom: 25px; line-height: 1.6; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
         .subtitle { font-size: 14px; color: #888; margin-bottom: 20px; letter-spacing: 1px; }
 
+        /* 按鈕與選單樣式 */
         .btn-choice {
             display: block; width: 100%; padding: 18px; margin-bottom: 15px;
             background: rgba(255, 255, 255, 0.02);
@@ -60,14 +57,19 @@
         }
 
         .form-group { margin-bottom: 20px; text-align: left; }
-        .form-label { display: block; font-size: 14px; color: #aaa; margin-bottom: 8px; padding-left: 5px; }
-        input[type="date"], select {
+        .form-label { display: block; font-size: 12px; color: #aaa; margin-bottom: 8px; padding-left: 5px; }
+        
+        /* 三柱日期排版 */
+        .date-group { display: flex; gap: 8px; }
+        .date-group select { flex: 1; text-align-last: center; }
+
+        select {
             width: 100%; padding: 15px; box-sizing: border-box;
             background: rgba(0,0,0,0.6); border: 1px solid var(--gray);
             color: var(--gold-light); font-size: 16px; border-radius: 8px;
             color-scheme: dark; appearance: none;
         }
-        input[type="date"]:focus, select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
+        select:focus { outline: none; border-color: var(--gold); }
 
         .btn-submit {
             width: 100%; padding: 18px; margin-top: 15px;
@@ -75,87 +77,43 @@
             border: none; border-radius: 8px;
             color: #000; font-size: 18px; font-weight: bold; letter-spacing: 2px;
             cursor: pointer; box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
-            transition: all 0.3s;
+            transition: transform 0.2s;
         }
         .btn-submit:active { transform: scale(0.96); }
+        .btn-submit:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; }
 
-        /* ----------------------------------------------------------- */
-        /* ✨ 終極升級：沉浸式 AI 深度解碼載入畫面 */
-        /* ----------------------------------------------------------- */
+        /* ✨ 載入遮罩 */
         #loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--bg-color);
-            z-index: 100;
+            background-color: var(--bg-color); z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none;
-            transition: opacity 1s ease;
-            overflow: hidden; /* 防止特效溢出 */
+            opacity: 0; pointer-events: none; transition: opacity 1s ease; overflow: hidden;
         }
         #loading-overlay.show { opacity: 1; pointer-events: auto; }
 
-        /* Layer 1: 深邃冷調星空 (專屬紫微斗數場景) */
-        #loading-overlay .loading-bg {
-            position: absolute; width: 100%; height: 100%;
-            background: radial-gradient(circle at 50% 50%, #1a1c2e 0%, var(--bg-color) 100%);
-            opacity: 0.6;
-            animation: rotateGalaxy 180s linear infinite;
-        }
-
-        /* Layer 2: 偽十二宮位天盤線條 (半透明幾何結構) */
+        .loading-bg { position: absolute; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, #1a1c2e 0%, var(--bg-color) 100%); opacity: 0.6; }
         .astrolabe-grid {
-            position: absolute; width: 150vw; height: 150vw;
-            max-width: 1000px; max-height: 1000px;
-            border-radius: 50%;
-            /* 繪制 radial 幾何線條 */
+            position: absolute; width: 150vw; height: 150vw; max-width: 900px; max-height: 900px;
+            border-radius: 50%; opacity: 0.3;
             background-image: 
-                radial-gradient(circle, rgba(212, 175, 55, 0.05) 1px, transparent 1px),
-                repeating-radial-gradient(rgba(212, 175, 55, 0.03) 0, rgba(212, 175, 55, 0.03) 1px, transparent 1px, transparent 50px),
-                repeating-conic-gradient(from 0deg, rgba(212, 175, 55, 0.02) 0deg 10deg, transparent 10deg 30deg);
-            z-index: 1;
-            /* 與文字一起呼吸 */
+                repeating-radial-gradient(rgba(212, 175, 55, 0.05) 0, rgba(212, 175, 55, 0.05) 1px, transparent 1px, transparent 50px),
+                repeating-conic-gradient(from 0deg, rgba(212, 175, 55, 0.02) 0deg 30deg, transparent 30deg 60deg);
             animation: gridPulse 4s infinite; 
         }
-        @keyframes gridPulse { 0% { opacity: 0.5; transform: rotate(0deg) scale(1); } 50% { opacity: 1; transform: rotate(2deg) scale(1.02); } 100% { opacity: 0.5; transform: rotate(0deg) scale(1); } }
+        @keyframes gridPulse { 0%, 100% { opacity: 0.2; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.05); } }
 
-        /* Layer 3: 金色歸位流星 (飛向中央) */
-        .meteor {
-            position: absolute; background: linear-gradient(to right, rgba(255,255,255,0), rgba(212, 175, 55, 0.8));
-            width: 100px; height: 2px; border-radius: 2px; z-index: 2; opacity: 0;
-        }
-        /* 定義多組不同角度飛向中央的流星 */
-        .meteor.m1 { top: 10%; left: -10%; animation: shooting 3s 1s infinite; transform: rotate(30deg); }
-        .meteor.m2 { top: 80%; left: -10%; animation: shooting 3s 2s infinite; transform: rotate(-30deg); }
-        .meteor.m3 { top: -10%; right: 10%; animation: shooting 3s 1.5s infinite; transform: rotate(120deg); }
-        .meteor.m4 { bottom: -10%; right: 20%; animation: shooting 3s 0.5s infinite; transform: rotate(210deg); }
+        .meteor { position: absolute; background: linear-gradient(to right, rgba(255,255,255,0), var(--gold)); width: 100px; height: 2px; opacity: 0; }
+        .m1 { top: 10%; left: -10%; animation: shooting 3s 1s infinite; transform: rotate(30deg); }
+        .m2 { top: 80%; left: -10%; animation: shooting 3s 2s infinite; transform: rotate(-30deg); }
+        .m3 { top: -10%; right: 10%; animation: shooting 3s 1.5s infinite; transform: rotate(120deg); }
+        .m4 { bottom: -10%; right: 20%; animation: shooting 3s 0.5s infinite; transform: rotate(210deg); }
+        @keyframes shooting { 0% { opacity: 0; transform: translate(0, 0) rotate(inherit); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(50vw, 50vh) rotate(inherit); } }
 
-        @keyframes shooting {
-            0% { transform: translate(0, 0) rotate(inherit); opacity: 0; width: 0; }
-            30% { opacity: 1; width: 100px; }
-            100% { transform: translate(50vw, 50vh) rotate(inherit); opacity: 0; width: 0; } /* 飛向螢幕中心 */
-        }
-        /* 針對手機版修正流星終點 */
-        @media (max-width: 600px) { @keyframes shooting { 0% { opacity: 0; width: 0; } 30% { opacity: 1; width: 80px; } 100% { transform: translate(40vw, 40vh) rotate(inherit); opacity: 0; width: 0; } } }
-
-        /* Layer 4: 呼吸燈文字 (保留核心優點) */
         .loading-content { z-index: 10; text-align: center; }
-        .bd-hub {
-            font-size: 40px; margin-bottom: 20px;
-            filter: drop-shadow(0 0 10px var(--gold));
-            animation: hubGlow 4s infinite;
-        }
-        @keyframes hubGlow { 0% { opacity: 0.8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); filter: drop-shadow(0 0 20px var(--gold)); } 100% { opacity: 0.8; transform: scale(1); } }
-
-        .loading-text {
-            color: var(--gold);
-            font-size: 16px;
-            letter-spacing: 4px;
-            /* 保留你喜歡的持續呼吸特效 */
-            animation: textPulse 4s infinite; 
-        }
+        .loading-text { color: var(--gold); font-size: 16px; letter-spacing: 4px; animation: textPulse 4s infinite; }
         @keyframes textPulse { 
-            0% { opacity: 0.4; text-shadow: 0 0 5px rgba(212, 175, 55, 0.2); } 
-            50% { opacity: 1; text-shadow: 0 0 15px var(--gold), 0 0 30px var(--gold-light); color: var(--gold-light); } 
-            100% { opacity: 0.4; text-shadow: 0 0 5px rgba(212, 175, 55, 0.2); } 
+            0%, 100% { opacity: 0.4; text-shadow: 0 0 5px rgba(212, 175, 55, 0.2); } 
+            50% { opacity: 1; text-shadow: 0 0 20px var(--gold), 0 0 40px var(--gold-light); color: var(--gold-light); } 
         }
     </style>
 </head>
@@ -164,7 +122,7 @@
 
     <div id="step-1" class="step-section active">
         <h2>命運的齒輪<br>從陰陽開始轉動</h2>
-        <div class="subtitle">請選擇您的生理性別，以定大運順逆</div>
+        <div class="subtitle">請選擇您的生理性別</div>
         <button class="btn-choice" onclick="makeChoice(1, 'gender', 'M', this)">乾 (男性)</button>
         <button class="btn-choice" onclick="makeChoice(1, 'gender', 'F', this)">坤 (女性)</button>
     </div>
@@ -178,117 +136,188 @@
 
     <div id="step-3" class="step-section">
         <h2>鎖定您的時空座標</h2>
-        
         <div class="form-group">
             <label class="form-label">降生之日</label>
-            <input type="date" id="input-date" required>
+            <div class="date-group">
+                <select id="input-year"></select>
+                <select id="input-month"></select>
+                <select id="input-day"></select>
+            </div>
         </div>
-
         <div class="form-group">
             <label class="form-label">降生時辰</label>
             <select id="input-time">
                 <option value="unknown">時辰不詳 (AI 輔助校正)</option>
-                <option value="子">子時 (23:00 - 00:59)</option>
-                <option value="丑">丑時 (01:00 - 02:59)</option>
-                <option value="寅">寅時 (03:00 - 04:59)</option>
-                <option value="卯">卯時 (05:00 - 06:59)</option>
-                <option value="辰">辰時 (07:00 - 08:59)</option>
-                <option value="巳">巳時 (09:00 - 10:59)</option>
-                <option value="午">午時 (11:00 - 12:59)</option>
-                <option value="未">未時 (13:00 - 14:59)</option>
-                <option value="申">申時 (15:00 - 16:59)</option>
-                <option value="酉">酉時 (17:00 - 18:59)</option>
-                <option value="戌">戌時 (19:00 - 20:59)</option>
-                <option value="亥">亥時 (21:00 - 22:59)</option>
+                <option value="子">子時 (23:00 - 00:59)</option><option value="丑">丑時 (01:00 - 02:59)</option>
+                <option value="寅">寅時 (03:00 - 04:59)</option><option value="卯">卯時 (05:00 - 06:59)</option>
+                <option value="辰">辰時 (07:00 - 08:59)</option><option value="巳">巳時 (09:00 - 10:59)</option>
+                <option value="午">午時 (11:00 - 12:59)</option><option value="未">未時 (13:00 - 14:59)</option>
+                <option value="申">申時 (15:00 - 16:59)</option><option value="酉">酉時 (17:00 - 18:59)</option>
+                <option value="戌">戌時 (19:00 - 20:59)</option><option value="亥">亥時 (21:00 - 22:59)</option>
             </select>
         </div>
-
-        <button class="btn-submit" onclick="submitAstrolabe()">注入靈力，啟動星盤</button>
+        <button id="btn-submit-main" class="btn-submit" onclick="submitAstrolabe()">注入靈力，啟動星盤</button>
     </div>
 
     <div id="step-4" class="step-section">
         <h2>解碼完成</h2>
-        <div id="result-text" style="text-align: left; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; font-size: 14px; line-height: 1.8; color: #ccc;">
-            這裡將顯示 AI 輸出的紫微斗數深度解析...
-        </div>
-        <button class="btn-submit" style="margin-top: 30px;" onclick="location.reload()">再次解碼</button>
+        <div id="result-text" style="text-align: left; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; font-size: 15px; line-height: 1.8; color: #E0E0E0; max-height: 50vh; overflow-y: auto; white-space: pre-wrap;">
+            </div>
+        <button class="btn-submit" style="margin-top: 20px;" onclick="liff.closeWindow();">完成解碼 (關閉)</button>
     </div>
 
     <div id="loading-overlay">
         <div class="loading-bg"></div>
-        
         <div class="astrolabe-grid"></div>
-        
-        <div class="meteor m1"></div><div class="meteor m2"></div>
-        <div class="meteor m3"></div><div class="meteor m4"></div>
-
+        <div class="meteor m1"></div><div class="meteor m2"></div><div class="meteor m3"></div><div class="meteor m4"></div>
         <div class="loading-content">
-            <div class="bd-hub">🔮</div> 
-            <div class="loading-text" id="loading-msg">啟動 AI 命運大腦深度解碼</div>
+            <div style="font-size: 50px; margin-bottom: 20px; filter: drop-shadow(0 0 10px var(--gold));">🔮</div> 
+            <div class="loading-text" id="loading-msg">系統初始化中...</div>
         </div>
     </div>
 
     <script>
-        // 集中儲存使用者的命理資料
+        // 1. 全局變數與 LIFF 初始化
         const userAstrolabeData = { gender: '', calendar: '', date: '', time: '' };
+        let currentIdToken = ""; // 存放使用者的 LINE Token
 
-        // 處理步驟切換與自動推進
-        function makeChoice(currentStep, key, value, btnElement) {
+        async function initLIFF() {
+            try {
+                // 確保 env.js 有載入
+                if (typeof LIFF_ID === 'undefined') {
+                    throw new Error("找不到 env.js 中的 LIFF_ID");
+                }
+                
+                await liff.init({ liffId: LIFF_ID });
+                if (!liff.isLoggedIn()) {
+                    liff.login();
+                    return;
+                }
+                currentIdToken = liff.getIDToken();
+                console.log("LIFF 初始化成功，取得 Token。");
+            } catch (err) {
+                console.error("LIFF 初始化失敗：", err);
+                alert("系統初始化失敗，請在 LINE 內部開啟！");
+            }
+        }
+
+        // 2. 初始化日期滾輪
+        function initDatePicker() {
+            const ySelect = document.getElementById('input-year');
+            const mSelect = document.getElementById('input-month');
+            const dSelect = document.getElementById('input-day');
+
+            for(let i = 2015; i >= 1940; i--) {
+                let opt = new Option(i + ' 年', i);
+                if(i === 1990) opt.selected = true;
+                ySelect.add(opt);
+            }
+            for(let i = 1; i <= 12; i++) {
+                let val = i < 10 ? '0'+i : i;
+                mSelect.add(new Option(val + ' 月', val));
+            }
+            function updateDays() {
+                const y = parseInt(ySelect.value), m = parseInt(mSelect.value);
+                const days = new Date(y, m, 0).getDate();
+                const current = dSelect.value;
+                dSelect.innerHTML = ''; 
+                for(let i = 1; i <= days; i++) {
+                    let val = i < 10 ? '0'+i : i;
+                    dSelect.add(new Option(val + ' 日', val));
+                }
+                if(current && current <= days) dSelect.value = current;
+            }
+            ySelect.onchange = mSelect.onchange = updateDays;
+            updateDays();
+        }
+
+        // 網頁載入時執行
+        window.onload = async () => {
+            initDatePicker();
+            await initLIFF();
+        };
+
+        // 3. UI 步驟切換邏輯
+        function makeChoice(currentStep, key, value, btn) {
             userAstrolabeData[key] = value;
-            btnElement.classList.add('selected');
-
-            // 轉場：舊的往上飄，新的浮現
+            btn.classList.add('selected');
             setTimeout(() => {
-                const currentDiv = document.getElementById(`step-${currentStep}`);
-                const nextDiv = document.getElementById(`step-${currentStep + 1}`);
-                currentDiv.classList.remove('active');
-                currentDiv.classList.add('exit-up');
-                nextDiv.classList.add('active');
+                const cur = document.getElementById(`step-${currentStep}`);
+                const next = document.getElementById(`step-${currentStep + 1}`);
+                cur.classList.remove('active'); cur.classList.add('exit-up');
+                next.classList.add('active');
             }, 400);
         }
 
-        // 最終提交表單
-        function submitAstrolabe() {
+        // 4. 🌟 核心：提交表單與呼叫後端 API 🌟
+        async function submitAstrolabe() {
+            // 防呆：確認前面兩步是否有選
+            if (!userAstrolabeData.gender || !userAstrolabeData.calendar) {
+                alert("系統錯誤：遺失基本資料，請重新整理頁面。");
+                return;
+            }
+
             const y = document.getElementById('input-year').value;
             const m = document.getElementById('input-month').value;
             const d = document.getElementById('input-day').value;
             const finalDate = `${y}-${m}-${d}`;
             const time = document.getElementById('input-time').value;
-            const gender = userAstrolabeData.gender === 'M' ? '乾(男)' : '坤(女)';
-            const cal = userAstrolabeData.calendar === 'solar' ? '國曆' : '農曆';
 
-            // 🌟 核心防錯：最終確認
-            const isConfirmed = confirm(
-                `確認星辰座標？\n\n` +
-                `● 性別：${gender}\n` +
-                `● 曆法：${cal}\n` +
-                `● 日期：${finalDate}\n` +
-                `● 時辰：${time}時\n\n` +
-                `⚠️ 提醒：解碼將扣除 50 點靈力，資料將永久綁定。`
-            );
+            // 最終確認視窗
+            const genderText = userAstrolabeData.gender === 'M' ? '乾(男)' : '坤(女)';
+            const calText = userAstrolabeData.calendar === 'solar' ? '國曆' : '農曆';
+            if(!confirm(`確認開啟星盤？\n\n● 性別：${genderText}\n● 曆法：${calText}\n● 日期：${finalDate}\n● 時辰：${time}時\n\n⚠️ 將消耗 50 點靈力進行解碼。`)) return;
 
-            if(!isConfirmed) return; // 使用者按取消，留在原地修改
+            // 鎖定按鈕，防止重複點擊
+            document.getElementById('btn-submit-main').disabled = true;
 
-            // --- 以下開始執行原本的銀河載入動畫 ---
             userAstrolabeData.date = finalDate;
             userAstrolabeData.time = time;
-            document.getElementById('loading-overlay').classList.add('show');
-
-            // 營造 AI 解算的神秘文字氛圍 (搭配呼吸燈特效)
-            setTimeout(() => { document.getElementById('loading-msg').innerText = "排盤中：定紫微、安108星曜座標..."; }, 2000);
-            setTimeout(() => { document.getElementById('loading-msg').innerText = "連結宇宙阿卡西紀錄，進行深度解碼..."; }, 4500);
-
-            console.log("🚀 準備發送至 Cloud Run 的資料：", userAstrolabeData);
             
-            // [展示用] 模擬 API 回傳成功，5秒後切換到結果頁
-            setTimeout(() => {
+            // 啟動載入遮罩
+            document.getElementById('loading-overlay').classList.add('show');
+            document.getElementById('loading-msg').innerText = "驗證靈魂印記與靈力餘額...";
+
+            try {
+                // 營造 AI 運算的氛圍
+                setTimeout(() => { document.getElementById('loading-msg').innerText = "排盤中：定紫微、安108星曜座標..."; }, 2500);
+                setTimeout(() => { document.getElementById('loading-msg').innerText = "連結宇宙阿卡西紀錄，進行深度解碼..."; }, 6000);
+
+                // 🚀 正式發送 API 請求給 Cloud Run
+                const response = await fetch(`${API_URL}/api/divination/ziwei`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentIdToken}` // 傳送 LINE 身分
+                    },
+                    body: JSON.stringify({
+                        birthData: userAstrolabeData // 將生辰八字打包送出
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // 成功：隱藏載入畫面，顯示結果
+                    document.getElementById('loading-overlay').classList.remove('show');
+                    document.getElementById('step-3').classList.remove('active');
+                    document.getElementById('step-3').classList.add('exit-up');
+                    document.getElementById('step-4').classList.add('active');
+                    
+                    // 將 AI 解析結果塞入結果視窗 (使用 marked 或直接塞入 text)
+                    document.getElementById('result-text').innerText = result.replyText;
+                } else {
+                    // 失敗 (例如：靈力不足)
+                    throw new Error(result.msg || "解碼失敗，請稍後再試。");
+                }
+
+            } catch (error) {
+                console.error("API 呼叫錯誤：", error);
+                alert("錯誤：" + error.message);
+                // 發生錯誤時，隱藏載入畫面並解鎖按鈕
                 document.getElementById('loading-overlay').classList.remove('show');
-                const currentDiv = document.getElementById(`step-3`);
-                const nextDiv = document.getElementById(`step-4`);
-                currentDiv.classList.remove('active');
-                currentDiv.classList.add('exit-up');
-                nextDiv.classList.add('active');
-            }, 7000);
+                document.getElementById('btn-submit-main').disabled = false;
+            }
         }
     </script>
 </body>
