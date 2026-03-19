@@ -249,8 +249,25 @@
 
         // 最終提交表單
         function submitAstrolabe() {
-            const dateInput = document.getElementById('input-date').value;
-            if(!dateInput) { alert("請輸入您的降生之日！"); return; }
+            const y = document.getElementById('input-year').value;
+            const m = document.getElementById('input-month').value;
+            const d = document.getElementById('input-day').value;
+            const finalDate = `${y}-${m}-${d}`;
+            const time = document.getElementById('input-time').value;
+            const gender = userAstrolabeData.gender === 'M' ? '乾(男)' : '坤(女)';
+            const cal = userAstrolabeData.calendar === 'solar' ? '國曆' : '農曆';
+
+            // 🌟 核心防錯：最終確認
+            const isConfirmed = confirm(
+                `確認星辰座標？\n\n` +
+                `● 性別：${gender}\n` +
+                `● 曆法：${cal}\n` +
+                `● 日期：${finalDate}\n` +
+                `● 時辰：${time}時\n\n` +
+                `⚠️ 提醒：解碼將扣除 50 點靈力，資料將永久綁定。`
+            );
+
+            if(!isConfirmed) return; // 使用者按取消，留在原地修改
 
             userAstrolabeData.date = dateInput;
             userAstrolabeData.time = document.getElementById('input-time').value;
