@@ -269,10 +269,9 @@
 
             if(!isConfirmed) return; // 使用者按取消，留在原地修改
 
-            userAstrolabeData.date = dateInput;
-            userAstrolabeData.time = document.getElementById('input-time').value;
-
-            // 🌌 啟動終極沉浸式載入遮罩
+            // --- 以下開始執行原本的銀河載入動畫 ---
+            userAstrolabeData.date = finalDate;
+            userAstrolabeData.time = time;
             document.getElementById('loading-overlay').classList.add('show');
 
             // 營造 AI 解算的神秘文字氛圍 (搭配呼吸燈特效)
