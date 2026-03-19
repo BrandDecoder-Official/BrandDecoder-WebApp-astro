@@ -352,7 +352,9 @@
             });
         }
 
-       // --- 🧠 讀取 AI 動態設定 ---
+       // ==========================================
+        // 🧠 讀取 AI 動態設定 (加強版)
+        // ==========================================
         window.loadAISettings = async function() {
             if (!currentIdToken) return;
             try {
@@ -360,30 +362,51 @@
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
                 const result = await response.json();
+                
+                // 💡 可以在瀏覽器按 F12 (Console) 看到底抓到什麼資料
+                console.log("📥 從資料庫讀取到的設定：", result); 
+
                 if (result.success && result.data) {
                     const data = result.data;
                     
+                    // 🔮 載入塔羅設定
                     if(data.tarot) {
-                        document.getElementById('tarot-model').value = data.tarot.model;
-                        document.getElementById('tarot-cost').value = data.tarot.cost;
-                        document.getElementById('tarot-prompt').value = data.tarot.prompt || '';
+                        const tarotModel = document.getElementById('tarot-model');
+                        const tarotCost = document.getElementById('tarot-cost');
+                        const tarotPrompt = document.getElementById('tarot-prompt');
+                        if(tarotModel) tarotModel.value = data.tarot.model;
+                        if(tarotCost) tarotCost.value = data.tarot.cost;
+                        if(tarotPrompt) tarotPrompt.value = data.tarot.prompt || '';
                     }
+                    
+                    // 🏮 載入紫微設定
                     if(data.ziwei) {
-                        document.getElementById('ziwei-model').value = data.ziwei.model;
-                        document.getElementById('ziwei-cost').value = data.ziwei.cost;
-                        document.getElementById('ziwei-prompt').value = data.ziwei.prompt || '';
+                        const ziweiModel = document.getElementById('ziwei-model');
+                        const ziweiCost = document.getElementById('ziwei-cost');
+                        const ziweiPrompt = document.getElementById('ziwei-prompt');
+                        if(ziweiModel) ziweiModel.value = data.ziwei.model;
+                        if(ziweiCost) ziweiCost.value = data.ziwei.cost;
+                        if(ziweiPrompt) ziweiPrompt.value = data.ziwei.prompt || '';
                     }
+                    
+                    // ✨ 載入每日一抽設定
                     if(data.daily) {
-                        document.getElementById('daily-model').value = data.daily.model;
+                        const dailyModel = document.getElementById('daily-model');
+                        if(dailyModel) dailyModel.value = data.daily.model;
                     }
                 }
-            } catch (e) { console.error("讀取 AI 設定失敗", e); }
+            } catch (e) { 
+                console.error("❌ 讀取 AI 設定失敗：", e); 
+            }
         };
 
-        // --- 💾 儲存 AI 動態設定 ---
+        // ==========================================
+        // 💾 儲存 AI 動態設定 (加強版)
+        // ==========================================
         window.saveAISettings = async function() {
             if (!currentIdToken) return;
             const btn = document.querySelector('button[onclick="saveAISettings()"]');
+            const originalText = btn.innerText;
             btn.innerText = "💾 儲存中..."; btn.disabled = true;
 
             try {
@@ -395,7 +418,7 @@
                     },
                     ziwei: {
                         model: document.getElementById('ziwei-model').value,
-                        cost: parseInt(document.getElementById('ziwei-cost').value) || 30,
+                        cost: parseInt(document.getElementById('ziwei-cost').value) || 50,
                         prompt: document.getElementById('ziwei-prompt').value
                     },
                     daily: {
@@ -413,11 +436,16 @@
                 const result = await response.json();
                 if (result.success) {
                     alert("✅ 各項命理服務的模型與定價已更新成功！");
+                    // 儲存成功後，強制重新讀取一次，確保畫面與資料庫同步！
+                    await loadAISettings(); 
                 } else {
                     alert("❌ 儲存失敗：" + result.msg);
                 }
-            } catch (e) { alert("❌ 連線錯誤：" + e.message); } 
-            finally { btn.innerText = "💾 儲存所有動態設定"; btn.disabled = false; }
+            } catch (e) { 
+                alert("❌ 連線錯誤：" + e.message); 
+            } finally { 
+                btn.innerText = originalText; btn.disabled = false; 
+            }
         };
 
         // --- 輔助工具 ---
