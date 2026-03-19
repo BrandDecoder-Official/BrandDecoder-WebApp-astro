@@ -164,19 +164,31 @@
             </div>
 
             <div id="tab-ai" class="tab-content">
-                <h3 style="margin-top: 0;">AI 大腦核心參數設定</h3>
-                <div class="form-group">
-                    <label>啟用中模型 (Active Model)</label>
-                    <select id="ai-model-select">
-                        <option value="gemini-3-flash-preview">Gemini 3 Flash (快速)</option>
-                        <option value="gemini-3-pro">Gemini 3 Pro (深度推論)</option>
+                <h3 style="margin-top: 0; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 10px;">🧠 AI 雙核心指令與參數</h3>
+                
+                <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px;">
+                    <label style="font-weight: bold; color: #333;">啟用中模型 (Active Model)</label>
+                    <select id="ai-model-select" style="width: 100%; padding: 10px; margin-top: 5px; border-radius: 4px; border: 1px solid #ccc; font-size: 16px;">
+                        <option value="gemini-3-flash">Gemini 3 Flash (快速/省錢)</option>
+                        <option value="gemini-3-pro">Gemini 3 Pro (高智商/深度解析)</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>塔羅解碼 System Prompt</label>
-                    <textarea id="ai-tarot-prompt" placeholder="請輸入塔羅系統指令..."></textarea>
+
+                <div style="background: #f4f0ff; padding: 20px; border-radius: 8px; border: 1px solid #d1c4e9; margin-bottom: 20px;">
+                    <h4 style="margin-top: 0; color: #512da8;">🔮 塔羅解碼 System Prompt</h4>
+                    <p style="font-size: 12px; color: #673ab7; margin-bottom: 10px;">專門負責：70% 心理面諮詢、靈性引導、當下困惑解決。</p>
+                    <textarea id="ai-tarot-prompt" rows="5" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #b39ddb; resize: vertical; font-size: 14px;" placeholder="請輸入塔羅專屬指令 (例如：你是一位精通塔羅的神祕學大師...)"></textarea>
                 </div>
-                <button class="btn-primary" onclick="saveAISettings()">💾 儲存設定</button>
+
+                <div style="background: #fff3e0; padding: 20px; border-radius: 8px; border: 1px solid #ffe0b2; margin-bottom: 20px;">
+                    <h4 style="margin-top: 0; color: #e65100;">🏮 紫微斗數 System Prompt</h4>
+                    <p style="font-size: 12px; color: #f57c00; margin-bottom: 10px;">專門負責：70% 命格排盤解說、流年大運、引導至 30% 線下服務。</p>
+                    <textarea id="ai-ziwei-prompt" rows="5" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ffcc80; resize: vertical; font-size: 14px;" placeholder="請輸入紫微專屬指令 (例如：你是一位精通紫微斗數的命理宗師...)"></textarea>
+                </div>
+
+                <button onclick="saveAISettings()" style="background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%;">
+                    💾 儲存雙核心設定
+                </button>
             </div>
 
         </div>
@@ -303,10 +315,60 @@
             });
         }
 
-        // --- 🧠 AI 設定相關 (留作後續擴充) ---
-        window.saveAISettings = function() {
-            alert("AI 大腦設定 API 已預留，待後端接通即可寫入資料庫！");
-        }
+       // --- 🧠 讀取 AI 設定 ---
+        window.loadAISettings = async function() {
+            if (!currentIdToken) return;
+            try {
+                const response = await fetch(`${API_URL}/api/admin/config/ai`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+                const result = await response.json();
+                if (result.success && result.data) {
+                    document.getElementById('ai-model-select').value = result.data.model || 'gemini-3-flash';
+                    document.getElementById('ai-tarot-prompt').value = result.data.tarot_prompt || '';
+                    document.getElementById('ai-ziwei-prompt').value = result.data.ziwei_prompt || '';
+                }
+            } catch (e) { console.error("讀取 AI 設定失敗", e); }
+        };
+
+        // --- 💾 儲存 AI 設定 ---
+        window.saveAISettings = async function() {
+            if (!currentIdToken) return;
+            
+            const btn = document.querySelector('button[onclick="saveAISettings()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "💾 儲存中...";
+            btn.disabled = true;
+
+            try {
+                const model = document.getElementById('ai-model-select').value;
+                const tarot_prompt = document.getElementById('ai-tarot-prompt').value;
+                const ziwei_prompt = document.getElementById('ai-ziwei-prompt').value;
+
+                const response = await fetch(`${API_URL}/api/admin/config/ai`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${currentIdToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    // 將三個參數打包送給我們剛寫好的 admin_ai.js
+                    body: JSON.stringify({ model, tarot_prompt, ziwei_prompt }) 
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert("✅ AI 多核心參數已同步至雲端資料庫！\n塔羅與紫微大腦已成功切割。");
+                } else {
+                    alert("❌ 儲存失敗：" + result.msg);
+                }
+            } catch (e) {
+                alert("❌ 連線錯誤：" + e.message);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        };
 
         // --- 輔助工具 ---
         window.switchTab = function(tabId) {
