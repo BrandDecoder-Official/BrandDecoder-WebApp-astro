@@ -108,6 +108,10 @@
         #loading-overlay.show { opacity: 1; pointer-events: auto; }
         .loading-text { color: var(--gold); font-size: 16px; letter-spacing: 4px; margin-top: 20px; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; text-shadow: 0 0 15px var(--gold); } 100% { opacity: 0.4; } }
+
+        /* 年月日三欄並排 */
+        .date-group { display: flex; gap: 8px; }
+        .date-group select { flex: 1; text-align: center; padding: 15px 5px; }
     </style>
 </head>
 <body>
@@ -132,7 +136,11 @@
         
         <div class="form-group">
             <label class="form-label">降生之日</label>
-            <input type="date" id="input-date" required>
+            <div class="date-group">
+                <select id="input-year"></select>
+                <select id="input-month"></select>
+                <select id="input-day"></select>
+            </div>
         </div>
 
         <div class="form-group">
@@ -166,44 +174,76 @@
         // 集中儲存使用者的命理資料
         const userAstrolabeData = { gender: '', calendar: '', date: '', time: '' };
 
-        // 處理步驟切換與自動推進
+        // 🌟 初始化高質感日期滾輪
+        function initDatePicker() {
+            const ySelect = document.getElementById('input-year');
+            const mSelect = document.getElementById('input-month');
+            const dSelect = document.getElementById('input-day');
+
+            // 產生年份 (1940 - 2015)，並預設選中 1990 年
+            for(let i = 2015; i >= 1940; i--) {
+                let opt = new Option(i + ' 年', i);
+                if(i === 1990) opt.selected = true;
+                ySelect.add(opt);
+            }
+
+            // 產生月份 (01 - 12)
+            for(let i = 1; i <= 12; i++) {
+                let val = i < 10 ? '0'+i : i;
+                mSelect.add(new Option(val + ' 月', val));
+            }
+
+            // 聯動產生日期 (會自動判斷大月小月跟閏年)
+            function updateDays() {
+                const y = parseInt(ySelect.value);
+                const m = parseInt(mSelect.value);
+                const daysInMonth = new Date(y, m, 0).getDate(); // 取得該月最後一天
+                
+                const currentDay = dSelect.value; // 記住目前選的日期，避免切換月份時跳掉
+                dSelect.innerHTML = ''; 
+                
+                for(let i = 1; i <= daysInMonth; i++) {
+                    let val = i < 10 ? '0'+i : i;
+                    dSelect.add(new Option(val + ' 日', val));
+                }
+                if(currentDay && currentDay <= daysInMonth) dSelect.value = currentDay;
+            }
+
+            ySelect.addEventListener('change', updateDays);
+            mSelect.addEventListener('change', updateDays);
+            updateDays(); // 網頁載入時先執行一次填滿日期
+        }
+
+        // 網頁載入完成後啟動滾輪
+        window.onload = initDatePicker;
+
+        // --- 以下為原本的 UI 邏輯 ---
+
         function makeChoice(currentStep, key, value, btnElement) {
-            // 1. 記錄資料
             userAstrolabeData[key] = value;
-            
-            // 2. 視覺回饋：讓按鈕亮起
             btnElement.classList.add('selected');
 
-            // 3. 延遲 400 毫秒後，觸發轉場動畫 (讓使用者有時間看到點擊回饋)
             setTimeout(() => {
                 const currentDiv = document.getElementById(`step-${currentStep}`);
                 const nextDiv = document.getElementById(`step-${currentStep + 1}`);
-
-                // 當前畫面往上飄散
                 currentDiv.classList.remove('active');
                 currentDiv.classList.add('exit-up');
-
-                // 下一個畫面從下方浮現
                 nextDiv.classList.add('active');
             }, 400);
         }
 
-        // 最終提交表單
         function submitAstrolabe() {
-            const dateInput = document.getElementById('input-date').value;
-            if(!dateInput) {
-                alert("請輸入您的降生之日！");
-                return;
-            }
+            // 把三個下拉選單的值組合成 YYYY-MM-DD
+            const y = document.getElementById('input-year').value;
+            const m = document.getElementById('input-month').value;
+            const d = document.getElementById('input-day').value;
+            const finalDate = `${y}-${m}-${d}`;
 
-            // 補齊最後兩項資料
-            userAstrolabeData.date = dateInput;
+            userAstrolabeData.date = finalDate;
             userAstrolabeData.time = document.getElementById('input-time').value;
 
-            // 啟動全螢幕星空遮罩
             document.getElementById('loading-overlay').classList.add('show');
 
-            // 營造 AI 解算的文字氛圍
             setTimeout(() => { document.getElementById('loading-msg').innerText = "排盤中：定紫微、安108星曜..."; }, 1500);
             setTimeout(() => { document.getElementById('loading-msg').innerText = "啟動 AI 命運大腦深度解碼..."; }, 3500);
 
