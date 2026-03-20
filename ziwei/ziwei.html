@@ -303,12 +303,36 @@
             });
         }
 
+        // ==========================================
+        // 🕵️‍♂️ 隱形發報機：發送漏斗追蹤訊號
+        // ==========================================
+        // 🕵️‍♂️ 隱形發報機
+        async function sendTrackingLog(stageName) {
+            if (!currentIdToken) return;
+            try {
+                await fetch(`${ENV.API_BASE}/api/log/stage`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentIdToken}` 
+                    },
+                    body: JSON.stringify({ type: 'ziwei', stage: stageName })
+                });
+            } catch (e) { console.log("Tracking Error:", e); }
+        }
+        
+
+        
         // --- 初始與驗證邏輯 ---
         async function initLIFF() {
             try {
                 await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
                 if (!liff.isLoggedIn()) { liff.login(); return; }
                 currentIdToken = liff.getIDToken();
+                
+                // 👇 補上這行：記錄用戶成功打開了網頁
+                sendTrackingLog("Stage 1: Page View");
+
             } catch (err) {
                 alert("無法開啟結界，請在 LINE 內部開啟！");
             }
@@ -384,7 +408,14 @@
                 ? `確認耗費靈力啟動【區間定盤】？\n\n大師將針對您選擇的時段，捕捉不變的命格核心。` 
                 : `確認耗費靈力啟動命盤？\n\n這將進行深度的 108 星曜矩陣運算。`;
 
+            // 如果用戶按取消，就中斷執行
             if(!confirm(confirmMsg)) return;
+
+            // 👇👇👇 CTO 埋點新增：當用戶點擊「確認」啟動時，發送漏斗 Stage 2 訊號 👇👇👇
+            if (typeof sendTrackingLog === "function") {
+                sendTrackingLog("Stage 2: Ticket Created");
+            }
+            // 👆👆👆 埋點結束 👆👆👆
 
             document.getElementById('btn-submit-main').disabled = true;
             userAstrolabeData.date = finalDate;
