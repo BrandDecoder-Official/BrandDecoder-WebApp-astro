@@ -3,227 +3,613 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BrandDecoder - 會員專區</title>
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="/env.js?v=3"></script>
+    <title>靈魂儀表板 | 命運解碼室</title>
     
+    <script src="/env.js?v=5"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-color: #0A0B10;
-            --gold: #D4AF37;
-            --gold-light: #F9E498;
-            --gray: #333;
-            --card-bg: rgba(255, 255, 255, 0.03);
+            --gold: #D4AF37; --gold-light: #F9E498; --bg-deep: #050508;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(212, 175, 55, 0.2);
         }
+
+        * { box-sizing: border-box; font-family: 'PingFang TC', 'Noto Serif TC', serif; }
 
         body {
-            margin: 0; padding: 20px; background-color: var(--bg-color); color: #E0E0E0;
-            font-family: 'Noto Serif TC', serif; 
-            min-height: 100vh;
+            margin: 0; padding: 0; background-color: var(--bg-deep); color: #fff;
+            min-height: 100vh; overflow-x: hidden;
         }
 
-        /* 標題與返回 */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); padding-bottom: 15px; }
-        .header h1 { color: var(--gold); font-size: 24px; margin: 0; font-weight: 300; letter-spacing: 2px; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
-        .btn-close { background: none; border: none; color: #888; font-size: 24px; cursor: pointer; }
+        /* 🌌 背景特效 */
+        #bg-canvas { position: fixed; inset: 0; z-index: -10; pointer-events: none; }
+        .vignette { position: fixed; inset: 0; background: radial-gradient(circle at center, transparent 30%, #000 120%); z-index: -9; pointer-events: none; }
 
-        /* 通用卡片設計 */
-        .card {
-            background: var(--card-bg); border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: 12px; padding: 20px; margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        /* 📱 主容器 */
+        .container {
+            max-width: 500px; margin: 0 auto; padding: 20px;
+            padding-bottom: 80px;
         }
-        .card-title { color: var(--gold-light); font-size: 16px; margin-bottom: 15px; border-left: 3px solid var(--gold); padding-left: 10px; letter-spacing: 1px; }
 
-        /* 👑 用戶基本資料區 */
-        .profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
-        .profile-img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
-        .profile-info h2 { margin: 0 0 5px 0; font-size: 18px; color: #fff; }
-        .profile-info p { margin: 0; font-size: 14px; color: #888; }
+        /* 🏷️ 頂部導航 */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .header h1 { margin: 0; font-size: 20px; color: var(--gold); letter-spacing: 2px; text-shadow: 0 0 10px rgba(212,175,55,0.5); }
+        .back-btn { background: none; border: 1px solid var(--gold); color: var(--gold); padding: 5px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; }
+
+        /* 🪞 玻璃卡片共用樣式 */
+        .glass-card {
+            background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border); border-radius: 15px; padding: 20px; margin-bottom: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        /* 👤 個人名片區 */
+        .profile-section { display: flex; align-items: center; gap: 15px; }
+        .avatar { width: 70px; height: 70px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; box-shadow: 0 0 15px rgba(212,175,55,0.4); }
+        .profile-info h2 { margin: 0 0 5px 0; font-size: 18px; letter-spacing: 1px; }
+        .soul-rank { display: inline-block; background: rgba(212,175,55,0.2); color: var(--gold-light); padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .join-date { font-size: 11px; color: #888; margin-top: 5px; }
+
+        /* ⚡ 能量核心區 */
+        .energy-section { text-align: center; position: relative; overflow: hidden; }
+        .energy-section::before { content: ''; position: absolute; top: -50px; left: 50%; transform: translateX(-50%); width: 150px; height: 150px; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%); z-index: -1; }
+        .energy-title { font-size: 12px; color: #aaa; letter-spacing: 2px; margin-bottom: 10px; }
+        .energy-points { font-size: 48px; font-weight: bold; color: var(--gold-light); text-shadow: 0 0 20px var(--gold); margin: 0; line-height: 1; }
+        .recharge-btn {
+            background: linear-gradient(135deg, var(--gold), #B8860B); color: #000; border: none;
+            padding: 10px 30px; border-radius: 25px; font-weight: bold; font-size: 14px; letter-spacing: 1px;
+            margin-top: 20px; cursor: pointer; box-shadow: 0 0 15px rgba(212,175,55,0.4); transition: 0.3s;
+        }
+        .recharge-btn:active { transform: scale(0.95); }
+
+        /* 📈 運勢圖表區 */
+        .chart-section h3 { margin: 0 0 15px 0; font-size: 14px; color: var(--gold); letter-spacing: 1px; }
+        .chart-container { position: relative; height: 200px; width: 100%; }
+
+        /* 📜 歷史紀錄區 */
+        .history-section h3 { margin: 0 0 15px 0; font-size: 14px; color: var(--gold); letter-spacing: 1px; }
         
-        /* 靈力金庫 */
-        .wallet-box { background: rgba(0,0,0,0.5); border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--gray); }
-        .wallet-label { color: #aaa; font-size: 14px; }
-        .wallet-points { color: var(--gold); font-size: 24px; font-weight: bold; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
-
-        /* 📜 歷史紀錄清單 */
-        .log-list { display: flex; flex-direction: column; gap: 10px; }
-        .log-item {
-            background: rgba(0,0,0,0.4); border: 1px solid #444; border-radius: 8px; padding: 15px;
-            cursor: pointer; transition: all 0.2s;
+        .history-list { 
+            display: flex; flex-direction: column; gap: 10px; 
+            max-height: 350px; overflow-y: auto; padding-right: 5px; 
         }
-        .log-item:active { transform: scale(0.98); border-color: var(--gold); }
-        .log-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .log-type { color: var(--gold-light); font-size: 14px; font-weight: bold; }
-        .log-date { color: #888; font-size: 12px; }
-        .log-preview { color: #ccc; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-        /* ✨ 載入動畫 */
-        #loading { text-align: center; color: var(--gold); padding: 50px 0; letter-spacing: 2px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
         
-        /* 隱藏區塊 */
-        .hidden { display: none !important; }
+        .history-list::-webkit-scrollbar { width: 4px; }
+        .history-list::-webkit-scrollbar-track { background: transparent; }
+        .history-list::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.4); border-radius: 4px; }
+        .history-list::-webkit-scrollbar-thumb:hover { background: rgba(212,175,55,0.8); }
+
+        .history-item {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+            padding: 12px 15px; display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; transition: 0.2s;
+        }
+        .history-item:active { background: rgba(212,175,55,0.1); }
+        .history-left { display: flex; flex-direction: column; gap: 4px; }
+        .history-type { font-size: 12px; color: var(--gold-light); font-weight: bold; }
+        .history-topic { font-size: 14px; color: #ddd; }
+        .history-date { font-size: 10px; color: #666; }
+        .history-points { font-size: 18px; font-weight: bold; }
+        .points-plus { color: #4CAF50; }
+        .points-minus { color: #FF6B6B; }
+
+        /* 彈出視窗 (Modal) 共用 */
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            z-index: 999; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: 0.3s; padding: 20px;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: #111; border: 1px solid var(--gold); border-radius: 15px; padding: 25px;
+            width: 100%; max-width: 400px; max-height: 80vh; overflow-y: auto; color: #eee; position: relative;
+        }
+        .modal-close-btn {
+            background: none; border: 1px solid #555; color: #aaa; padding: 8px 0; width: 100%;
+            border-radius: 8px; margin-top: 20px; cursor: pointer; font-size: 14px;
+        }
+
+        /* 🔮 儲值祭壇專屬樣式 */
+        .tier-grid { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; }
+        .tier-card {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); border-radius: 12px;
+            padding: 15px; display: flex; justify-content: space-between; align-items: center;
+            cursor: pointer; position: relative; overflow: hidden; transition: 0.3s;
+        }
+        .tier-card:active { transform: scale(0.98); background: rgba(212,175,55,0.1); }
+        .tier-card.popular { border-color: var(--gold); box-shadow: 0 0 15px rgba(212,175,55,0.3); }
+        .tier-card.popular::before {
+            content: '推薦主力'; position: absolute; top: 0; left: 0; background: var(--gold); color: #000;
+            font-size: 10px; font-weight: bold; padding: 2px 8px; border-bottom-right-radius: 8px;
+        }
+        .tier-info { display: flex; flex-direction: column; gap: 5px; }
+        .tier-points { font-size: 20px; font-weight: bold; color: var(--gold-light); }
+        .tier-bonus { font-size: 12px; color: #FF6B6B; font-weight: bold; display: none; }
+        .tier-price { background: #222; border: 1px solid var(--gold); color: var(--gold); padding: 5px 15px; border-radius: 20px; font-weight: bold; }
+        
+        /* ⏳ Loading 畫面 */
+        #loader, #pay-loader {
+            position: fixed; inset: 0; z-index: 9999; background: var(--bg-deep);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; transition: 0.5s;
+        }
+        #pay-loader { background: rgba(0,0,0,0.9); opacity: 0; pointer-events: none; }
+        #pay-loader.active { opacity: 1; pointer-events: auto; }
+        .spinner { width: 50px; height: 50px; border: 3px solid rgba(212,175,55,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>專屬阿卡西紀錄</h1>
-        <button class="btn-close" onclick="liff.closeWindow()">✕</button>
+    <canvas id="bg-canvas"></canvas>
+    <div class="vignette"></div>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="color: var(--gold); letter-spacing: 2px; margin-top: 20px; font-size: 14px;">同步星盤數據中...</p>
     </div>
 
-    <div id="loading">讀取靈魂檔案中...</div>
+    <div id="pay-loader">
+        <div class="spinner"></div>
+        <p style="color: #00C300; letter-spacing: 2px; margin-top: 20px; font-size: 14px;">正在連結 LINE Pay 結界...</p>
+    </div>
 
-    <div id="main-content" class="hidden">
+    <div class="container" style="display: none;" id="main-content">
         
-        <div class="card">
-            <div class="profile-header">
-                <img id="user-img" class="profile-img" src="https://via.placeholder.com/60/333/D4AF37?text=U" alt="Profile">
-                <div class="profile-info">
-                    <h2 id="user-name">載入中...</h2>
-                    <p id="user-id" style="font-size: 10px;">ID: ...</p>
+        <div class="header">
+            <h1>靈魂儀表板</h1>
+            <button class="back-btn" onclick="liff.closeWindow()">返回結界</button>
+        </div>
+
+        <div class="glass-card profile-section">
+            <img src="" alt="Avatar" class="avatar" id="ui-avatar">
+            <div class="profile-info">
+                <h2 id="ui-name">讀取中...</h2>
+                <div class="soul-rank" id="ui-rank">靈能感應中</div>
+                <div class="join-date" id="ui-date">時空座標定位中...</div>
+            </div>
+        </div>
+
+        <div class="glass-card energy-section">
+            <div class="energy-title">當前靈力儲備 (Points)</div>
+            <div class="energy-points" id="ui-points">--</div>
+            <button class="recharge-btn" onclick="openRechargeModal()">補充靈力</button>
+        </div>
+
+        <div class="glass-card chart-section">
+            <h3>📈 近期能量波動 <span style="cursor:pointer; font-size:12px; background:rgba(212,175,55,0.2); padding:2px 6px; border-radius:50%; margin-left:5px; vertical-align: middle;" onclick="document.getElementById('chart-info-modal').classList.add('active')">❓</span></h3>
+            <div class="chart-container">
+                <canvas id="energyChart"></canvas>
+            </div>
+        </div>
+
+        <div class="glass-card history-section">
+            <h3>📜 命運回顧</h3>
+            <div class="history-list" id="ui-history-list">
+                </div>
+        </div>
+
+    </div>
+
+    <div id="detail-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;" id="modal-title">報告標題</h3>
+            <div id="modal-body" style="font-size: 14px; line-height: 1.6; color: #ccc; margin-top: 15px; white-space: pre-wrap;">
+                詳細內容...
+            </div>
+            <button class="modal-close-btn" onclick="closeModal('detail-modal')">關閉回顧</button>
+        </div>
+    </div>
+
+    <div id="recharge-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">靈力補充祭壇</h3>
+            <p style="text-align: center; font-size: 12px; color: #888; margin-top: 10px;">請選擇您要注入的能量級別</p>
+            
+            <div class="tier-grid" id="tier-grid"></div>
+            
+            <button class="modal-close-btn" onclick="closeModal('recharge-modal')">離開祭壇</button>
+        </div>
+    </div>
+
+    <div id="chart-info-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">📊 能量波動觀測指南</h3>
+            <div style="font-size: 14px; line-height: 1.6; color: #ccc; margin-top: 15px;">
+                <p><span style="color: var(--gold); font-weight: bold;">🔮 塔羅/紫微運勢 (尊貴金線)：</span><br>
+                呈現您進行解碼時的綜合能量。星盤將自動為您計算出<span style="color: #fff; font-weight: bold;">「當日平均值」</span>，以展現最平穩的運勢走向。</p>
+                <p style="margin-top: 15px;"><span style="color: #4A90E2; font-weight: bold;">✨ 每日基礎能量 (星芒藍線)：</span><br>
+                反映您每日「簽到抽牌」所獲得的基礎靈能，是您當日運勢的基石。</p>
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 3px solid #888;">
+                    <strong style="color: #eee; font-size: 13px;">⏳ 星軌觀測限制與說明：</strong>
+                    <ul style="margin: 5px 0 0 0; padding-left: 20px; font-size: 13px; color: #aaa;">
+                        <li><strong>觀測區間：</strong>圖表固定展現您<span style="color: #ddd;">近 7 日</span>的能量起伏。</li>
+                        <li><strong>承載上限：</strong>下方「命運回顧」最多僅顯示<span style="color: #ddd;">最近 30 筆</span>動態。</li>
+                    </ul>
                 </div>
             </div>
-            <div class="wallet-box">
-                <span class="wallet-label">⚡ 目前靈力餘額</span>
-                <span class="wallet-points"><span id="user-points">0</span> 點</span>
-            </div>
+            <button class="modal-close-btn" onclick="closeModal('chart-info-modal')">關閉指南</button>
         </div>
-
-        <div class="card">
-            <div class="card-title">鎖定之星辰座標 🔒</div>
-            <div style="font-size: 14px; color: #ccc; line-height: 1.6;" id="birth-data-display">
-                尚無星盤紀錄，請先前往紫微斗數進行解碼。
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">命運解碼軌跡</div>
-            <div class="log-list" id="history-logs">
-                </div>
-        </div>
-
     </div>
 
     <script>
-        let currentIdToken = "";
+        // --- 🌌 背景特效 (輕量版) ---
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+        const stars = Array.from({length: 100}, () => ({x: Math.random()*width, y: Math.random()*height, r: Math.random()*1.5, a: Math.random()}));
+        function animate() {
+            ctx.clearRect(0,0,width,height);
+            ctx.fillStyle='#fff';
+            stars.forEach(s => { s.a += (Math.random()-0.5)*0.05; if(s.a<0.1)s.a=0.1; if(s.a>1)s.a=1; ctx.globalAlpha=s.a; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
+            requestAnimationFrame(animate);
+        }
+        animate();
 
-        // 1. 初始化 LIFF 並取得使用者資訊
-        async function initPage() {
+        // --- ⚙️ 核心數據邏輯 ---
+        let rawHistoryData = [];
+        let userProfileData = null; 
+        let currentIdToken = ""; // 🛡️ 改用 ID Token ( JWT 安全驗證 )
+
+        // 定義計費方案
+        const pricingTiers = [
+            { price: 99, points: 990, isPopular: false },
+            { price: 199, points: 2000, isPopular: true },
+            { price: 299, points: 3100, isPopular: true },
+            { price: 599, points: 6300, isPopular: false },
+            { price: 999, points: 10600, isPopular: false }
+        ];
+
+        async function initDashboard() {
             try {
-                await liff.init({ liffId: ENV.MEMBER_LIFF_ID }); // 使用你在 env.js 設好的 Member LIFF ID
+                await liff.init({ liffId: ENV.MEMBER_LIFF_ID });
                 
                 if (!liff.isLoggedIn()) {
-                    liff.login();
+                    liff.login({ redirectUri: window.location.href });
                     return;
                 }
-                
-                currentIdToken = liff.getIDToken();
+
+                currentIdToken = liff.getIDToken(); // 取代 AccessToken，確保後端解析 userId
+                if(!currentIdToken) throw new Error("無法取得安全通行證");
+
+                // 取得 LINE 使用者外觀資料
                 const profile = await liff.getProfile();
-                
-                // 填入 LINE 頭像與暱稱
-                document.getElementById('user-name').innerText = profile.displayName;
-                document.getElementById('user-img').src = profile.pictureUrl || 'https://via.placeholder.com/60/333/D4AF37?text=U';
-                document.getElementById('user-id').innerText = `ID: ${profile.userId.substring(0,8)}...`;
 
-                // 呼叫後端取得資料庫資料
-                await fetchUserData();
-
-            } catch (err) {
-                console.error("LIFF 初始化或讀取失敗：", err);
-                alert("無法驗證身分，請在 LINE 內部開啟。");
-            }
-        }
-
-        // 2. 呼叫後端 API 取得點數與歷史紀錄 (防彈強化版)
-        async function fetchUserData() {
-            try {
-                const response = await fetch(`${API_URL}/api/member/profile`, {
+                // 🚀 使用單一且最強大的 Backend API：取得點數、生辰座標、歷史紀錄
+                const response = await fetch(`${ENV.API_BASE}/api/member/profile`, {
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
                 const result = await response.json();
 
-                if (result.success) {
+                if(result.success) {
                     const data = result.data;
-                    
-                    // 更新靈力點數
-                    document.getElementById('user-points').innerText = data.points || 0;
+                    userProfileData = data; 
+                    rawHistoryData = data.logs || [];
 
-                    // 處理星辰座標 (取最新的一筆紫微紀錄的生辰)
-                    if (data.birthData) {
-                        const genderStr = data.birthData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
-                        const calStr = data.birthData.calendar === 'solar' ? '國曆' : '農曆';
-                        document.getElementById('birth-data-display').innerHTML = `
-                            陰陽：${genderStr} <br>
-                            曆法：${calStr} <br>
-                            降生：${data.birthData.date} ${data.birthData.time}時
-                        `;
-                    }
+                    // 渲染三大區塊
+                    renderProfile(profile, data.points, data.birthData);
+                    renderHistory(rawHistoryData);
+                    renderChart(rawHistoryData);
 
-                    // 處理歷史紀錄列表
-                    const logContainer = document.getElementById('history-logs');
-                    if (data.logs && data.logs.length > 0) {
-                        logContainer.innerHTML = ''; // 清空預設
-                        
-                        data.logs.forEach(log => {
-                            // 防彈處理 1：服務名稱 (相容新舊寫法 type vs serviceType)
-                            const isZiwei = (log.type === 'ziwei' || log.serviceType === 'ziwei');
-                            const serviceName = isZiwei ? '🔮 紫微斗數' : '🃏 塔羅密訊';
-                            
-                            // 防彈處理 2：時間轉換 (確保各種格式都能解析)
-                            let dateStr = "未知時間";
-                            if (log.timestamp) {
-                                try {
-                                    const d = log.timestamp._seconds 
-                                        ? new Date(log.timestamp._seconds * 1000) 
-                                        : new Date(log.timestamp);
-                                    dateStr = d.toLocaleDateString('zh-TW');
-                                } catch(e) { console.warn("時間解析錯誤", e); }
-                            }
-
-                            // 防彈處理 3：預覽文字 (確保 aiResult 或 summary 存在)
-                            let previewText = "讀取解析內容...";
-                            let fullTextForAlert = "詳細解析請稍後再試。";
-                            
-                            if (log.aiResult) {
-                                previewText = log.aiResult.substring(0, 50).replace(/#/g, '') + '...';
-                                // 為了避免字串中有換行符號弄壞 onclick 屬性，做個簡單編碼
-                                fullTextForAlert = log.aiResult.substring(0, 100).replace(/(\r\n|\n|\r)/gm, " ");
-                            } else if (log.summary) {
-                                previewText = log.summary;
-                                fullTextForAlert = log.summary;
-                            }
-                            
-                            const logHTML = `
-                                <div class="log-item" onclick="alert('詳細解析即將實裝：\\n\\n${fullTextForAlert}...')">
-                                    <div class="log-header">
-                                        <span class="log-type">${serviceName}</span>
-                                        <span class="log-date">${dateStr}</span>
-                                    </div>
-                                    <div class="log-preview">${previewText}</div>
-                                </div>
-                            `;
-                            logContainer.innerHTML += logHTML;
-                        });
-                    } else {
-                        logContainer.innerHTML = '<div style="color:#888; text-align:center; padding: 10px;">目前尚無解碼紀錄</div>';
-                    }
-
-                    // 隱藏載入中，顯示主畫面
-                    document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('main-content').classList.remove('hidden');
-
+                    // 隱藏載入畫面
+                    document.getElementById('loader').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('loader').style.display = 'none';
+                        document.getElementById('main-content').style.display = 'block';
+                    }, 500);
                 } else {
-                    document.getElementById('loading').innerText = "讀取資料失敗：" + result.msg;
+                    throw new Error(result.msg || "伺服器結界異常，請稍後再試");
                 }
-            } catch (err) {
-                console.error(err);
-                document.getElementById('loading').innerText = "系統連線異常";
+
+            } catch (error) {
+                console.error("初始化失敗:", error);
+                alert("🚨 " + error.message);
             }
         }
 
-        window.onload = initPage;
+        // 👤 渲染頂部名片與點數
+        function renderProfile(liffProfile, points, birthData) {
+            document.getElementById('ui-avatar').src = liffProfile.pictureUrl || "https://static.line-scdn.net/liff/edge/2/images/logo.svg";
+            document.getElementById('ui-name').innerText = liffProfile.displayName || "神祕旅人";
+            document.getElementById('ui-points').innerText = points || 0;
+            
+            let rank = "靈能學徒";
+            if (points >= 500) rank = "高階祭司";
+            else if (points >= 200) rank = "覺醒者";
+            else if (points < 20) rank = "靈能枯竭";
+            document.getElementById('ui-rank').innerText = rank;
+
+            // 顯示最新的一筆生辰座標
+            if (birthData) {
+                const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
+                document.getElementById('ui-date').innerText = `座標：${calStr} ${birthData.date}`;
+            } else {
+                document.getElementById('ui-date').innerText = `尚未解鎖星辰座標`;
+            }
+        }
+
+        // 📜 渲染歷史列表 (完美結合防彈時間與紫微斗數邏輯)
+        function renderHistory(historyArray) {
+            const list = document.getElementById('ui-history-list');
+            list.innerHTML = "";
+
+            if (historyArray.length === 0) {
+                list.innerHTML = `<div style="text-align:center; color:#666; padding: 20px 0; font-size:12px;">星盤尚無軌跡，快去進行第一次占卜吧。</div>`;
+                return;
+            }
+
+            const displayList = historyArray.slice(0, 30);
+
+            displayList.forEach((item, index) => {
+                let typeText, topicText, extraHtml = "";
+                
+                // 修正新舊點數欄位
+                const pointsValue = item.points_change !== undefined ? item.points_change : (item.points || 0);
+                const pointsClass = pointsValue > 0 ? "points-plus" : "points-minus";
+                const pointsText = pointsValue > 0 ? `+${pointsValue}` : pointsValue;
+                
+                // 🌟 分流判斷：儲值
+                if (item.type === "recharge") {
+                    typeText = "💎 靈力充能";
+                    topicText = `💸 成功支付 NT$ ${item.amount_paid || 0}`;
+                    extraHtml = `<span style="font-size: 10px; color: #4CAF50; border: 1px solid rgba(76,175,80,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">🎉 能量注入</span>`;
+                } 
+                // 🌟 分流判斷：紫微斗數
+                else if (item.type === "ziwei" || item.serviceType === "ziwei") {
+                    typeText = "🏮 紫微斗數";
+                    topicText = item.summary || "排盤解碼";
+                    extraHtml = `<span style="font-size: 10px; color: #d8b4e2; border: 1px solid rgba(216,180,226,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">深度解析</span>`;
+                }
+                // 🌟 分流判斷：塔羅或每日
+                else {
+                    const isTarot = item.type === "tarot";
+                    typeText = isTarot ? "🔮 塔羅解碼" : "✨ 每日一抽";
+                    topicText = isTarot ? `領域：${item.topic}` : `指引：${item.result_card || item.topic || '抽牌'}`;
+                    
+                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
+                    if (isTarot || score !== '--') {
+                        extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${score} 分</span>`;
+                    }
+                }
+                
+                // 防彈版時間解析 (支援 _seconds 或純字串)
+                let dateStr = "未知時間";
+                if (item.timestamp) {
+                    try {
+                        const d = item.timestamp._seconds 
+                                  ? new Date(item.timestamp._seconds * 1000) 
+                                  : new Date(item.timestamp);
+                        dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                    } catch(e) {}
+                }
+
+                const clickAction = item.type === "recharge" ? "" : `onclick="showHistoryModal(${index})"`;
+                const activeStyle = item.type === "recharge" ? "style='cursor:default; border-color: rgba(76,175,80,0.3);'" : "";
+
+                const html = `
+                    <div class="history-item" ${clickAction} ${activeStyle}>
+                        <div class="history-left">
+                            <div class="history-type">${typeText} ${extraHtml}</div>
+                            <div class="history-topic">${topicText}</div>
+                            <div class="history-date">${dateStr}</div>
+                        </div>
+                        <div class="history-points ${pointsClass}">${pointsText}</div>
+                    </div>
+                `;
+                list.insertAdjacentHTML('beforeend', html);
+            });
+
+            if (historyArray.length > 30) {
+                 list.insertAdjacentHTML('beforeend', `<div style="text-align:center; font-size:10px; color:#666; margin-top:5px; padding-bottom:10px;">僅顯示最近 30 筆動態...</div>`);
+            }
+        }
+
+        // 📈 渲染雙線運勢圖
+        function renderChart(historyArray) {
+            const ctx = document.getElementById('energyChart').getContext('2d');
+            const labels = [];
+            const dateMap = {};
+            
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                labels.push(dateStr);
+                dateMap[dateStr] = { sum: 0, count: 0, dailyScore: null };
+            }
+
+            historyArray.forEach(item => {
+                let d;
+                if(item.timestamp && item.timestamp._seconds) d = new Date(item.timestamp._seconds * 1000);
+                else d = new Date(item.timestamp);
+                
+                const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
+                
+                if (dateMap[dateStr]) {
+                    // 塔羅或紫微可以加入綜合評分
+                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : 50;
+                    
+                    if (item.type === 'tarot' || item.serviceType === 'ziwei') {
+                        dateMap[dateStr].sum += score;
+                        dateMap[dateStr].count += 1;
+                    } else if (item.type === 'daily_draw') {
+                        dateMap[dateStr].dailyScore = score;
+                    }
+                }
+            });
+
+            const tarotData = [];
+            const dailyData = [];
+            const tooltipMeta = [];
+
+            labels.forEach(dateStr => {
+                const dayData = dateMap[dateStr];
+                let avg = null;
+                if (dayData.count > 0) avg = Math.round(dayData.sum / dayData.count);
+                
+                tarotData.push(avg);
+                dailyData.push(dayData.dailyScore);
+                tooltipMeta.push({ count: dayData.count });
+            });
+
+            if(window.energyChartInstance) window.energyChartInstance.destroy();
+
+            window.energyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    tooltipMeta: tooltipMeta,
+                    datasets: [
+                        {
+                            label: '🔮 深度解碼運勢',
+                            data: tarotData,
+                            borderColor: '#D4AF37', 
+                            backgroundColor: 'rgba(212,175,55,0.1)',
+                            borderWidth: 3, pointBackgroundColor: '#FFF', pointBorderColor: '#D4AF37', pointRadius: 5,
+                            spanGaps: true, tension: 0.3, pointHitRadius: 10
+                        },
+                        {
+                            label: '✨ 每日基礎能量',
+                            data: dailyData,
+                            borderColor: '#4A90E2', 
+                            borderWidth: 2, borderDash: [5, 5], 
+                            pointBackgroundColor: '#4A90E2', pointRadius: 4,
+                            spanGaps: true, tension: 0.4, pointHitRadius: 10
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'nearest', intersect: true },
+                    plugins: { 
+                        legend: { display: true, labels: { color: '#CCC', font: { size: 10 } } },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)', titleColor: '#D4AF37', bodyFont: { size: 13 }, padding: 10,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) label += context.parsed.y + ' 分';
+                                    if (context.datasetIndex === 0) {
+                                        const meta = context.chart.data.tooltipMeta[context.dataIndex];
+                                        if (meta && meta.count > 0) label += ` (綜合 ${meta.count} 筆)`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888' } },
+                        x: { grid: { display: false }, ticks: { color: '#888', font: {size: 10} } }
+                    }
+                }
+            });
+        }
+
+        // --- 🪟 Modal 控制區 (支援紫微斗數) ---
+        function showHistoryModal(index) {
+            const item = rawHistoryData[index];
+            const title = document.getElementById('modal-title');
+            const body = document.getElementById('modal-body');
+
+            if (item.type === 'ziwei' || item.serviceType === 'ziwei') {
+                title.innerText = `🏮 紫微斗數：${item.summary || '排盤解碼'}`;
+                body.innerText = item.aiResult || "（詳細解析處理中...）";
+            } else if (item.type === 'tarot') {
+                title.innerText = `🔮 塔羅解碼：${item.topic}`;
+                body.innerHTML = `<b>牌陣：</b>${(item.cards || []).join('、')}<br><br>${item.aiText || item.aiResult || "（資料同步中...）"}`;
+            } else {
+                title.innerText = `✨ 每日一抽：${item.result_card || item.topic}`;
+                body.innerText = item.aiText || item.aiResult || "（資料同步中...）";
+            }
+            document.getElementById('detail-modal').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // --- 💰 靈力儲值與金流邏輯 ---
+        function getCurrentRechargePeriod() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const periodNum = Math.ceil((now.getMonth() + 1) / 2);
+            return `${year}-${periodNum}`;
+        }
+
+        function openRechargeModal() {
+            const currentPeriod = getCurrentRechargePeriod();
+            const lastPeriod = userProfileData.lastFirstRechargePeriod || null;
+            const isFirstRechargeAvailable = (currentPeriod !== lastPeriod);
+
+            const grid = document.getElementById('tier-grid');
+            grid.innerHTML = ""; 
+
+            pricingTiers.forEach(tier => {
+                let finalPoints = tier.points;
+                let bonusHtml = "";
+                
+                if (isFirstRechargeAvailable) {
+                    const bonusPoints = Math.floor(tier.points * 0.1); 
+                    finalPoints += bonusPoints;
+                    bonusHtml = `<span class="tier-bonus" style="display:inline;">首充 +${bonusPoints} 點</span>`;
+                }
+
+                const popularClass = tier.isPopular ? "popular" : "";
+                const html = `
+                    <div class="tier-card ${popularClass}" onclick="requestLinePay(${tier.price}, ${finalPoints}, '${currentPeriod}')">
+                        <div class="tier-info">
+                            <span class="tier-points">💎 ${finalPoints} 靈力</span>
+                            ${bonusHtml}
+                        </div>
+                        <div class="tier-price">NT$ ${tier.price}</div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', html);
+            });
+
+            document.getElementById('recharge-modal').classList.add('active');
+        }
+
+        async function requestLinePay(amount, pointsToGive, periodCode) {
+            const confirmMsg = `即將透過 LINE Pay 支付 NT$ ${amount} 元\n獲取 ${pointsToGive} 點靈力。\n\n確定前往結帳嗎？`;
+            if(!confirm(confirmMsg)) return;
+
+            document.getElementById('pay-loader').classList.add('active');
+
+            try {
+                const response = await fetch(`${ENV.API_BASE}/api/pay/request`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        amount: amount, 
+                        productName: `${pointsToGive} 點靈力儲值`,
+                        pointsGiven: pointsToGive, 
+                        periodCode: periodCode     
+                    })
+                });
+
+                const data = await response.json();
+                
+                if(data.success && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert("🚨 呼叫 LINE Pay 結界失敗：" + (data.msg || "未知錯誤"));
+                    document.getElementById('pay-loader').classList.remove('active');
+                }
+
+            } catch(e) {
+                console.error(e);
+                alert("🚨 網路結界不穩定，請重試。");
+                document.getElementById('pay-loader').classList.remove('active');
+            }
+        }
+
+        // 🚀 啟動
+        document.addEventListener('DOMContentLoaded', initDashboard);
     </script>
 </body>
 </html>
