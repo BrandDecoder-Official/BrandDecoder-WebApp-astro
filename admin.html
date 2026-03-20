@@ -387,12 +387,16 @@
                     pointText = "-"; 
                 } 
                 else if (log.log_class === 'revenue') {
-                    rowStyle = "style='background-color: #e8f5e9;'"; // 儲值顯示淺綠色背景
+                    rowStyle = "style='background-color: #e8f5e9;'"; 
                     typeBadge = '<span class="badge badge-pay">💰 金流紀錄</span>';
-                    summary = `💳 用戶儲值獲取 ${rawPoints} 點`;
+                    
+                    // 🌟 抓取後端傳來的金流管道，並顯示在摘要中
+                    const gateway = log.paymentMethod || 'LINE Pay';
+                    summary = `💳 透過 [${gateway}] 儲值獲取 ${rawPoints} 點`;
+                    
                     pointClass = "point-plus";
                     pointText = `+${rawPoints}`;
-                } 
+                }
                 else {
                     // 🌟 2. 處理常規消費 (Consumption) 的 Badge
                     if (rawPoints > 0) { pointClass = "point-plus"; pointText = `+${rawPoints}`; }
