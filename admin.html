@@ -64,7 +64,7 @@
 
         /* 📝 日誌表格專用區 */
         .toolbar { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
-        .filters { display: flex; gap: 10px; align-items: center; }
+        .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .filters input, .filters select { padding: 8px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 13px; }
         .btn-primary { background: var(--primary); color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: bold; }
         .btn-primary:hover { background: var(--primary-hover); }
@@ -78,6 +78,7 @@
         .badge-ai { background: #e8f0fe; color: #1967d2; }
         .badge-tarot { background: #fce8e6; color: #c5221f; }
         .badge-pay { background: #e6f4ea; color: #137333; }
+        .badge-face { background: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; } /* 面相手相 Badge */
         
         .point-plus { color: var(--success); font-weight: bold; }
         .point-minus { color: var(--danger); font-weight: bold; }
@@ -155,14 +156,28 @@
                 <div class="toolbar">
                     <h3 style="margin: 0;">系統操作與服務軌跡</h3>
                     <div class="filters">
+                        <select id="filter-log-class" onchange="loadLogs()">
+                            <option value="defaultView">📂 預設視角 (消費與儲值)</option>
+                            <option value="consumption">💰 僅看命理消費 (扣款)</option>
+                            <option value="revenue">💎 僅看金流儲值 (香油錢)</option>
+                            <option value="system">⚙️ 系統與行為軌跡 (灰色埋點)</option>
+                            <option value="all">🌐 全部的日誌 (含灰色埋點)</option>
+                        </select>
+                        
+                        <select id="filter-type" onchange="loadLogs()">
+                            <option value="all">📁 全部類型</option>
+                            <option value="tarot">🔮 塔羅解碼</option>
+                            <option value="ziwei">🏮 紫微斗數</option>
+                            <option value="daily_draw">✨ 每日一抽</option>
+                            <option value="face">👁️ 面手相學</option> 
+                        </select>
+
                         <input type="date" id="filter-start">
                         <span>至</span>
                         <input type="date" id="filter-end">
-                        <select id="filter-type">
-                            <option value="all">📁 全部類型</option>
-                            <option value="tarot">🔮 塔羅解碼</option>
-                            <option value="daily_draw">✨ 每日一抽</option>
-                            <option value="recharge">💰 金流紀錄</option>
+                        <select id="limit">
+                            <option value="50">顯示 50 筆</option>
+                            <option value="100">顯示 100 筆</option>
                         </select>
                         <button class="btn-primary" onclick="loadLogs()">🔍 查詢</button>
                     </div>
@@ -286,7 +301,7 @@
                 // 🌟 載入預設資料 (這裡就是啟動引擎的地方)
                 loadLogs();         // 抓取日誌
                 loadAISettings();   // 抓取 AI 大腦設定
-                loadOverview();     // 👈👈👈 請在這裡加上這一行！(抓取戰情中心數據)
+                loadOverview();     // 抓取戰情中心數據
 
             } else {
                 // 未登入
@@ -309,16 +324,18 @@
             signOut(auth);
         });
 
-        // --- 🗂️ 載入日誌資料 ---
+        // --- 🗂️ 載入日誌資料 (三維分類淨化版) ---
         window.loadLogs = async function() {
             if (!currentIdToken) return;
             showLoading(true);
             try {
+                const logClass = document.getElementById('filter-log-class').value; // 🌟 獲取大標籤視角
                 const type = document.getElementById('filter-type').value;
                 const startDate = document.getElementById('filter-start').value;
                 const endDate = document.getElementById('filter-end').value;
+                const limit = document.getElementById('limit').value;
                 
-                let query = `?limit=50&type=${type}`;
+                let query = `?limit=${limit}&filterClass=${logClass}&filterType=${type}`;
                 if (startDate && endDate) query += `&startDate=${startDate}&endDate=${endDate}`;
 
                 const response = await fetch(`${API_URL}/api/admin/logs${query}`, {
@@ -347,56 +364,71 @@
             const tbody = document.getElementById('log-table-body');
             tbody.innerHTML = "";
 
+            if (logs.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='4' style='text-align:center; color:#888;'>此區間尚無解碼紀錄</td></tr>";
+                return;
+            }
+
             logs.forEach(log => {
                 const d = new Date(log.timestamp);
                 const timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                 
                 let typeBadge = "";
-                let summary = "";
-                
-                // 1. 修正服務類型與摘要
-                if(log.type === 'tarot') { 
-                    typeBadge = '<span class="badge badge-tarot">🔮 塔羅解碼</span>'; 
-                    summary = `領域：${log.topic || '未指定'}`; 
-                }
-                else if(log.type === 'ziwei' || log.serviceType === 'ziwei') { 
-                    typeBadge = '<span class="badge" style="background:#F3E5F5; color:#8E24AA; border:1px solid #CE93D8;">🏮 紫微解碼</span>'; 
-                    summary = log.summary || '排盤解碼'; 
-                }
-                else if(log.type === 'daily_draw') { 
-                    typeBadge = '<span class="badge badge-ai">✨ 每日一抽</span>'; 
-                    summary = `抽中：${log.topic}`; 
-                }
-                else if(log.type === 'recharge') { 
-                    typeBadge = '<span class="badge badge-pay">💰 金流紀錄</span>'; 
-                    summary = `LINE Pay 儲值成功`; 
-                }
-                else { 
-                    typeBadge = `<span class="badge">${log.type || log.serviceType || '未知'}</span>`; 
-                }
-
-                // 2. 修正點數讀取
+                let summary = log.topic || '';
+                let rowStyle = "";
                 let rawPoints = log.points_change !== undefined ? log.points_change : (log.points || 0);
                 let pointClass = "point-zero";
                 let pointText = rawPoints;
-                
-                if (rawPoints > 0) { 
-                    pointClass = "point-plus"; 
-                    pointText = `+${rawPoints}`; 
-                }
-                else if (rawPoints < 0) { 
-                    pointClass = "point-minus"; 
+
+                // 🌟 1. 處理 UI 淨化與顏色 (根據 log_class)
+                if (log.log_class === 'system') {
+                    rowStyle = "style='opacity:0.6; background-color:#fcfcfc;'"; // 讓系統紀錄變灰暗
+                    typeBadge = '<span class="badge" style="background:#eee; color:#666; border:1px solid #ccc;">⚙️ 系統背景軌跡</span>';
+                    pointText = "-"; 
+                } 
+                else if (log.log_class === 'revenue') {
+                    rowStyle = "style='background-color: #e8f5e9;'"; // 儲值顯示淺綠色背景
+                    typeBadge = '<span class="badge badge-pay">💰 金流紀錄</span>';
+                    summary = `💳 用戶儲值獲取 ${rawPoints} 點`;
+                    pointClass = "point-plus";
+                    pointText = `+${rawPoints}`;
+                } 
+                else {
+                    // 🌟 2. 處理常規消費 (Consumption) 的 Badge
+                    if (rawPoints > 0) { pointClass = "point-plus"; pointText = `+${rawPoints}`; }
+                    else if (rawPoints < 0) { pointClass = "point-minus"; }
+
+                    const serviceType = log.type || log.serviceType;
+                    if(serviceType === 'tarot') { 
+                        typeBadge = '<span class="badge badge-tarot">🔮 塔羅解碼</span>'; 
+                    }
+                    else if(serviceType === 'ziwei') { 
+                        typeBadge = '<span class="badge" style="background:#F3E5F5; color:#8E24AA; border:1px solid #CE93D8;">🏮 紫微大運</span>'; 
+                    }
+                    else if(serviceType === 'daily_draw') { 
+                        typeBadge = '<span class="badge badge-ai">✨ 每日一抽</span>'; 
+                    }
+                    else if(serviceType === 'face' || serviceType === 'palm') { 
+                        typeBadge = '<span class="badge badge-face">👁️ 面手相學</span>'; 
+                    }
+                    else { 
+                        typeBadge = `<span class="badge">${serviceType || '未知服務'}</span>`; 
+                    }
                 }
 
-                // 3. 修正使用者名稱讀取
+                // 3. 處理使用者名稱讀取
                 let showName = log.displayName || log.userName || '未知用戶';
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${timeStr}</td>
-                    <td>${typeBadge}</td>
-                    <td class="${pointClass}">${pointText}</td>
-                    <td><span style="color:var(--primary); font-weight:bold;">👤 ${showName}</span> <br> <span style="color:#888; font-size:11px;">${log.userId}</span> <br> ${summary}</td>
+                    <td ${rowStyle}>${timeStr}</td>
+                    <td ${rowStyle}>${typeBadge}</td>
+                    <td ${rowStyle} class="${pointClass}">${pointText}</td>
+                    <td ${rowStyle}>
+                        <span style="color:var(--primary); font-weight:bold;">👤 ${showName}</span> 
+                        <br> <span style="color:#aaa; font-size:10px;">${log.userId}</span> 
+                        <br> ${summary}
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
