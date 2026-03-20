@@ -78,7 +78,7 @@
         .badge-ai { background: #e8f0fe; color: #1967d2; }
         .badge-tarot { background: #fce8e6; color: #c5221f; }
         .badge-pay { background: #e6f4ea; color: #137333; }
-        .badge-face { background: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; } /* 面相手相 Badge */
+        .badge-face { background: #fff3e0; color: #ef6c00; border: 1px solid #ffe0b2; } 
         
         .point-plus { color: var(--success); font-weight: bold; }
         .point-minus { color: var(--danger); font-weight: bold; }
@@ -144,28 +144,20 @@
                     </div>
                 </div>
 
-                <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); width: 100%; max-width: 600px;">
-                    <h3 style="margin-top:0; font-size: 14px; color: #555;">近期服務佔比 (近100筆)</h3>
-                    <div style="height: 250px; position: relative;">
-                        <canvas id="overviewChart"></canvas>
-                    </div>
-                </div>
-                <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); width: 100%; max-width: 600px;">
+                <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); width: 100%; max-width: 600px; margin-bottom: 20px;">
                     <h3 style="margin-top:0; font-size: 14px; color: #555;">近期服務佔比 (近100筆)</h3>
                     <div style="height: 250px; position: relative;">
                         <canvas id="overviewChart"></canvas>
                     </div>
                 </div>
 
-                <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); width: 100%; max-width: 600px; margin-top: 20px;">
+                <div style="background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); width: 100%; max-width: 600px;">
                     <h3 style="margin-top:0; font-size: 14px; color: #555;">用戶操作流程轉換率 (漏斗分析)</h3>
                     <p style="font-size: 12px; color: #888; margin-bottom: 15px;">追蹤用戶從「啟動結界」到「完成解碼」的中斷狀況</p>
                     <div style="height: 250px; position: relative;">
                         <canvas id="funnelChart"></canvas>
                     </div>
                 </div>
-
-                
             </div>
 
             <div id="tab-logs" class="tab-content active">
@@ -470,6 +462,7 @@
                     document.getElementById('kpi-users').innerText = data.totalUsers;
                     document.getElementById('kpi-revenue').innerText = `$ ${data.totalRevenue}`;
 
+                    // 1. 繪製圓餅圖 (Overview Chart)
                     const ctx = document.getElementById('overviewChart').getContext('2d');
                     if(window.overviewChartInstance) window.overviewChartInstance.destroy();
                     
@@ -485,39 +478,31 @@
                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
                     });
 
-                    // 👇👇👇 補上這段畫「水平漏斗圖」的代碼 👇👇👇
-                    if (data.funnelData) {
-                        const ctxFunnel = document.getElementById('funnelChart').getContext('2d');
-                        if(window.funnelChartInstance) window.funnelChartInstance.destroy();
-                        
-                    // 👇👇👇 補上這段畫「水平漏斗圖」的代碼 👇👇👇
+                    // 2. 繪製漏斗圖 (Funnel Chart)
                     if (data.funnelData) {
                         const ctxFunnel = document.getElementById('funnelChart').getContext('2d');
                         if(window.funnelChartInstance) window.funnelChartInstance.destroy();
                         
                         window.funnelChartInstance = new Chart(ctxFunnel, {
-                            type: 'bar', // 使用長條圖
+                            type: 'bar', 
                             data: {
-                                labels: ['步驟一：啟動服務 (抽牌/排盤)', '步驟二：AI 運算完成 (成功解碼)'], // 這裡可以根據你埋的 stage 動態擴充
+                                labels: ['啟動服務 (抽牌/排盤)', '運算完成 (成功解碼)'], 
                                 datasets: [{
-                                    label: '人次/次數',
+                                    label: '人次',
                                     data: [data.funnelData.step1 || 0, data.funnelData.step2 || 0],
-                                    backgroundColor: ['#4285F4', '#34A853'], // Google 藍綠配色，代表順暢
+                                    backgroundColor: ['#4285F4', '#34A853'], 
                                     borderRadius: 4
                                 }]
                             },
                             options: { 
-                                indexAxis: 'y', // 🌟 關鍵：將長條圖轉為水平，看起來就像漏斗
+                                indexAxis: 'y', 
                                 responsive: true, 
                                 maintainAspectRatio: false,
-                                plugins: { legend: { display: false } }, // 隱藏多餘的圖例
+                                plugins: { legend: { display: false } }, 
                                 scales: { x: { beginAtZero: true } }
                             }
                         });
                     }
-                    // 👆👆👆 漏斗圖代碼結束 👆👆👆
-
-                    
                 }
             } catch (e) {
                 console.error("載入戰情總覽失敗：", e);
