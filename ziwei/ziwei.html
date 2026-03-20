@@ -281,8 +281,8 @@
                 setTimeout(() => { document.getElementById('loading-msg').innerText = "連結宇宙阿卡西紀錄，進行深度解碼..."; }, 6000);
 
                 // 🚀 正式發送 API 請求給 Cloud Run
-                //const response = await fetch(`${API_URL}/api/divination/ziwei`, {
-                const response = await fetch(`https://bastro-bot-217800246535.asia-east1.run.app/api/divination/ziwei`, {
+                const response = await fetch(`${API_URL}/api/divination/ziwei`, {
+                //const response = await fetch(`https://bastro-bot-217800246535.asia-east1.run.app/api/divination/ziwei`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
