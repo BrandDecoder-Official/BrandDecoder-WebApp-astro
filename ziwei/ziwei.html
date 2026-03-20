@@ -12,7 +12,6 @@
     <style>
         :root {
             --bg-color: #0A0B10;
-            --bg-purple: #1a0b2e;
             --gold: #D4AF37;
             --gold-light: #F9E498;
             --gray: #333;
@@ -24,47 +23,46 @@
             overflow: hidden; height: 100vh; position: relative;
         }
 
-        /* 🌌 沉浸式深空背景 (底層) */
-        .universal-bg {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle at 50% 50%, var(--bg-purple) 0%, var(--bg-color) 100%);
-            z-index: 0; opacity: 0.8;
-        }
+        /* 🌟 PixiJS 全局背景畫布 */
+        #pixi-background { position: absolute; inset: 0; z-index: -1; }
 
-        /* 🔮 步驟容器 */
+        /* 🔮 步驟容器 (加上毛玻璃效果讓文字更清楚) */
         .step-section {
             position: absolute; top: 50%; left: 50%; width: 90%; max-width: 400px; text-align: center; z-index: 10;
             transform: translate(-50%, -30%); opacity: 0; pointer-events: none;
             transition: all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: rgba(10, 11, 16, 0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            padding: 30px 20px; border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.15);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         .step-section.active { transform: translate(-50%, -50%); opacity: 1; pointer-events: auto; }
         .step-section.exit-up { transform: translate(-50%, -70%); opacity: 0; pointer-events: none; }
 
-        h2 { color: var(--gold); font-weight: 300; letter-spacing: 2px; margin-bottom: 25px; line-height: 1.6; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
+        h2 { color: var(--gold); font-weight: 300; letter-spacing: 2px; margin-bottom: 25px; line-height: 1.6; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3); margin-top: 0;}
         .subtitle { font-size: 14px; color: #aaa; margin-bottom: 20px; letter-spacing: 1px; }
 
         /* 按鈕與選單樣式 */
         .btn-choice {
             display: block; width: 100%; padding: 18px; margin-bottom: 15px;
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 12px;
             color: var(--gold-light); font-size: 18px; letter-spacing: 2px;
             cursor: pointer; transition: all 0.3s;
         }
         .btn-choice:active, .btn-choice.selected {
-            background: rgba(212, 175, 55, 0.15); border-color: var(--gold);
-            transform: scale(0.98); box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+            background: rgba(212, 175, 55, 0.2); border-color: var(--gold);
+            transform: scale(0.98); box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
         }
 
         .form-group { margin-bottom: 20px; text-align: left; }
-        .form-label { display: block; font-size: 12px; color: #aaa; margin-bottom: 8px; padding-left: 5px; }
+        .form-label { display: block; font-size: 12px; color: #ccc; margin-bottom: 8px; padding-left: 5px; }
         
         .date-group { display: flex; gap: 8px; }
         .date-group select { flex: 1; text-align-last: center; }
 
         select {
             width: 100%; padding: 15px; box-sizing: border-box;
-            background: rgba(0,0,0,0.6); border: 1px solid var(--gray);
+            background: rgba(0,0,0,0.8); border: 1px solid var(--gray);
             color: var(--gold-light); font-size: 16px; border-radius: 8px;
             color-scheme: dark; appearance: none;
         }
@@ -81,31 +79,29 @@
         .btn-submit:active { transform: scale(0.96); }
         .btn-submit:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; }
 
-        /* ✨ 載入遮罩 & Pixi 畫布容器 */
+        /* ✨ 載入遮罩 (僅文字) */
         #loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(10, 11, 16, 0.95); z-index: 100;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.8s ease; overflow: hidden;
+            background-color: rgba(10, 11, 16, 0.6); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 15vh;
+            opacity: 0; pointer-events: none; transition: opacity 0.8s ease;
         }
         #loading-overlay.show { opacity: 1; pointer-events: auto; }
         
-        #pixi-container { position: absolute; inset: 0; z-index: 1; }
-
-        .loading-content { z-index: 10; text-align: center; position: relative; margin-top: 150px; }
         .loading-text { 
-            color: var(--gold); font-size: 16px; letter-spacing: 4px; font-weight: bold;
+            color: var(--gold-light); font-size: 18px; letter-spacing: 4px; font-weight: bold;
             animation: textPulse 2s infinite; 
-            background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 20px;
+            background: rgba(0,0,0,0.6); padding: 15px 30px; border-radius: 30px;
+            border: 1px solid rgba(212,175,55,0.3); backdrop-filter: blur(5px);
         }
         @keyframes textPulse { 
             0%, 100% { opacity: 0.7; text-shadow: 0 0 5px rgba(212, 175, 55, 0.2); } 
-            50% { opacity: 1; text-shadow: 0 0 15px var(--gold); color: #fff; } 
+            50% { opacity: 1; text-shadow: 0 0 20px var(--gold); } 
         }
     </style>
 </head>
 <body>
-    <div class="universal-bg"></div>
+    <div id="pixi-background"></div>
 
     <div id="step-1" class="step-section active">
         <h2>命運的齒輪<br>從陰陽開始轉動</h2>
@@ -145,42 +141,155 @@
         <button id="btn-submit-main" class="btn-submit" onclick="submitAstrolabe()">啟動 108 星曜解碼</button>
     </div>
 
-    <div id="step-4" class="step-section" style="max-width: 90%;">
+    <div id="step-4" class="step-section" style="max-width: 90%; background: rgba(10, 11, 16, 0.85);">
         <h2>天命具現化完成</h2>
-        <div style="font-size: 13px; color: #4CAF50; margin-bottom: 15px; border: 1px solid #4CAF50; padding: 8px; border-radius: 8px; background: rgba(76, 175, 80, 0.1);">
-            ✨ 尊爵版命盤收據已同步推播至您的 LINE 聊天室
+        <div style="font-size: 13px; color: #4CAF50; margin-bottom: 15px; border: 1px solid rgba(76, 175, 80, 0.4); padding: 10px; border-radius: 8px; background: rgba(76, 175, 80, 0.1);">
+            ✨ 尊爵版命盤報告已同步推播至您的 LINE 聊天室
         </div>
-        <div id="result-text" style="text-align: left; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; font-size: 14px; line-height: 1.8; color: #E0E0E0; max-height: 45vh; overflow-y: auto; white-space: pre-wrap; border-left: 3px solid var(--gold);">
+        <div id="result-text" style="text-align: left; background: rgba(0,0,0,0.4); padding: 20px; border-radius: 8px; font-size: 14px; line-height: 1.8; color: #E0E0E0; max-height: 45vh; overflow-y: auto; white-space: pre-wrap; border-left: 3px solid var(--gold);">
             </div>
         <button class="btn-submit" style="margin-top: 20px;" onclick="liff.closeWindow();">關閉星盤回 LINE 查看</button>
     </div>
 
     <div id="loading-overlay">
-        <div id="pixi-container"></div>
-        <div class="loading-content">
-            <div class="loading-text" id="loading-msg">定紫微、安星曜...</div>
-        </div>
+        <div class="loading-text" id="loading-msg">定紫微、安星曜...</div>
     </div>
 
     <script>
         const userAstrolabeData = { gender: '', calendar: '', date: '', time: '' };
         let currentIdToken = ""; 
-        let pixiApp = null; // 全域保存 Pixi 實例以利控制
+        
+        // --- 🌌 PixiJS 全域特效控制器 ---
+        let pixiApp;
+        let astrolabeGrid, astrolabeCore;
+        let isCalculating = false; // 控制特效狀態切換
+        const particles = [];
 
+        function initPixiBackground() {
+            const container = document.getElementById('pixi-background');
+            pixiApp = new PIXI.Application({
+                resizeTo: window,
+                transparent: true,
+                autoDensity: true,
+                resolution: window.devicePixelRatio || 1,
+            });
+            container.appendChild(pixiApp.view);
+
+            // 1. 星塵背景 (緩慢漂浮)
+            const starContainer = new PIXI.Container();
+            pixiApp.stage.addChild(starContainer);
+            for(let i=0; i<150; i++) {
+                let star = new PIXI.Graphics();
+                star.beginFill(0xFFFFFF, Math.random() * 0.8 + 0.2);
+                star.drawCircle(0, 0, Math.random() * 1.5);
+                star.endFill();
+                star.x = Math.random() * pixiApp.screen.width;
+                star.y = Math.random() * pixiApp.screen.height;
+                star.vy = (Math.random() - 0.5) * 0.2;
+                starContainer.addChild(star);
+            }
+
+            // 2. 命盤中心組件
+            const center = new PIXI.Container();
+            center.x = pixiApp.screen.width / 2;
+            center.y = pixiApp.screen.height / 2; // 置中
+            pixiApp.stage.addChild(center);
+
+            // 3. 12 宮位立體星軌
+            astrolabeGrid = new PIXI.Graphics();
+            astrolabeGrid.lineStyle(1.5, 0xD4AF37, 0.5); // 金色
+            astrolabeGrid.drawCircle(0, 0, 180);
+            astrolabeGrid.lineStyle(1, 0xD4AF37, 0.3);
+            astrolabeGrid.drawCircle(0, 0, 110);
+            for(let i = 0; i < 12; i++) {
+                const angle = (i * Math.PI) / 6;
+                astrolabeGrid.lineStyle(1.5, 0xD4AF37, 0.4);
+                astrolabeGrid.moveTo(Math.cos(angle) * 110, Math.sin(angle) * 110);
+                astrolabeGrid.lineTo(Math.cos(angle) * 180, Math.sin(angle) * 180);
+            }
+            astrolabeGrid.alpha = 0.2; // 潛伏期暗淡
+            center.addChild(astrolabeGrid);
+
+            // 4. 核心
+            astrolabeCore = new PIXI.Graphics();
+            astrolabeCore.beginFill(0x4A148C, 0.8); // 深紫
+            astrolabeCore.drawCircle(0, 0, 35);
+            astrolabeCore.endFill();
+            astrolabeCore.lineStyle(2, 0xD8B4E2, 0.5);
+            astrolabeCore.drawCircle(0, 0, 45);
+            astrolabeCore.alpha = 0.3; // 潛伏期暗淡
+            center.addChild(astrolabeCore);
+
+            const elementColors = [0xFFD700, 0x4CAF50, 0x2196F3, 0xF44336, 0x795548]; // 金木水火土
+
+            // 動畫循環
+            let tick = 0;
+            pixiApp.ticker.add((delta) => {
+                tick += delta;
+
+                // 星塵飄動
+                starContainer.children.forEach(star => {
+                    star.y += star.vy * delta;
+                    if(star.y < 0) star.y = pixiApp.screen.height;
+                    if(star.y > pixiApp.screen.height) star.y = 0;
+                });
+
+                if (!isCalculating) {
+                    // 【潛伏期】：緩慢旋轉，微弱呼吸
+                    astrolabeGrid.rotation += 0.001 * delta;
+                    astrolabeCore.scale.set(1 + Math.sin(tick * 0.05) * 0.05);
+                } else {
+                    // 【爆發期】：高亮、高速、五行撞擊
+                    astrolabeGrid.alpha = Math.min(1, astrolabeGrid.alpha + 0.05);
+                    astrolabeCore.alpha = Math.min(1, astrolabeCore.alpha + 0.05);
+                    
+                    astrolabeGrid.rotation += 0.01 * delta; // 轉速加快
+                    astrolabeCore.scale.set(1 + Math.sin(tick * 0.2) * 0.15); // 劇烈呼吸
+
+                    // 隨機生成五行能量球
+                    if (Math.random() < 0.2) {
+                        const p = new PIXI.Graphics();
+                        p.beginFill(elementColors[Math.floor(Math.random() * elementColors.length)], 0.9);
+                        p.drawCircle(0, 0, 5);
+                        p.endFill();
+                        
+                        const spawnAngle = Math.random() * Math.PI * 2;
+                        p.x = Math.cos(spawnAngle) * (pixiApp.screen.width / 2 + 100);
+                        p.y = Math.sin(spawnAngle) * (pixiApp.screen.height / 2 + 100);
+                        p.speed = 6 + Math.random() * 4;
+                        center.addChild(p);
+                        particles.push(p);
+                    }
+
+                    // 能量球撞擊核心
+                    for (let i = particles.length - 1; i >= 0; i--) {
+                        const p = particles[i];
+                        const dist = Math.sqrt(p.x * p.x + p.y * p.y);
+                        if (dist < 40) {
+                            center.removeChild(p);
+                            particles.splice(i, 1);
+                            astrolabeCore.scale.set(1.5); // 撞擊瞬間放大
+                            astrolabeGrid.rotation -= 0.05; // 震動感
+                        } else {
+                            p.x -= (p.x / dist) * p.speed * delta;
+                            p.y -= (p.y / dist) * p.speed * delta;
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 核心邏輯 ---
         async function initLIFF() {
             try {
                 await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
-                if (!liff.isLoggedIn()) {
-                    liff.login(); return;
-                }
+                if (!liff.isLoggedIn()) { liff.login(); return; }
                 currentIdToken = liff.getIDToken();
             } catch (err) {
-                console.error("LIFF 初始化失敗：", err);
                 alert("無法開啟結界，請在 LINE 內部開啟！");
             }
         }
 
-        // 初始化日期滾輪
         function initDatePicker() {
             const ySelect = document.getElementById('input-year');
             const mSelect = document.getElementById('input-month');
@@ -211,6 +320,7 @@
         }
 
         window.onload = async () => {
+            initPixiBackground(); // 啟動背景特效
             initDatePicker();
             await initLIFF();
         };
@@ -227,105 +337,6 @@
             }, 300);
         }
 
-        // =========================================================
-        // 🔮 旗艦級 Pixi.js 特效核心：12宮位星軌 + 五行能量撞擊
-        // =========================================================
-        function launchCosmicMatrix() {
-            if (pixiApp) return; // 避免重複啟動
-
-            const container = document.getElementById('pixi-container');
-            pixiApp = new PIXI.Application({
-                resizeTo: window,
-                transparent: true,
-                autoDensity: true,
-                resolution: window.devicePixelRatio || 1,
-            });
-            container.appendChild(pixiApp.view);
-
-            const center = new PIXI.Container();
-            center.x = pixiApp.screen.width / 2;
-            center.y = pixiApp.screen.height / 2 - 50;
-            pixiApp.stage.addChild(center);
-
-            // 1. 繪製 12 宮位星軌 (Astrolabe Grid)
-            const grid = new PIXI.Graphics();
-            grid.lineStyle(1.5, 0xD4AF37, 0.4); // 金色線條
-            grid.drawCircle(0, 0, 160); // 外圈
-            grid.lineStyle(1, 0xD4AF37, 0.2);
-            grid.drawCircle(0, 0, 100); // 內圈
-            
-            // 繪製 12 條分隔線
-            for(let i = 0; i < 12; i++) {
-                const angle = (i * Math.PI) / 6;
-                grid.lineStyle(1.5, 0xD4AF37, 0.4);
-                grid.moveTo(Math.cos(angle) * 100, Math.sin(angle) * 100);
-                grid.lineTo(Math.cos(angle) * 160, Math.sin(angle) * 160);
-            }
-            center.addChild(grid);
-
-            // 2. 繪製命盤核心能量 (Core)
-            const core = new PIXI.Graphics();
-            core.beginFill(0x8E24AA, 0.8); // 深紫色
-            core.drawCircle(0, 0, 30);
-            core.endFill();
-            // 核心外發光
-            core.lineStyle(2, 0xD8B4E2, 0.8);
-            core.drawCircle(0, 0, 38);
-            center.addChild(core);
-
-            // 3. 五行能量球系統 (Five Elements Particles)
-            const particles = [];
-            const elementColors = [0xFFD700, 0x4CAF50, 0x2196F3, 0xF44336, 0x795548]; // 金木水火土
-
-            let tickCounter = 0;
-            pixiApp.ticker.add((delta) => {
-                tickCounter += delta;
-                
-                // 星軌緩慢自轉
-                grid.rotation += 0.003 * delta;
-                
-                // 核心脈衝呼吸效果
-                core.scale.x = 1 + Math.sin(tickCounter * 0.1) * 0.1;
-                core.scale.y = 1 + Math.sin(tickCounter * 0.1) * 0.1;
-
-                // 隨機生成五行能量球，從外向內撞擊
-                if (Math.random() < 0.15) {
-                    const p = new PIXI.Graphics();
-                    p.beginFill(elementColors[Math.floor(Math.random() * elementColors.length)], 0.8);
-                    p.drawCircle(0, 0, 4);
-                    p.endFill();
-                    
-                    const spawnAngle = Math.random() * Math.PI * 2;
-                    p.x = Math.cos(spawnAngle) * (pixiApp.screen.width / 2 + 50);
-                    p.y = Math.sin(spawnAngle) * (pixiApp.screen.height / 2 + 50);
-                    p.speed = 5 + Math.random() * 5; // 高速撞擊
-                    center.addChild(p);
-                    particles.push(p);
-                }
-
-                // 能量球移動與撞擊判定
-                for (let i = particles.length - 1; i >= 0; i--) {
-                    const p = particles[i];
-                    const dist = Math.sqrt(p.x * p.x + p.y * p.y);
-                    
-                    if (dist < 40) { // 撞擊到核心
-                        center.removeChild(p);
-                        particles.splice(i, 1);
-                        // 撞擊時的劇烈脈衝
-                        core.scale.set(1.4); 
-                        grid.rotation -= 0.05; // 造成星軌震動
-                    } else {
-                        // 朝向中心點移動
-                        p.x -= (p.x / dist) * p.speed * delta;
-                        p.y -= (p.y / dist) * p.speed * delta;
-                    }
-                }
-            });
-        }
-
-        // =========================================================
-        // 🚀 API 呼叫與主邏輯
-        // =========================================================
         async function submitAstrolabe() {
             if (!userAstrolabeData.gender || !userAstrolabeData.calendar) {
                 alert("宇宙訊號流失，請重新整理頁面。"); return;
@@ -340,16 +351,16 @@
             userAstrolabeData.date = finalDate;
             userAstrolabeData.time = time;
             
-            // 🌟 啟動載入遮罩 & PixiJS 特效
+            // 🌟 進入爆發期：淡出原本的表單，顯示下方純文字遮罩，並觸發特效暴走
+            document.getElementById('step-3').classList.replace('active', 'exit-up');
             document.getElementById('loading-overlay').classList.add('show');
-            launchCosmicMatrix();
+            isCalculating = true; // 啟動特效暴走
 
             const msgEl = document.getElementById('loading-msg');
-            msgEl.innerText = "驗證靈魂印記與靈力餘額...";
+            msgEl.innerText = "構築 12 宮位星辰網格...";
 
             try {
-                setTimeout(() => { msgEl.innerText = "構築 12 宮位星辰網格..."; }, 2000);
-                setTimeout(() => { msgEl.innerText = "五行能量注入，連結阿卡西紀錄..."; }, 5000);
+                setTimeout(() => { msgEl.innerText = "五行能量注入，解析阿卡西紀錄..."; }, 3500);
 
                 const response = await fetch(`${ENV.API_BASE}/api/divination/ziwei`, {
                     method: 'POST',
@@ -362,16 +373,12 @@
                 if (result.success) {
                     msgEl.innerText = "天命具現化完成！";
                     
-                    // 讓用戶多看 1 秒完成的特效
                     setTimeout(() => {
+                        // 結束特效暴走，進入結果頁
+                        isCalculating = false;
                         document.getElementById('loading-overlay').classList.remove('show');
-                        document.getElementById('step-3').classList.replace('active', 'exit-up');
                         document.getElementById('step-4').classList.add('active');
-                        
                         document.getElementById('result-text').innerText = result.replyText;
-                        
-                        // 銷毀 Pixi 釋放記憶體
-                        if(pixiApp) { pixiApp.destroy(true, {children: true}); pixiApp = null; }
                     }, 1500);
                     
                 } else {
@@ -382,8 +389,9 @@
                 console.error("API 錯誤：", error);
                 alert("🚨 結界異常：" + error.message);
                 document.getElementById('loading-overlay').classList.remove('show');
+                document.getElementById('step-3').classList.replace('exit-up', 'active');
                 document.getElementById('btn-submit-main').disabled = false;
-                if(pixiApp) { pixiApp.destroy(true, {children: true}); pixiApp = null; }
+                isCalculating = false; // 恢復潛伏期
             }
         }
     </script>
