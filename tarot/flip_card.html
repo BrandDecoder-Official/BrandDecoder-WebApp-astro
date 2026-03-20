@@ -267,12 +267,35 @@
         const slider = document.getElementById('frequency-slider');
         const coreNum = document.getElementById('core-number');
         const particleContainer = document.getElementById('particle-container');
-        const coreCard = document.getElementById('energy-core'); // 🚨 就是這行！我把靈魂核心加回來了！
+        const coreCard = document.getElementById('energy-core');
         let currentTopic = "";
         let drawnCount = 0;
         let selectedCards = [];
         let isAnimating = false;
         let isSubmitting = false;
+
+        // ==========================================
+        // 🕵️‍♂️ 隱形發報機：發送漏斗追蹤訊號 (塔羅專用)
+        // ==========================================
+        let currentIdToken = ""; // 儲存 Token
+        async function sendTrackingLog(stageName) {
+            if (!currentIdToken) return;
+            try {
+                await fetch(`${ENV.API_BASE}/api/log/stage`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentIdToken}` 
+                    },
+                    body: JSON.stringify({ 
+                        type: 'tarot', // 塔羅埋點標籤
+                        stage: stageName 
+                    })
+                });
+            } catch (e) {
+                console.log("Tracking Error:", e); 
+            }
+        }
 
         // ==========================================
         // 🚀 6. 初始化 LIFF 與 門禁防護系統
@@ -299,17 +322,11 @@
                 return;
             }
 
-            // 🚀 已確保登入，執行 Stage 1 埋點
-            const profile = await liff.getProfile();
-            fetch(`${ENV.API_BASE}/api/log/stage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    userId: profile.userId, 
-                    stage: "Stage 1: Open LIFF",
-                    type: ENV.TYPE
-                })
-            }).catch(e => console.log("埋點發送忽略"));
+            // 取得並儲存 Token 給發報機使用
+            currentIdToken = liff.getAccessToken(); // LINE LIFF 習慣用 AccessToken
+
+            // 🚀 執行 Stage 1 埋點 (進入結界)
+            sendTrackingLog("Stage 1: Page View");
             
         }).catch((err) => {
             console.error("LIFF 初始化失敗", err);
@@ -443,8 +460,13 @@
         // ==========================================
         document.getElementById('submitBtn').addEventListener('click', async () => {
             if (isSubmitting) return;
-            isSubmitting = true;
 
+            // 👇👇👇 CTO 埋點新增：當用戶點擊「解開結界」啟動時，發送漏斗 Stage 2 訊號 👇👇👇
+            if(!confirm("確認耗費靈力啟動塔羅解碼？")) return;
+            sendTrackingLog("Stage 2: Ticket Created");
+            // 👆👆👆 埋點結束 👆👆👆
+
+            isSubmitting = true;
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerText = "結界凝聚中...";
