@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>命運解碼室 | 紫微大運</title>
+    <title>BrandDecoder - 命運解碼室 | 紫微大運</title>
     
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="/env.js?V=5"></script>
@@ -26,7 +26,7 @@
         /* 🌟 PixiJS 全局背景畫布 */
         #pixi-background { position: absolute; inset: 0; z-index: -1; }
 
-        /* 🔮 步驟容器 (加上毛玻璃效果讓文字更清楚) */
+        /* 🔮 步驟容器 */
         .step-section {
             position: absolute; top: 50%; left: 50%; width: 90%; max-width: 400px; text-align: center; z-index: 10;
             transform: translate(-50%, -30%); opacity: 0; pointer-events: none;
@@ -41,7 +41,6 @@
         h2 { color: var(--gold); font-weight: 300; letter-spacing: 2px; margin-bottom: 25px; line-height: 1.6; text-shadow: 0 0 10px rgba(212, 175, 55, 0.3); margin-top: 0;}
         .subtitle { font-size: 14px; color: #aaa; margin-bottom: 20px; letter-spacing: 1px; }
 
-        /* 按鈕與選單樣式 */
         .btn-choice {
             display: block; width: 100%; padding: 18px; margin-bottom: 15px;
             background: rgba(255, 255, 255, 0.05);
@@ -64,9 +63,25 @@
             width: 100%; padding: 15px; box-sizing: border-box;
             background: rgba(0,0,0,0.8); border: 1px solid var(--gray);
             color: var(--gold-light); font-size: 16px; border-radius: 8px;
-            color-scheme: dark; appearance: none;
+            color-scheme: dark; appearance: none; transition: all 0.3s;
         }
         select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 10px rgba(212,175,55,0.2); }
+
+        /* ✨ 勾選框樣式 */
+        .checkbox-wrapper { margin-top: 12px; padding-left: 5px; }
+        .checkbox-label { display: flex; align-items: center; color: #aaa; font-size: 13px; cursor: pointer; transition: color 0.3s; }
+        .checkbox-label:hover { color: var(--gold-light); }
+        .checkbox-label input[type="checkbox"] { 
+            appearance: none; width: 18px; height: 18px; border: 1px solid var(--gray); border-radius: 4px; 
+            margin-right: 10px; background: rgba(0,0,0,0.5); cursor: pointer; position: relative;
+        }
+        .checkbox-label input[type="checkbox"]:checked {
+            background: var(--gold); border-color: var(--gold);
+        }
+        .checkbox-label input[type="checkbox"]:checked::after {
+            content: '✓'; position: absolute; color: #000; font-size: 14px; font-weight: bold;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
 
         .btn-submit {
             width: 100%; padding: 18px; margin-top: 15px;
@@ -79,7 +94,6 @@
         .btn-submit:active { transform: scale(0.96); }
         .btn-submit:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; }
 
-        /* ✨ 載入遮罩 (僅文字) */
         #loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: rgba(10, 11, 16, 0.6); z-index: 100;
@@ -127,17 +141,19 @@
                 <select id="input-day"></select>
             </div>
         </div>
+        
         <div class="form-group">
             <label class="form-label">降生時辰</label>
             <select id="input-time">
-                <option value="子">子時 (23:00 - 00:59)</option><option value="丑">丑時 (01:00 - 02:59)</option>
-                <option value="寅">寅時 (03:00 - 04:59)</option><option value="卯">卯時 (05:00 - 06:59)</option>
-                <option value="辰">辰時 (07:00 - 08:59)</option><option value="巳">巳時 (09:00 - 10:59)</option>
-                <option value="午">午時 (11:00 - 12:59)</option><option value="未">未時 (13:00 - 14:59)</option>
-                <option value="申">申時 (15:00 - 16:59)</option><option value="酉">酉時 (17:00 - 18:59)</option>
-                <option value="戌">戌時 (19:00 - 20:59)</option><option value="亥">亥時 (21:00 - 22:59)</option>
-            </select>
+                </select>
+            <div class="checkbox-wrapper">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="toggle-fuzzy-time">
+                    不知確切時辰，申請大師區間定盤
+                </label>
+            </div>
         </div>
+
         <button id="btn-submit-main" class="btn-submit" onclick="submitAstrolabe()">啟動 108 星曜解碼</button>
     </div>
 
@@ -158,24 +174,47 @@
     <script>
         const userAstrolabeData = { gender: '', calendar: '', date: '', time: '' };
         let currentIdToken = ""; 
-        
-        // --- 🌌 PixiJS 全域特效控制器 ---
         let pixiApp;
         let astrolabeGrid, astrolabeCore;
-        let isCalculating = false; // 控制特效狀態切換
+        let isCalculating = false; 
         const particles = [];
 
+        // --- 🔮 動態時辰選單資料 ---
+        const preciseTimes = [
+            {v: '子', t: '子時 (23:00 - 00:59)'}, {v: '丑', t: '丑時 (01:00 - 02:59)'},
+            {v: '寅', t: '寅時 (03:00 - 04:59)'}, {v: '卯', t: '卯時 (05:00 - 06:59)'},
+            {v: '辰', t: '辰時 (07:00 - 08:59)'}, {v: '巳', t: '巳時 (09:00 - 10:59)'},
+            {v: '午', t: '午時 (11:00 - 12:59)'}, {v: '未', t: '未時 (13:00 - 14:59)'},
+            {v: '申', t: '申時 (15:00 - 16:59)'}, {v: '酉', t: '酉時 (17:00 - 18:59)'},
+            {v: '戌', t: '戌時 (19:00 - 20:59)'}, {v: '亥', t: '亥時 (21:00 - 22:59)'}
+        ];
+        const fuzzyTimes = [
+            {v: '清晨', t: '清晨破曉 (約 05:00 - 11:00)'},
+            {v: '午後', t: '午後日輪 (約 11:00 - 17:00)'},
+            {v: '傍晚', t: '傍晚暮色 (約 17:00 - 23:00)'},
+            {v: '深夜', t: '深夜星辰 (約 23:00 - 05:00)'}
+        ];
+
+        function populateTimeOptions(isFuzzy) {
+            const timeSelect = document.getElementById('input-time');
+            timeSelect.innerHTML = '';
+            const options = isFuzzy ? fuzzyTimes : preciseTimes;
+            options.forEach(opt => {
+                timeSelect.add(new Option(opt.t, opt.v));
+            });
+            // 切換時給予視覺特效反饋
+            timeSelect.style.borderColor = 'var(--gold-light)';
+            setTimeout(() => timeSelect.style.borderColor = 'var(--gray)', 400);
+        }
+
+        // --- 🌌 PixiJS 全域特效 ---
         function initPixiBackground() {
             const container = document.getElementById('pixi-background');
             pixiApp = new PIXI.Application({
-                resizeTo: window,
-                transparent: true,
-                autoDensity: true,
-                resolution: window.devicePixelRatio || 1,
+                resizeTo: window, transparent: true, autoDensity: true, resolution: window.devicePixelRatio || 1,
             });
             container.appendChild(pixiApp.view);
 
-            // 1. 星塵背景 (緩慢漂浮)
             const starContainer = new PIXI.Container();
             pixiApp.stage.addChild(starContainer);
             for(let i=0; i<150; i++) {
@@ -189,15 +228,12 @@
                 starContainer.addChild(star);
             }
 
-            // 2. 命盤中心組件
             const center = new PIXI.Container();
-            center.x = pixiApp.screen.width / 2;
-            center.y = pixiApp.screen.height / 2; // 置中
+            center.x = pixiApp.screen.width / 2; center.y = pixiApp.screen.height / 2; 
             pixiApp.stage.addChild(center);
 
-            // 3. 12 宮位立體星軌
             astrolabeGrid = new PIXI.Graphics();
-            astrolabeGrid.lineStyle(1.5, 0xD4AF37, 0.5); // 金色
+            astrolabeGrid.lineStyle(1.5, 0xD4AF37, 0.5); 
             astrolabeGrid.drawCircle(0, 0, 180);
             astrolabeGrid.lineStyle(1, 0xD4AF37, 0.3);
             astrolabeGrid.drawCircle(0, 0, 110);
@@ -207,27 +243,23 @@
                 astrolabeGrid.moveTo(Math.cos(angle) * 110, Math.sin(angle) * 110);
                 astrolabeGrid.lineTo(Math.cos(angle) * 180, Math.sin(angle) * 180);
             }
-            astrolabeGrid.alpha = 0.2; // 潛伏期暗淡
+            astrolabeGrid.alpha = 0.2; 
             center.addChild(astrolabeGrid);
 
-            // 4. 核心
             astrolabeCore = new PIXI.Graphics();
-            astrolabeCore.beginFill(0x4A148C, 0.8); // 深紫
+            astrolabeCore.beginFill(0x4A148C, 0.8); 
             astrolabeCore.drawCircle(0, 0, 35);
             astrolabeCore.endFill();
             astrolabeCore.lineStyle(2, 0xD8B4E2, 0.5);
             astrolabeCore.drawCircle(0, 0, 45);
-            astrolabeCore.alpha = 0.3; // 潛伏期暗淡
+            astrolabeCore.alpha = 0.3; 
             center.addChild(astrolabeCore);
 
-            const elementColors = [0xFFD700, 0x4CAF50, 0x2196F3, 0xF44336, 0x795548]; // 金木水火土
+            const elementColors = [0xFFD700, 0x4CAF50, 0x2196F3, 0xF44336, 0x795548]; 
 
-            // 動畫循環
             let tick = 0;
             pixiApp.ticker.add((delta) => {
                 tick += delta;
-
-                // 星塵飄動
                 starContainer.children.forEach(star => {
                     star.y += star.vy * delta;
                     if(star.y < 0) star.y = pixiApp.screen.height;
@@ -235,24 +267,19 @@
                 });
 
                 if (!isCalculating) {
-                    // 【潛伏期】：緩慢旋轉，微弱呼吸
                     astrolabeGrid.rotation += 0.001 * delta;
                     astrolabeCore.scale.set(1 + Math.sin(tick * 0.05) * 0.05);
                 } else {
-                    // 【爆發期】：高亮、高速、五行撞擊
                     astrolabeGrid.alpha = Math.min(1, astrolabeGrid.alpha + 0.05);
                     astrolabeCore.alpha = Math.min(1, astrolabeCore.alpha + 0.05);
-                    
-                    astrolabeGrid.rotation += 0.01 * delta; // 轉速加快
-                    astrolabeCore.scale.set(1 + Math.sin(tick * 0.2) * 0.15); // 劇烈呼吸
+                    astrolabeGrid.rotation += 0.01 * delta; 
+                    astrolabeCore.scale.set(1 + Math.sin(tick * 0.2) * 0.15); 
 
-                    // 隨機生成五行能量球
                     if (Math.random() < 0.2) {
                         const p = new PIXI.Graphics();
                         p.beginFill(elementColors[Math.floor(Math.random() * elementColors.length)], 0.9);
                         p.drawCircle(0, 0, 5);
                         p.endFill();
-                        
                         const spawnAngle = Math.random() * Math.PI * 2;
                         p.x = Math.cos(spawnAngle) * (pixiApp.screen.width / 2 + 100);
                         p.y = Math.sin(spawnAngle) * (pixiApp.screen.height / 2 + 100);
@@ -261,25 +288,22 @@
                         particles.push(p);
                     }
 
-                    // 能量球撞擊核心
                     for (let i = particles.length - 1; i >= 0; i--) {
                         const p = particles[i];
                         const dist = Math.sqrt(p.x * p.x + p.y * p.y);
                         if (dist < 40) {
-                            center.removeChild(p);
-                            particles.splice(i, 1);
-                            astrolabeCore.scale.set(1.5); // 撞擊瞬間放大
-                            astrolabeGrid.rotation -= 0.05; // 震動感
+                            center.removeChild(p); particles.splice(i, 1);
+                            astrolabeCore.scale.set(1.5); 
+                            astrolabeGrid.rotation -= 0.05; 
                         } else {
-                            p.x -= (p.x / dist) * p.speed * delta;
-                            p.y -= (p.y / dist) * p.speed * delta;
+                            p.x -= (p.x / dist) * p.speed * delta; p.y -= (p.y / dist) * p.speed * delta;
                         }
                     }
                 }
             });
         }
 
-        // --- 核心邏輯 ---
+        // --- 初始與驗證邏輯 ---
         async function initLIFF() {
             try {
                 await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
@@ -320,8 +344,15 @@
         }
 
         window.onload = async () => {
-            initPixiBackground(); // 啟動背景特效
+            initPixiBackground(); 
             initDatePicker();
+            populateTimeOptions(false); // 🌟 初始化載入 12 時辰
+            
+            // 🌟 監聽打勾狀態切換選單
+            document.getElementById('toggle-fuzzy-time').addEventListener('change', (e) => {
+                populateTimeOptions(e.target.checked);
+            });
+
             await initLIFF();
         };
 
@@ -343,21 +374,28 @@
             }
 
             const finalDate = `${document.getElementById('input-year').value}-${document.getElementById('input-month').value}-${document.getElementById('input-day').value}`;
+            
+            // 🌟 自動抓取目前動態選單的值（不論是 子 還是 清晨，都會精準抓取）
             const time = document.getElementById('input-time').value;
 
-            if(!confirm(`確認耗費靈力啟動命盤？\n\n這將進行深度的 108 星曜矩陣運算。`)) return;
+            // 判斷給予不同的提示文案
+            const isFuzzy = document.getElementById('toggle-fuzzy-time').checked;
+            const confirmMsg = isFuzzy 
+                ? `確認耗費靈力啟動【區間定盤】？\n\n大師將針對您選擇的時段，捕捉不變的命格核心。` 
+                : `確認耗費靈力啟動命盤？\n\n這將進行深度的 108 星曜矩陣運算。`;
+
+            if(!confirm(confirmMsg)) return;
 
             document.getElementById('btn-submit-main').disabled = true;
             userAstrolabeData.date = finalDate;
-            userAstrolabeData.time = time;
+            userAstrolabeData.time = time; // 🌟 傳送給後端：'子' 或 '清晨'
             
-            // 🌟 進入爆發期：淡出原本的表單，顯示下方純文字遮罩，並觸發特效暴走
             document.getElementById('step-3').classList.replace('active', 'exit-up');
             document.getElementById('loading-overlay').classList.add('show');
-            isCalculating = true; // 啟動特效暴走
+            isCalculating = true; 
 
             const msgEl = document.getElementById('loading-msg');
-            msgEl.innerText = "構築 12 宮位星辰網格...";
+            msgEl.innerText = isFuzzy ? "啟動靈能區間定盤..." : "構築 12 宮位星辰網格...";
 
             try {
                 setTimeout(() => { msgEl.innerText = "五行能量注入，解析阿卡西紀錄..."; }, 3500);
@@ -372,15 +410,12 @@
 
                 if (result.success) {
                     msgEl.innerText = "天命具現化完成！";
-                    
                     setTimeout(() => {
-                        // 結束特效暴走，進入結果頁
                         isCalculating = false;
                         document.getElementById('loading-overlay').classList.remove('show');
                         document.getElementById('step-4').classList.add('active');
                         document.getElementById('result-text').innerText = result.replyText;
                     }, 1500);
-                    
                 } else {
                     throw new Error(result.msg || "解碼失敗，請稍後再試。");
                 }
@@ -391,7 +426,7 @@
                 document.getElementById('loading-overlay').classList.remove('show');
                 document.getElementById('step-3').classList.replace('exit-up', 'active');
                 document.getElementById('btn-submit-main').disabled = false;
-                isCalculating = false; // 恢復潛伏期
+                isCalculating = false; 
             }
         }
     </script>
