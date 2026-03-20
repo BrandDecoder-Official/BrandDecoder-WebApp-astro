@@ -252,6 +252,7 @@
         let rawHistoryData = [];
         let userProfileData = null; 
         let currentIdToken = ""; // 🛡️ 改用 ID Token ( JWT 安全驗證 )
+        let currentAccessToken = ""; // 🌟 新增：用來過金流門神的鑰匙
 
         // 定義計費方案
         const pricingTiers = [
@@ -272,7 +273,9 @@
                 }
 
                 currentIdToken = liff.getIDToken(); // 取代 AccessToken，確保後端解析 userId
-                if(!currentIdToken) throw new Error("無法取得安全通行證");
+                currentAccessToken = liff.getAccessToken(); // 🌟 新增：取得 Access Token 供金流使用
+                
+                if(!currentIdToken || !currentAccessToken) throw new Error("無法取得安全通行證");
 
                 // 取得 LINE 使用者外觀資料
                 const profile = await liff.getProfile();
@@ -583,7 +586,8 @@
             try {
                 const response = await fetch(`${ENV.API_BASE}/api/pay/request`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    // 👇 🌟 關鍵修正：這裡換成 currentAccessToken (過金流門神專用的鑰匙)
+                    headers: { 'Authorization': `Bearer ${currentAccessToken}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         amount: amount, 
                         productName: `${pointsToGive} 點靈力儲值`,
@@ -597,7 +601,8 @@
                 if(data.success && data.url) {
                     window.location.href = data.url;
                 } else {
-                    alert("🚨 呼叫 LINE Pay 結界失敗：" + (data.msg || "未知錯誤"));
+                    // 👇 🌟 優化：同時捕捉 msg 或 message，避免顯示未知錯誤
+                    alert("🚨 呼叫 LINE Pay 結界失敗：" + (data.msg || data.message || "未知錯誤"));
                     document.getElementById('pay-loader').classList.remove('active');
                 }
 
