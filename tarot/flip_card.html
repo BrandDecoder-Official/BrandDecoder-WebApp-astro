@@ -256,6 +256,18 @@
         // ==========================================
         let confirmActionCallback = null;
 
+        // 🌟 讓前端去後端問現在的價格
+        async function fetchAiConfig() {
+            try {
+                const response = await fetch(`${ENV.API_BASE}/api/admin/config/ai`);
+                const result = await response.json();
+                if (result.success && result.data && result.data.tarot) {
+                    window.tarotCost = result.data.tarot.cost; // 把後台定價存起來
+                }
+            } catch (e) { console.error("無法取得動態定價", e); }
+        }
+        
+
         function showCustomConfirm(title, desc, cost, callback) {
             document.getElementById('confirm-title').innerText = title;
             document.getElementById('confirm-desc').innerHTML = `
@@ -400,6 +412,8 @@
 
             currentIdToken = liff.getAccessToken();
             sendTrackingLog("Stage 1: Page View");
+            
+            await fetchAiConfig();
             
         }).catch((err) => {
             console.error("LIFF 初始化失敗", err);
