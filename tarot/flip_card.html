@@ -260,7 +260,7 @@
         async function fetchAiConfig() {
             try {
                 // 加上時間戳 ?t=... 強制瀏覽器不要使用快取
-                const response = await fetch(`${ENV.API_BASE}/api/admin/config/ai?t=${Date.now()}`);
+                const response = await fetch(`${ENV.API_BASE}/api/public/config/ai?t=${Date.now()}`);
                 const result = await response.json();
                 
                 console.log("🔥 [CTO 雷達] 取得後台動態定價:", result); // 留著這行，按 F12 可以直接看有沒有抓到
