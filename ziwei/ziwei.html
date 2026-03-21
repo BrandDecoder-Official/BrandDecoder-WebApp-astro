@@ -99,7 +99,7 @@
            ========================================== */
         #loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(10, 11, 16, 0.4); /* 調低透明度讓光點透出來 */
+            background-color: rgba(10, 11, 16, 0.4); 
             z-index: 100;
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
             opacity: 0; pointer-events: none; transition: opacity 0.8s ease;
@@ -110,31 +110,22 @@
         /* ==========================================
            🔮 尊爵版紫微 Loading 動畫 (太極星辰陣)
            ========================================== */
-        
-        /* 🌟 新增：疊加容器，把圖騰跟紫點都對齊中心 */
         .ritual-container {
             width: 280px; height: 280px; margin-bottom: 50px;
             position: relative; display: flex; justify-content: center; align-items: center;
         }
-
-        /* 🌟 新增：紫色能量核心 (放在下面，並變小以符合太極圖中間) */
         .core-nebula {
-            width: 60px; height: 60px; /* 變小以符合太極中間 */
+            width: 60px; height: 60px; 
             background: radial-gradient(circle, #ce93d8 0%, #8e24aa 50%, transparent 100%);
             border-radius: 50%;
-            position: absolute; z-index: 1; /* 放在下面 */
-            /* 使用原本舊有的呼吸閃爍動畫，並加快頻率使其更有能量感 */
+            position: absolute; z-index: 1; 
             animation: textPulse 1s infinite;
         }
-
         .magic-chart {
             width: 100%; height: 100%; object-fit: contain;
-            position: absolute; z-index: 2; /* 放在紫點上面 */
-            /* 只保留旋轉動畫，呼吸效果由底下的紫點負責 */
+            position: absolute; z-index: 2; 
             animation: rotate-chart 15s linear infinite;
         }
-
-        /* 旋轉動畫 */
         @keyframes rotate-chart {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -148,8 +139,6 @@
             background: rgba(0, 0, 0, 0.6); padding: 15px 30px; border-radius: 30px;
             border: 1px solid rgba(212,175,55,0.3); animation: textPulse 2s infinite; 
         }
-
-        /* 文字框專屬呼吸燈 */
         @keyframes textPulse { 
             0%, 100% { 
                 opacity: 0.8; 
@@ -162,6 +151,39 @@
                 box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
             } 
         }
+
+        /* ==========================================
+           🌌 沉浸式確認彈窗 (Custom Confirm Modal)
+           ========================================== */
+        #custom-confirm-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            z-index: 999; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #custom-confirm-overlay.show { opacity: 1; pointer-events: auto; }
+        
+        .confirm-box {
+            background: #111; border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 16px; width: 85%; max-width: 320px;
+            padding: 25px 20px; text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(212,175,55,0.1) inset;
+            transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #custom-confirm-overlay.show .confirm-box { transform: scale(1); }
+        
+        .confirm-title { color: var(--gold); font-size: 18px; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
+        .confirm-desc { color: #ccc; font-size: 14px; line-height: 1.6; margin-bottom: 25px; }
+        .confirm-cost { color: var(--gold-light); font-weight: bold; font-size: 16px; margin: 8px 0; background: rgba(212,175,55,0.1); display: inline-block; padding: 4px 12px; border-radius: 20px;}
+        
+        .confirm-actions { display: flex; gap: 12px; }
+        .btn-confirm-cancel, .btn-confirm-ok {
+            flex: 1; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; border: none; letter-spacing: 1px;
+        }
+        .btn-confirm-cancel { background: rgba(255,255,255,0.1); color: #aaa; }
+        .btn-confirm-cancel:active { background: rgba(255,255,255,0.2); }
+        .btn-confirm-ok { background: linear-gradient(135deg, #D4AF37, #AA7C11); color: #000; }
+        .btn-confirm-ok:active { opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -194,8 +216,7 @@
         
         <div class="form-group">
             <label class="form-label">降生時辰</label>
-            <select id="input-time">
-                </select>
+            <select id="input-time"></select>
             <div class="checkbox-wrapper">
                 <label class="checkbox-label">
                     <input type="checkbox" id="toggle-fuzzy-time">
@@ -220,14 +241,51 @@
     <div id="loading-overlay">
         <div class="ritual-container">
             <div class="core-nebula"></div>
-            
             <img src="/images/ziwei_ritual_chart.png" alt="紫微星辰陣" class="magic-chart">
         </div>
-
         <div id="loading-msg">構築 12 宮位星辰網格...</div>
     </div>
 
+    <div id="custom-confirm-overlay">
+        <div class="confirm-box">
+            <div class="confirm-title" id="confirm-title">【 🏮 紫微天命羅盤 】</div>
+            <div class="confirm-desc" id="confirm-desc">
+                </div>
+            <div class="confirm-actions">
+                <button class="btn-confirm-cancel" onclick="closeCustomConfirm()">取消</button>
+                <button class="btn-confirm-ok" id="btn-confirm-ok">確認啟動</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // ==========================================
+        // 🌌 沉浸式彈窗控制器
+        // ==========================================
+        let confirmActionCallback = null;
+
+        function showCustomConfirm(title, desc, cost, callback) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-desc').innerHTML = `
+                ${desc}<br>
+                <div class="confirm-cost">消耗靈力：<span id="confirm-cost-value">${cost}</span> 點</div>
+                是否確認啟動？
+            `;
+            confirmActionCallback = callback;
+            document.getElementById('custom-confirm-overlay').classList.add('show');
+        }
+
+        function closeCustomConfirm() {
+            document.getElementById('custom-confirm-overlay').classList.remove('show');
+            confirmActionCallback = null;
+        }
+
+        document.getElementById('btn-confirm-ok').addEventListener('click', () => {
+            closeCustomConfirm();
+            if (confirmActionCallback) confirmActionCallback(); // 執行回呼
+        });
+
+        
         const userAstrolabeData = { gender: '', calendar: '', date: '', time: '' };
         let currentIdToken = ""; 
         let pixiApp;
@@ -258,7 +316,6 @@
             options.forEach(opt => {
                 timeSelect.add(new Option(opt.t, opt.v));
             });
-            // 切換時給予視覺特效反饋
             timeSelect.style.borderColor = 'var(--gold-light)';
             setTimeout(() => timeSelect.style.borderColor = 'var(--gray)', 400);
         }
@@ -360,9 +417,8 @@
         }
 
         // ==========================================
-        // 🕵️‍♂️ 隱形發報機：發送漏斗追蹤訊號
-        // ==========================================
         // 🕵️‍♂️ 隱形發報機
+        // ==========================================
         async function sendTrackingLog(stageName) {
             if (!currentIdToken) return;
             try {
@@ -377,18 +433,13 @@
             } catch (e) { console.log("Tracking Error:", e); }
         }
         
-
-        
         // --- 初始與驗證邏輯 ---
         async function initLIFF() {
             try {
                 await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
                 if (!liff.isLoggedIn()) { liff.login(); return; }
                 currentIdToken = liff.getIDToken();
-                
-                // 👇 補上這行：記錄用戶成功打開了網頁
                 sendTrackingLog("Stage 1: Page View");
-
             } catch (err) {
                 alert("無法開啟結界，請在 LINE 內部開啟！");
             }
@@ -426,9 +477,8 @@
         window.onload = async () => {
             initPixiBackground(); 
             initDatePicker();
-            populateTimeOptions(false); // 🌟 初始化載入 12 時辰
+            populateTimeOptions(false); 
             
-            // 🌟 監聽打勾狀態切換選單
             document.getElementById('toggle-fuzzy-time').addEventListener('change', (e) => {
                 populateTimeOptions(e.target.checked);
             });
@@ -448,73 +498,76 @@
             }, 300);
         }
 
+        // ==========================================
+        // 🚀 最終提交流程 (結合沉浸式彈窗)
+        // ==========================================
         async function submitAstrolabe() {
             if (!userAstrolabeData.gender || !userAstrolabeData.calendar) {
                 alert("宇宙訊號流失，請重新整理頁面。"); return;
             }
 
             const finalDate = `${document.getElementById('input-year').value}-${document.getElementById('input-month').value}-${document.getElementById('input-day').value}`;
-            
-            // 🌟 自動抓取目前動態選單的值（不論是 子 還是 清晨，都會精準抓取）
             const time = document.getElementById('input-time').value;
-
-            // 判斷給予不同的提示文案
             const isFuzzy = document.getElementById('toggle-fuzzy-time').checked;
-            const confirmMsg = isFuzzy 
-                ? `確認耗費靈力啟動【區間定盤】？\n\n大師將針對您選擇的時段，捕捉不變的命格核心。` 
-                : `確認耗費靈力啟動命盤？\n\n這將進行深度的 108 星曜矩陣運算。`;
 
-            // 如果用戶按取消，就中斷執行
-            if(!confirm(confirmMsg)) return;
-
-            // 👇👇👇 CTO 埋點新增：當用戶點擊「確認」啟動時，發送漏斗 Stage 2 訊號 👇👇👇
-            if (typeof sendTrackingLog === "function") {
-                sendTrackingLog("Stage 2: Ticket Created");
-            }
-            // 👆👆👆 埋點結束 👆👆👆
-
-            document.getElementById('btn-submit-main').disabled = true;
-            userAstrolabeData.date = finalDate;
-            userAstrolabeData.time = time; // 🌟 傳送給後端：'子' 或 '清晨'
+            const descMsg = isFuzzy 
+                ? "大師將針對您選擇的時段，捕捉不變的命格核心。" 
+                : "這將進行深度的 108 星曜矩陣運算。";
             
-            document.getElementById('step-3').classList.replace('active', 'exit-up');
-            document.getElementById('loading-overlay').classList.add('show');
-            isCalculating = true; 
+            // 設定靈力點數 (若無後端變數，預設為 39)
+            const currentCost = window.ziweiCost || 39; 
 
-            const msgEl = document.getElementById('loading-msg');
-            msgEl.innerText = isFuzzy ? "啟動靈能區間定盤..." : "構築 12 宮位星辰網格...";
-
-            try {
-                setTimeout(() => { msgEl.innerText = "五行能量注入，解析阿卡西紀錄..."; }, 3500);
-
-                const response = await fetch(`${ENV.API_BASE}/api/divination/ziwei`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentIdToken}` },
-                    body: JSON.stringify({ birthData: userAstrolabeData })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    msgEl.innerText = "天命具現化完成！";
-                    setTimeout(() => {
-                        isCalculating = false;
-                        document.getElementById('loading-overlay').classList.remove('show');
-                        document.getElementById('step-4').classList.add('active');
-                        document.getElementById('result-text').innerText = result.replyText;
-                    }, 1500);
-                } else {
-                    throw new Error(result.msg || "解碼失敗，請稍後再試。");
+            // 呼叫沉浸式彈窗
+            showCustomConfirm("【 🏮 紫微天命羅盤 】", descMsg, currentCost, async () => {
+                
+                // --- 按下確認後才開始執行 ---
+                if (typeof sendTrackingLog === "function") {
+                    sendTrackingLog("Stage 2: Ticket Created");
                 }
 
-            } catch (error) {
-                console.error("API 錯誤：", error);
-                alert("🚨 結界異常：" + error.message);
-                document.getElementById('loading-overlay').classList.remove('show');
-                document.getElementById('step-3').classList.replace('exit-up', 'active');
-                document.getElementById('btn-submit-main').disabled = false;
-                isCalculating = false; 
-            }
+                document.getElementById('btn-submit-main').disabled = true;
+                userAstrolabeData.date = finalDate;
+                userAstrolabeData.time = time; 
+                
+                document.getElementById('step-3').classList.replace('active', 'exit-up');
+                document.getElementById('loading-overlay').classList.add('show');
+                isCalculating = true; 
+
+                const msgEl = document.getElementById('loading-msg');
+                msgEl.innerText = isFuzzy ? "啟動靈能區間定盤..." : "構築 12 宮位星辰網格...";
+
+                try {
+                    setTimeout(() => { msgEl.innerText = "五行能量注入，解析阿卡西紀錄..."; }, 3500);
+
+                    const response = await fetch(`${ENV.API_BASE}/api/divination/ziwei`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentIdToken}` },
+                        body: JSON.stringify({ birthData: userAstrolabeData })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        msgEl.innerText = "天命具現化完成！";
+                        setTimeout(() => {
+                            isCalculating = false;
+                            document.getElementById('loading-overlay').classList.remove('show');
+                            document.getElementById('step-4').classList.add('active');
+                            document.getElementById('result-text').innerText = result.replyText;
+                        }, 1500);
+                    } else {
+                        throw new Error(result.msg || "解碼失敗，請稍後再試。");
+                    }
+
+                } catch (error) {
+                    console.error("API 錯誤：", error);
+                    alert("🚨 結界異常：" + error.message);
+                    document.getElementById('loading-overlay').classList.remove('show');
+                    document.getElementById('step-3').classList.replace('exit-up', 'active');
+                    document.getElementById('btn-submit-main').disabled = false;
+                    isCalculating = false; 
+                }
+            });
         }
     </script>
 </body>
