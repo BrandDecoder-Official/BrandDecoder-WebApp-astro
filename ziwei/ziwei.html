@@ -94,23 +94,88 @@
         .btn-submit:active { transform: scale(0.96); }
         .btn-submit:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; }
 
+        /* ==========================================
+           🌌 Loading 滿版遮罩與排版
+           ========================================== */
         #loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(10, 11, 16, 0.6); z-index: 100;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding-bottom: 15vh;
+            background-color: rgba(10, 11, 16, 0.8); /* 稍微加深背景，讓金線更突出 */
+            z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
             opacity: 0; pointer-events: none; transition: opacity 0.8s ease;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
         }
         #loading-overlay.show { opacity: 1; pointer-events: auto; }
-        
-        .loading-text { 
-            color: var(--gold-light); font-size: 18px; letter-spacing: 4px; font-weight: bold;
-            animation: textPulse 2s infinite; 
-            background: rgba(0,0,0,0.6); padding: 15px 30px; border-radius: 30px;
-            border: 1px solid rgba(212,175,55,0.3); backdrop-filter: blur(5px);
+
+        /* ==========================================
+           🔮 尊爵版紫微 Loading 動畫 (太極星辰陣)
+           ========================================== */
+        .ritual-magic-circle {
+            width: 280px; /* 圖騰大小 */
+            height: 280px;
+            margin-bottom: 50px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+
+        .magic-chart {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            /* 15秒自轉一圈 + 3秒呼吸閃爍一次 */
+            animation: 
+                rotate-chart 15s linear infinite, 
+                breathe-glow 3s ease-in-out infinite;
+        }
+
+        /* 旋轉動畫 */
+        @keyframes rotate-chart {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 發光呼吸動畫 */
+        @keyframes breathe-glow {
+            0%, 100% { 
+                opacity: 0.7; 
+                filter: drop-shadow(0 0 10px rgba(212,175,55,0.3)) brightness(0.9);
+            }
+            50% { 
+                opacity: 1; 
+                filter: drop-shadow(0 0 35px rgba(212,175,55,1)) brightness(1.3);
+            }
+        }
+
+        /* ==========================================
+           ✨ 動態文字框樣式
+           ========================================== */
+        #loading-msg {
+            color: var(--gold-light); 
+            font-size: 18px; 
+            letter-spacing: 4px; 
+            font-weight: bold;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.6); 
+            padding: 15px 30px; 
+            border-radius: 30px;
+            border: 1px solid rgba(212,175,55,0.3); 
+            animation: textPulse 2s infinite; 
+        }
+
+        /* 文字框專屬呼吸燈 */
         @keyframes textPulse { 
-            0%, 100% { opacity: 0.7; text-shadow: 0 0 5px rgba(212, 175, 55, 0.2); } 
-            50% { opacity: 1; text-shadow: 0 0 20px var(--gold); } 
+            0%, 100% { 
+                opacity: 0.8; 
+                text-shadow: 0 0 5px rgba(212, 175, 55, 0.2); 
+                box-shadow: 0 0 0px rgba(212, 175, 55, 0);
+            } 
+            50% { 
+                opacity: 1; 
+                text-shadow: 0 0 20px var(--gold); 
+                box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+            } 
         }
     </style>
 </head>
@@ -168,7 +233,10 @@
     </div>
 
     <div id="loading-overlay">
-        <div class="loading-text" id="loading-msg">定紫微、安星曜...</div>
+        <div class="ritual-magic-circle">
+            <img src="/images/ziwei_ritual_chart.png" alt="紫微星辰陣" class="magic-chart">
+        </div>
+        <div id="loading-msg">構築 12 宮位星辰網格...</div>
     </div>
 
     <script>
