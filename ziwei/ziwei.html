@@ -245,22 +245,21 @@
         </div>
         <div id="loading-msg">構築 12 宮位星辰網格...</div>
     </div>
-
     <div id="custom-confirm-overlay">
         <div class="confirm-box">
-            <div class="confirm-title" id="confirm-title">【 🏮 紫微天命羅盤 】</div>
+            <div class="confirm-title" id="confirm-title">【🏮 紫微天命羅盤】</div>
             <div class="confirm-desc" id="confirm-desc">
                 </div>
             <div class="confirm-actions">
                 <button class="btn-confirm-cancel" onclick="closeCustomConfirm()">取消</button>
-                <button class="btn-confirm-ok" id="btn-confirm-ok">確認啟動</button>
+                <button class="btn-confirm-ok" onclick="executeCustomConfirm()">確認啟動</button>
             </div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // 🌌 沉浸式彈窗控制器
+        // 🌌 沉浸式彈窗控制器 (修復版)
         // ==========================================
         let confirmActionCallback = null;
 
@@ -269,21 +268,27 @@
             document.getElementById('confirm-desc').innerHTML = `
                 ${desc}<br>
                 <div class="confirm-cost">消耗靈力：<span id="confirm-cost-value">${cost}</span> 點</div>
-                是否確認啟動？
             `;
             confirmActionCallback = callback;
             document.getElementById('custom-confirm-overlay').classList.add('show');
         }
 
+        // 單純點擊「取消」時呼叫
         function closeCustomConfirm() {
             document.getElementById('custom-confirm-overlay').classList.remove('show');
-            confirmActionCallback = null;
+            confirmActionCallback = null; 
         }
 
-        document.getElementById('btn-confirm-ok').addEventListener('click', () => {
-            closeCustomConfirm();
-            if (confirmActionCallback) confirmActionCallback(); // 執行回呼
-        });
+        // 🌟 新增：點擊「確認啟動」時專用的執行函數
+        function executeCustomConfirm() {
+            document.getElementById('custom-confirm-overlay').classList.remove('show');
+            
+            if (confirmActionCallback) {
+                const action = confirmActionCallback; // 先把包裹備份起來
+                confirmActionCallback = null; // 清空狀態
+                action(); // 🚀 執行算命與扣點邏輯！
+            }
+        }
 
         
         const userAstrolabeData = { gender: '', calendar: '', date: '', time: '' };
