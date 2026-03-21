@@ -1,1 +1,428 @@
 
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>命運解碼室 - 靈能指揮中心</title>
+    
+    <script src="/env.js?v=2"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+    <style>
+        :root {
+            --gold: #D4AF37; --gold-light: #F9E498; --bg-deep: #050508;
+            --card-bg: rgba(20, 20, 25, 0.6);
+        }
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg-deep); color: #fff; 
+            font-family: 'PingFang TC', 'Noto Serif TC', serif; 
+            min-height: 100vh; display: flex; flex-direction: column;
+            user-select: none; -webkit-user-select: none; overflow-x: hidden;
+        }
+
+        /* 🌌 永恆銀河背景 */
+        #space-canvas { position: fixed; inset: 0; z-index: -10; pointer-events: none; }
+        .vignette { position: fixed; inset: 0; background: radial-gradient(circle at center, transparent 20%, #000 120%); z-index: -9; pointer-events: none; }
+
+        /* --- 頂部狀態列 --- */
+        .top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px; background: linear-gradient(180deg, rgba(0,0,0,0.8), transparent);
+            z-index: 10; border-bottom: 1px solid rgba(212,175,55,0.2);
+        }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-name { font-size: 14px; font-weight: bold; color: #ccc; letter-spacing: 1px; }
+        .points-badge {
+            background: rgba(212,175,55,0.15); border: 1px solid var(--gold);
+            padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: bold;
+            color: var(--gold-light); display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 0 10px rgba(212,175,55,0.2); transition: 0.3s;
+        }
+
+        /* --- 每日簽到 --- */
+        .daily-claim-section { text-align: center; margin: 30px 0 20px 0; z-index: 10; }
+        .btn-claim {
+            background: linear-gradient(135deg, #2a2a35, #111); border: 1.5px solid var(--gold);
+            color: var(--gold-light); padding: 12px 30px; border-radius: 30px;
+            font-size: 16px; font-weight: bold; letter-spacing: 2px; cursor: pointer;
+            box-shadow: 0 0 15px rgba(212,175,55,0.4); transition: all 0.3s;
+        }
+        .btn-claim.active { animation: pulse-gold 2s infinite; }
+        .btn-claim.claimed {
+            background: #222; border-color: #555; color: #777;
+            box-shadow: none; animation: none; pointer-events: none;
+        }
+        @keyframes pulse-gold { 0%,100%{ box-shadow: 0 0 10px rgba(212,175,55,0.3); } 50%{ box-shadow: 0 0 25px var(--gold); } }
+
+        /* --- 日籤卡牌網格 --- */
+        .dashboard-title { text-align: center; color: #aaa; font-size: 13px; letter-spacing: 4px; margin-bottom: 20px; z-index: 10; }
+        .card-grid {
+            display: flex; flex-direction: column; gap: 15px; padding: 0 20px 40px 20px; z-index: 10;
+        }
+        .daily-card {
+            background: var(--card-bg); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; padding: 20px; display: flex; align-items: center; justify-content: space-between;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); position: relative; overflow: hidden;
+        }
+        .daily-card::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--gold); box-shadow: 0 0 10px var(--gold); opacity: 0.5;
+        }
+        
+        /* 狀態：可用 */
+        .daily-card.available { cursor: pointer; border-color: rgba(212,175,55,0.3); }
+        .daily-card.available:active { transform: scale(0.96); background: rgba(212,175,55,0.1); }
+        .daily-card.available .card-status { color: var(--gold-light); background: rgba(212,175,55,0.15); }
+        
+        /* 狀態：冷卻中 (已使用) */
+        .daily-card.cooldown { opacity: 0.6; filter: grayscale(0.5); pointer-events: none; border-color: #333; }
+        .daily-card.cooldown::before { background: #555; box-shadow: none; }
+        .daily-card.cooldown .card-status { color: #888; background: rgba(255,255,255,0.05); }
+
+        .card-info { display: flex; align-items: center; gap: 15px; }
+        .card-icon { font-size: 32px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        .card-text h3 { margin: 0 0 5px 0; font-size: 18px; color: #fff; letter-spacing: 1px; }
+        .card-text p { margin: 0; font-size: 12px; color: #aaa; }
+        
+        .card-status {
+            padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; letter-spacing: 1px;
+            display: flex; flex-direction: column; align-items: center; min-width: 80px;
+        }
+        .cost-text { font-size: 10px; opacity: 0.8; font-weight: normal; margin-top: 2px;}
+
+        /* --- 沉浸式確認彈窗 (共用) --- */
+        #custom-confirm-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            z-index: 999; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #custom-confirm-overlay.show { opacity: 1; pointer-events: auto; }
+        .confirm-box {
+            background: #111; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 16px; width: 85%; max-width: 320px;
+            padding: 25px 20px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(212,175,55,0.1) inset;
+            transform: scale(0.95); transition: transform 0.3s;
+        }
+        #custom-confirm-overlay.show .confirm-box { transform: scale(1); }
+        .confirm-title { color: var(--gold); font-size: 18px; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
+        .confirm-desc { color: #ccc; font-size: 14px; line-height: 1.6; margin-bottom: 25px; }
+        .confirm-cost { color: var(--gold-light); font-weight: bold; font-size: 16px; margin: 8px 0; background: rgba(212,175,55,0.1); display: inline-block; padding: 4px 12px; border-radius: 20px;}
+        .confirm-actions { display: flex; gap: 12px; }
+        .btn-confirm-cancel, .btn-confirm-ok { flex: 1; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; border: none; }
+        .btn-confirm-cancel { background: rgba(255,255,255,0.1); color: #aaa; }
+        .btn-confirm-ok { background: linear-gradient(135deg, #D4AF37, #AA7C11); color: #000; }
+
+        /* --- 運勢結果展示彈窗 --- */
+        #result-overlay {
+            position: fixed; inset: 0; background: rgba(5,5,8,0.9); z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: 0.4s; backdrop-filter: blur(8px);
+        }
+        #result-overlay.show { opacity: 1; pointer-events: auto; }
+        .result-card {
+            width: 85%; max-width: 350px; background: linear-gradient(180deg, #1a1a24, #0a0b10);
+            border: 1px solid var(--gold); border-radius: 20px; padding: 30px 25px;
+            text-align: center; box-shadow: 0 15px 50px rgba(0,0,0,0.9), 0 0 30px rgba(212,175,55,0.2);
+            transform: translateY(20px); transition: 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        #result-overlay.show .result-card { transform: translateY(0); }
+        .result-icon { font-size: 50px; margin-bottom: 15px; animation: float 3s ease-in-out infinite; }
+        .result-title { color: var(--gold-light); font-size: 20px; letter-spacing: 2px; margin-bottom: 20px; border-bottom: 1px solid rgba(212,175,55,0.3); padding-bottom: 15px; }
+        .result-text { color: #e0e0e0; font-size: 15px; line-height: 1.8; text-align: left; margin-bottom: 25px; }
+        .btn-close-result { background: transparent; border: 1px solid var(--gold); color: var(--gold); padding: 10px 30px; border-radius: 20px; font-size: 14px; cursor: pointer; transition: 0.3s; }
+        .btn-close-result:active { background: rgba(212,175,55,0.2); }
+
+        @keyframes float { 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-10px); } }
+        
+        /* 載入動畫 */
+        #loader { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; }
+        #loader.show { opacity: 1; pointer-events: auto; }
+        .spinner { width: 50px; height: 50px; border: 3px solid rgba(212,175,55,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <canvas id="space-canvas"></canvas>
+    <div class="vignette"></div>
+
+    <div class="top-bar">
+        <div class="user-info">
+            <span class="user-name" id="display-name">神祕旅人</span>
+        </div>
+        <div class="points-badge">
+            <span style="font-size: 12px;">💠</span> <span id="display-points">--</span>
+        </div>
+    </div>
+
+    <div class="daily-claim-section">
+        <button id="btn-daily-claim" class="btn-claim active" onclick="claimDailyEnergy()">✨ 領取今日宇宙補給</button>
+    </div>
+
+    <div class="dashboard-title">── 今日專屬能量矩陣 ──</div>
+
+    <div class="card-grid">
+        <div class="daily-card available" id="card-tarot" onclick="openDrawConfirm('tarot', '🔮 塔羅流日指引', 3)">
+            <div class="card-info">
+                <div class="card-icon">🔮</div>
+                <div class="card-text">
+                    <h3>塔羅流日指引</h3>
+                    <p>抽出一張牌，校準今日頻率</p>
+                </div>
+            </div>
+            <div class="card-status">
+                <span class="status-text">啟動矩陣</span>
+                <span class="cost-text">消耗 3 點</span>
+            </div>
+        </div>
+
+        <div class="daily-card available" id="card-ziwei" onclick="openDrawConfirm('ziwei', '🏮 紫微流日氣場', 5)">
+            <div class="card-info">
+                <div class="card-icon">🏮</div>
+                <div class="card-text">
+                    <h3>紫微流日氣場</h3>
+                    <p>解析今日專屬天象吉凶方位</p>
+                </div>
+            </div>
+            <div class="card-status">
+                <span class="status-text">啟動矩陣</span>
+                <span class="cost-text">消耗 5 點</span>
+            </div>
+        </div>
+
+        <div class="daily-card available" id="card-numerology" onclick="openDrawConfirm('numerology', '🔢 生命靈數共振', 2)">
+            <div class="card-info">
+                <div class="card-icon">🔢</div>
+                <div class="card-text">
+                    <h3>生命靈數共振</h3>
+                    <p>獲取今日幸運數字與色彩</p>
+                </div>
+            </div>
+            <div class="card-status">
+                <span class="status-text">啟動矩陣</span>
+                <span class="cost-text">消耗 2 點</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-confirm-overlay">
+        <div class="confirm-box">
+            <div class="confirm-title" id="confirm-title">系統確認</div>
+            <div class="confirm-desc" id="confirm-desc"></div>
+            <div class="confirm-actions">
+                <button class="btn-confirm-cancel" onclick="closeCustomConfirm()">稍後再說</button>
+                <button class="btn-confirm-ok" onclick="executeCustomConfirm()">確認啟動</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="result-overlay">
+        <div class="result-card">
+            <div class="result-icon" id="res-icon">🔮</div>
+            <div class="result-title" id="res-title">塔羅流日指引</div>
+            <div class="result-text" id="res-text">
+                這是一段測試的運勢文字。未來將由後端 AI 動態生成。
+            </div>
+            <button class="btn-close-result" onclick="closeResult()">將能量收入靈魂</button>
+        </div>
+    </div>
+
+    <div id="loader"><div class="spinner"></div></div>
+
+    <script>
+        // ==========================================
+        // 🌌 永恆銀河背景 (重用視覺引擎)
+        // ==========================================
+        const canvas = document.getElementById('space-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+        const stars = []; 
+        for(let i=0; i<150; i++) stars.push({x: Math.random()*width, y: Math.random()*height, r: Math.random()*1.5, a: Math.random()});
+        function animateSpace() {
+            ctx.clearRect(0,0,width,height);
+            ctx.fillStyle='#fff';
+            stars.forEach(s => { 
+                s.a += (Math.random()-0.5)*0.1; if(s.a<0.1)s.a=0.1; if(s.a>1)s.a=1; 
+                ctx.globalAlpha=s.a; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); 
+                s.y -= 0.2; if(s.y < 0) s.y = height; // 緩慢上升
+            });
+            requestAnimationFrame(animateSpace);
+        }
+        animateSpace();
+
+        // ==========================================
+        // 🛡️ 狀態與資料管理
+        // ==========================================
+        let currentIdToken = "";
+        let userPoints = 15; // 前端模擬點數
+        
+        // 模擬後端回傳的用戶當日狀態 (true = 可用, false = 已使用冷卻中)
+        let dailyStatus = {
+            claimed: false, // 簽到
+            tarot: true,
+            ziwei: true,
+            numerology: true
+        };
+
+        // ==========================================
+        // ⏳ 倒數計時引擎 (計算到今晚 23:59:59)
+        // ==========================================
+        function getMidnightCountdown() {
+            const now = new Date();
+            const midnight = new Date();
+            midnight.setHours(23, 59, 59, 999);
+            const diff = midnight - now;
+            
+            const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function updateTimers() {
+            const timerStr = getMidnightCountdown();
+            ['tarot', 'ziwei', 'numerology'].forEach(type => {
+                if (!dailyStatus[type]) {
+                    document.querySelector(`#card-${type} .status-text`).innerText = `⏳ ${timerStr}`;
+                }
+            });
+        }
+        setInterval(updateTimers, 1000); // 每秒更新一次
+
+        // ==========================================
+        // 🎨 UI 狀態更新邏輯
+        // ==========================================
+        function renderDashboard() {
+            document.getElementById('display-points').innerText = userPoints;
+
+            // 簽到按鈕
+            const claimBtn = document.getElementById('btn-daily-claim');
+            if (dailyStatus.claimed) {
+                claimBtn.className = 'btn-claim claimed';
+                claimBtn.innerText = '✅ 今日補給已領取';
+            }
+
+            // 卡牌狀態
+            ['tarot', 'ziwei', 'numerology'].forEach(type => {
+                const card = document.getElementById(`card-${type}`);
+                if (!dailyStatus[type]) {
+                    card.className = 'daily-card cooldown';
+                    card.onclick = null; // 拔除點擊事件
+                    card.querySelector('.cost-text').innerText = '明日重置';
+                }
+            });
+            updateTimers();
+        }
+
+        // ==========================================
+        // 🎁 領取每日簽到
+        // ==========================================
+        async function claimDailyEnergy() {
+            if(dailyStatus.claimed) return;
+            
+            // 🚨 這裡未來替換為真實的 API Fetch
+            // const res = await fetch('/api/daily/claim', ...);
+            
+            // 前端模擬成功
+            userPoints += 1;
+            dailyStatus.claimed = true;
+            renderDashboard();
+            alert("✨ 宇宙補給接收成功！獲得 1 點靈力。");
+        }
+
+        // ==========================================
+        // 🔮 沉浸式彈窗與抽卡邏輯
+        // ==========================================
+        let confirmActionCallback = null;
+
+        function openDrawConfirm(type, title, cost) {
+            document.getElementById('confirm-title').innerText = `【 ${title} 】`;
+            document.getElementById('confirm-desc').innerHTML = `
+                即將連結宇宙能量，抽取今日專屬指引。<br>
+                <div class="confirm-cost">消耗靈力：<span style="color:#fff">${cost}</span> 點</div>
+            `;
+            
+            confirmActionCallback = async () => {
+                if(userPoints < cost) {
+                    alert("🚨 靈力不足！請前往儲值。"); return;
+                }
+
+                // 啟動 Loading
+                document.getElementById('loader').classList.add('show');
+
+                // 🚨 這裡未來替換為真實的 API Fetch 去算命
+                // const res = await fetch('/api/daily/draw', { body: JSON.stringify({ type: type }) });
+                
+                // 模擬 API 延遲與回傳結果
+                setTimeout(() => {
+                    userPoints -= cost;
+                    dailyStatus[type] = false; // 標記為已使用
+                    
+                    document.getElementById('loader').classList.remove('show');
+                    renderDashboard(); // 重新渲染卡牌鎖定狀態
+                    
+                    // 顯示結果
+                    showResultModal(type, title);
+                }, 1500);
+            };
+
+            document.getElementById('custom-confirm-overlay').classList.add('show');
+        }
+
+        function closeCustomConfirm() {
+            document.getElementById('custom-confirm-overlay').classList.remove('show');
+            confirmActionCallback = null; 
+        }
+
+        function executeCustomConfirm() {
+            document.getElementById('custom-confirm-overlay').classList.remove('show');
+            if (confirmActionCallback) {
+                const action = confirmActionCallback; 
+                confirmActionCallback = null; 
+                action(); 
+            }
+        }
+
+        // --- 結果展示彈窗 ---
+        function showResultModal(type, title) {
+            const iconMap = { tarot: '🔮', ziwei: '🏮', numerology: '🔢' };
+            const mockTextMap = {
+                tarot: "【今日牌卡：魔術師】\n\n宇宙為你備齊了所有的元素。今天你的溝通能力極佳，大膽說出你的想法，顯化奇蹟就在此刻。",
+                ziwei: "【今日流日：天機化祿】\n\n靈感湧現的一天。適合規劃未來或學習新事物。幸運方位：正東方。防雷指南：避免過度鑽牛角尖。",
+                numerology: "【今日靈數：7】\n\n向內探索的一天。適合獨處、沉思或冥想。今日幸運色：深海藍。帶上一件藍色小物能穩定你的頻率。"
+            };
+
+            document.getElementById('res-icon').innerText = iconMap[type];
+            document.getElementById('res-title').innerText = title;
+            document.getElementById('res-text').innerText = mockTextMap[type];
+            
+            document.getElementById('result-overlay').classList.add('show');
+        }
+
+        function closeResult() {
+            document.getElementById('result-overlay').classList.remove('show');
+        }
+
+        // ==========================================
+        // 🚀 初始化
+        // ==========================================
+        window.onload = async () => {
+            // 初始化 UI (未來這裡要先去 API 撈 userPoints 跟 dailyStatus)
+            renderDashboard();
+
+            try {
+                await liff.init({ liffId: ENV.TAROT_LIFF_ID }); // 暫時共用塔羅的 LIFF ID
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    document.getElementById('display-name').innerText = profile.displayName;
+                    currentIdToken = liff.getAccessToken();
+                }
+            } catch(e) { console.error("LIFF Init Error"); }
+        };
+    </script>
+</body>
+</html>
