@@ -561,7 +561,7 @@
             const desc = `解開三張命運之牌的深層啟示。<br>針對領域：【${currentTopic}】`;
 
             // 🌟 呼叫沉浸式確認彈窗
-            showCustomConfirm("【 🔮 塔羅星陣解碼 】", desc, tarotCost, async () => {
+            showCustomConfirm("【 🔮 塔羅星陣解碼 】", desc, currentCost, async () => {
                 
                 // --- 以下為按下確認後的執行邏輯 ---
                 sendTrackingLog("Stage 2: Ticket Created");
