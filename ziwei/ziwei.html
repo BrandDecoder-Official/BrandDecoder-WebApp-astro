@@ -258,6 +258,17 @@
     </div>
 
     <script>
+        // 🌟 讓前端去後端問現在的價格
+        async function fetchAiConfig() {
+            try {
+                const response = await fetch(`${ENV.API_BASE}/api/admin/config/ai`);
+                const result = await response.json();
+                if (result.success && result.data && result.data.ziwei) {
+                    window.ziweiCost = result.data.ziwei.cost; // 把後台定價存起來
+                }
+            } catch (e) { console.error("無法取得動態定價", e); }
+        }
+        
         // ==========================================
         // 🌌 沉浸式彈窗控制器 (修復版)
         // ==========================================
@@ -487,6 +498,9 @@
             document.getElementById('toggle-fuzzy-time').addEventListener('change', (e) => {
                 populateTimeOptions(e.target.checked);
             });
+
+            // 👇👇👇 CTO 補丁：在畫面載入時呼叫抓取價格 👇👇👇
+            await fetchAiConfig();
 
             await initLIFF();
         };
