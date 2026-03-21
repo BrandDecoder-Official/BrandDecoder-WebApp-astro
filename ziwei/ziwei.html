@@ -258,15 +258,23 @@
     </div>
 
     <script>
-        // 🌟 讓前端去後端問現在的價格
+        // 🌟 讓前端去後端問現在的價格 (強制破除快取版)
         async function fetchAiConfig() {
             try {
-                const response = await fetch(`${ENV.API_BASE}/api/admin/config/ai`);
+                // 加上時間戳 ?t=... 強制瀏覽器不要使用快取
+                const response = await fetch(`${ENV.API_BASE}/api/admin/config/ai?t=${Date.now()}`);
                 const result = await response.json();
-                if (result.success && result.data && result.data.ziwei) {
-                    window.ziweiCost = result.data.ziwei.cost; // 把後台定價存起來
+                
+                console.log("🔥 [CTO 雷達] 取得後台動態定價:", result); // 留著這行，按 F12 可以直接看有沒有抓到
+
+                if (result.success && result.data) {
+                    // 強制轉成數字型態 (parseInt)，避免字串判斷錯誤
+                    if (result.data.tarot !== undefined) window.tarotCost = parseInt(result.data.tarot.cost);
+                    if (result.data.ziwei !== undefined) window.ziweiCost = parseInt(result.data.ziwei.cost);
                 }
-            } catch (e) { console.error("無法取得動態定價", e); }
+            } catch (e) { 
+                console.error("🚨 [CTO 雷達] 無法取得動態定價:", e); 
+            }
         }
         
         // ==========================================
@@ -533,8 +541,8 @@
                 ? "大師將針對您選擇的時段，捕捉不變的命格核心。" 
                 : "這將進行深度的 108 星曜矩陣運算。";
             
-            // 設定靈力點數 (若無後端變數，預設為 39)
-            const currentCost = window.ziweiCost || 39; 
+            // 嚴格判斷：只要不是 undefined 且是有效數字，就用後台的；否則才用 39
+            const currentCost = (window.ziweiCost !== undefined && !isNaN(window.ziweiCost)) ? window.ziweiCost : 39;
 
             // 呼叫沉浸式彈窗
             showCustomConfirm("【 🏮 紫微天命羅盤 】", descMsg, currentCost, async () => {
