@@ -108,7 +108,7 @@
         #loading-overlay.show { opacity: 1; pointer-events: auto; }
 
         /* ==========================================
-           🔮 尊爵版紫微 Loading 動畫 (太極星辰陣)
+           🔮 尊爵版紫微 Loading 動畫
            ========================================== */
         .ritual-container {
             width: 280px; height: 280px; margin-bottom: 50px;
@@ -131,29 +131,18 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* ==========================================
-           ✨ 動態文字框樣式
-           ========================================== */
         #loading-msg {
             color: var(--gold-light); font-size: 18px; letter-spacing: 4px; font-weight: bold; text-align: center;
             background: rgba(0, 0, 0, 0.6); padding: 15px 30px; border-radius: 30px;
             border: 1px solid rgba(212,175,55,0.3); animation: textPulse 2s infinite; 
         }
         @keyframes textPulse { 
-            0%, 100% { 
-                opacity: 0.8; 
-                text-shadow: 0 0 5px rgba(212, 175, 55, 0.2); 
-                box-shadow: 0 0 0px rgba(212, 175, 55, 0);
-            } 
-            50% { 
-                opacity: 1; 
-                text-shadow: 0 0 20px var(--gold); 
-                box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-            } 
+            0%, 100% { opacity: 0.8; text-shadow: 0 0 5px rgba(212, 175, 55, 0.2); box-shadow: 0 0 0px rgba(212, 175, 55, 0); } 
+            50% { opacity: 1; text-shadow: 0 0 20px var(--gold); box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); } 
         }
 
         /* ==========================================
-           🌌 沉浸式確認彈窗 (Custom Confirm Modal)
+           🌌 沉浸式確認彈窗
            ========================================== */
         #custom-confirm-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -190,20 +179,29 @@
     <div id="pixi-background"></div>
 
     <div id="step-1" class="step-section active">
-        <h2>命運的齒輪<br>從陰陽開始轉動</h2>
-        <div class="subtitle">請選擇您的生理性別</div>
-        <button class="btn-choice" onclick="makeChoice(1, 'gender', 'M', this)">乾造 (男命)</button>
-        <button class="btn-choice" onclick="makeChoice(1, 'gender', 'F', this)">坤造 (女命)</button>
+        <h2>請鎖定欲窺探之<br>天命領域</h2>
+        <div class="subtitle">大師將為您降下專屬格局指引</div>
+        <button class="btn-choice" onclick="makeChoice(1, 'topic', '本命格局', this)">🏮 本命先天格局</button>
+        <button class="btn-choice" onclick="makeChoice(1, 'topic', '事業財富', this)">💰 事業財富版圖</button>
+        <button class="btn-choice" onclick="makeChoice(1, 'topic', '感情婚姻', this)">🌸 感情姻緣軌跡</button>
+        <button class="btn-choice" onclick="makeChoice(1, 'topic', '2026流年', this)">📅 2026 流年大運</button>
     </div>
 
     <div id="step-2" class="step-section">
-        <h2>您習慣仰望太陽<br>還是追隨月亮的軌跡？</h2>
-        <div class="subtitle">請選擇星辰曆法</div>
-        <button class="btn-choice" onclick="makeChoice(2, 'calendar', 'solar', this)">太陽曆 (國曆)</button>
-        <button class="btn-choice" onclick="makeChoice(2, 'calendar', 'lunar', this)">太陰曆 (農曆)</button>
+        <h2>命運的齒輪<br>從陰陽開始轉動</h2>
+        <div class="subtitle">請選擇您的生理性別</div>
+        <button class="btn-choice" onclick="makeChoice(2, 'gender', 'M', this)">乾造 (男命)</button>
+        <button class="btn-choice" onclick="makeChoice(2, 'gender', 'F', this)">坤造 (女命)</button>
     </div>
 
     <div id="step-3" class="step-section">
+        <h2>您習慣仰望太陽<br>還是追隨月亮的軌跡？</h2>
+        <div class="subtitle">請選擇星辰曆法</div>
+        <button class="btn-choice" onclick="makeChoice(3, 'calendar', 'solar', this)">太陽曆 (國曆)</button>
+        <button class="btn-choice" onclick="makeChoice(3, 'calendar', 'lunar', this)">太陰曆 (農曆)</button>
+    </div>
+
+    <div id="step-4" class="step-section">
         <h2>鎖定您的時空座標</h2>
         <div class="form-group">
             <label class="form-label">降生之日</label>
@@ -228,7 +226,7 @@
         <button id="btn-submit-main" class="btn-submit" onclick="submitAstrolabe()">啟動 108 星曜解碼</button>
     </div>
 
-    <div id="step-4" class="step-section" style="max-width: 90%; background: rgba(10, 11, 16, 0.85);">
+    <div id="step-5" class="step-section" style="max-width: 90%; background: rgba(10, 11, 16, 0.85);">
         <h2>天命具現化完成</h2>
         <div style="font-size: 13px; color: #4CAF50; margin-bottom: 15px; border: 1px solid rgba(76, 175, 80, 0.4); padding: 10px; border-radius: 8px; background: rgba(76, 175, 80, 0.1);">
             ✨ 尊爵版命盤報告已同步推播至您的 LINE 聊天室
@@ -245,11 +243,11 @@
         </div>
         <div id="loading-msg">構築 12 宮位星辰網格...</div>
     </div>
+
     <div id="custom-confirm-overlay">
         <div class="confirm-box">
             <div class="confirm-title" id="confirm-title">【🏮 紫微天命羅盤】</div>
-            <div class="confirm-desc" id="confirm-desc">
-                </div>
+            <div class="confirm-desc" id="confirm-desc"></div>
             <div class="confirm-actions">
                 <button class="btn-confirm-cancel" onclick="closeCustomConfirm()">取消</button>
                 <button class="btn-confirm-ok" onclick="executeCustomConfirm()">確認啟動</button>
@@ -261,25 +259,16 @@
         // 🌟 讓前端去後端問現在的價格 (強制破除快取版)
         async function fetchAiConfig() {
             try {
-                // 加上時間戳 ?t=... 強制瀏覽器不要使用快取
                 const response = await fetch(`${ENV.API_BASE}/api/public/config/ai?t=${Date.now()}`);
                 const result = await response.json();
-                
-                console.log("🔥 [CTO 雷達] 取得後台動態定價:", result); // 留著這行，按 F12 可以直接看有沒有抓到
-
+                console.log("🔥 [CTO 雷達] 取得後台動態定價:", result); 
                 if (result.success && result.data) {
-                    // 強制轉成數字型態 (parseInt)，避免字串判斷錯誤
-                    if (result.data.tarot !== undefined) window.tarotCost = parseInt(result.data.tarot.cost);
                     if (result.data.ziwei !== undefined) window.ziweiCost = parseInt(result.data.ziwei.cost);
                 }
-            } catch (e) { 
-                console.error("🚨 [CTO 雷達] 無法取得動態定價:", e); 
-            }
+            } catch (e) { console.error("🚨 [CTO 雷達] 無法取得動態定價:", e); }
         }
         
-        // ==========================================
         // 🌌 沉浸式彈窗控制器 (修復版)
-        // ==========================================
         let confirmActionCallback = null;
 
         function showCustomConfirm(title, desc, cost, callback) {
@@ -292,25 +281,22 @@
             document.getElementById('custom-confirm-overlay').classList.add('show');
         }
 
-        // 單純點擊「取消」時呼叫
         function closeCustomConfirm() {
             document.getElementById('custom-confirm-overlay').classList.remove('show');
             confirmActionCallback = null; 
         }
 
-        // 🌟 新增：點擊「確認啟動」時專用的執行函數
         function executeCustomConfirm() {
             document.getElementById('custom-confirm-overlay').classList.remove('show');
-            
             if (confirmActionCallback) {
-                const action = confirmActionCallback; // 先把包裹備份起來
-                confirmActionCallback = null; // 清空狀態
-                action(); // 🚀 執行算命與扣點邏輯！
+                const action = confirmActionCallback; 
+                confirmActionCallback = null; 
+                action(); 
             }
         }
 
-        
-        const userAstrolabeData = { gender: '', calendar: '', date: '', time: '' };
+        // 🌟 新增 topic 變數
+        const userAstrolabeData = { topic: '', gender: '', calendar: '', date: '', time: '' };
         let currentIdToken = ""; 
         let pixiApp;
         let astrolabeGrid, astrolabeCore;
@@ -337,9 +323,7 @@
             const timeSelect = document.getElementById('input-time');
             timeSelect.innerHTML = '';
             const options = isFuzzy ? fuzzyTimes : preciseTimes;
-            options.forEach(opt => {
-                timeSelect.add(new Option(opt.t, opt.v));
-            });
+            options.forEach(opt => { timeSelect.add(new Option(opt.t, opt.v)); });
             timeSelect.style.borderColor = 'var(--gold-light)';
             setTimeout(() => timeSelect.style.borderColor = 'var(--gray)', 400);
         }
@@ -347,9 +331,7 @@
         // --- 🌌 PixiJS 全域特效 ---
         function initPixiBackground() {
             const container = document.getElementById('pixi-background');
-            pixiApp = new PIXI.Application({
-                resizeTo: window, transparent: true, autoDensity: true, resolution: window.devicePixelRatio || 1,
-            });
+            pixiApp = new PIXI.Application({ resizeTo: window, transparent: true, autoDensity: true, resolution: window.devicePixelRatio || 1 });
             container.appendChild(pixiApp.view);
 
             const starContainer = new PIXI.Container();
@@ -440,33 +422,25 @@
             });
         }
 
-        // ==========================================
         // 🕵️‍♂️ 隱形發報機
-        // ==========================================
         async function sendTrackingLog(stageName) {
             if (!currentIdToken) return;
             try {
                 await fetch(`${ENV.API_BASE}/api/log/stage`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentIdToken}` 
-                    },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentIdToken}` },
                     body: JSON.stringify({ type: 'ziwei', stage: stageName })
                 });
             } catch (e) { console.log("Tracking Error:", e); }
         }
         
-        // --- 初始與驗證邏輯 ---
         async function initLIFF() {
             try {
                 await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
                 if (!liff.isLoggedIn()) { liff.login(); return; }
                 currentIdToken = liff.getIDToken();
                 sendTrackingLog("Stage 1: Page View");
-            } catch (err) {
-                alert("無法開啟結界，請在 LINE 內部開啟！");
-            }
+            } catch (err) { alert("無法開啟結界，請在 LINE 內部開啟！"); }
         }
 
         function initDatePicker() {
@@ -507,9 +481,7 @@
                 populateTimeOptions(e.target.checked);
             });
 
-            // 👇👇👇 CTO 補丁：在畫面載入時呼叫抓取價格 👇👇👇
             await fetchAiConfig();
-
             await initLIFF();
         };
 
@@ -525,11 +497,10 @@
             }, 300);
         }
 
-        // ==========================================
-        // 🚀 最終提交流程 (結合沉浸式彈窗)
-        // ==========================================
+        // 🚀 最終提交流程 (結合沉浸式彈窗與主題)
         async function submitAstrolabe() {
-            if (!userAstrolabeData.gender || !userAstrolabeData.calendar) {
+            // 🌟 檢查是否所有步驟都有填寫（包含新增的主題）
+            if (!userAstrolabeData.topic || !userAstrolabeData.gender || !userAstrolabeData.calendar) {
                 alert("宇宙訊號流失，請重新整理頁面。"); return;
             }
 
@@ -537,17 +508,14 @@
             const time = document.getElementById('input-time').value;
             const isFuzzy = document.getElementById('toggle-fuzzy-time').checked;
 
-            const descMsg = isFuzzy 
-                ? "大師將針對您選擇的時段，捕捉不變的命格核心。" 
-                : "這將進行深度的 108 星曜矩陣運算。";
+            // 🌟 將用戶選擇的「領域」動態加入彈窗說明中
+            const descMsg = `針對領域：【${userAstrolabeData.topic}】<br>` + 
+                (isFuzzy ? "大師將針對您選擇的時段，捕捉不變的命格核心。" : "這將進行深度的 108 星曜矩陣運算。");
             
-            // 嚴格判斷：只要不是 undefined 且是有效數字，就用後台的；否則才用 39
-            const currentCost = (window.ziweiCost !== undefined && !isNaN(window.ziweiCost)) ? window.ziweiCost : 39;
+            const currentCost = (window.ziweiCost !== undefined && !isNaN(window.ziweiCost)) ? window.ziweiCost : 39; 
 
-            // 呼叫沉浸式彈窗
             showCustomConfirm("【 🏮 紫微天命羅盤 】", descMsg, currentCost, async () => {
                 
-                // --- 按下確認後才開始執行 ---
                 if (typeof sendTrackingLog === "function") {
                     sendTrackingLog("Stage 2: Ticket Created");
                 }
@@ -556,7 +524,8 @@
                 userAstrolabeData.date = finalDate;
                 userAstrolabeData.time = time; 
                 
-                document.getElementById('step-3').classList.replace('active', 'exit-up');
+                // 🌟 步驟編號更新：從 step-4 跳到 step-5
+                document.getElementById('step-4').classList.replace('active', 'exit-up');
                 document.getElementById('loading-overlay').classList.add('show');
                 isCalculating = true; 
 
@@ -569,7 +538,7 @@
                     const response = await fetch(`${ENV.API_BASE}/api/divination/ziwei`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentIdToken}` },
-                        body: JSON.stringify({ birthData: userAstrolabeData })
+                        body: JSON.stringify({ birthData: userAstrolabeData }) // 🌟 這裡會把 topic 一起送給後端
                     });
 
                     const result = await response.json();
@@ -579,7 +548,7 @@
                         setTimeout(() => {
                             isCalculating = false;
                             document.getElementById('loading-overlay').classList.remove('show');
-                            document.getElementById('step-4').classList.add('active');
+                            document.getElementById('step-5').classList.add('active'); // 🌟 顯示最後的結果容器
                             document.getElementById('result-text').innerText = result.replyText;
                         }, 1500);
                     } else {
@@ -590,7 +559,7 @@
                     console.error("API 錯誤：", error);
                     alert("🚨 結界異常：" + error.message);
                     document.getElementById('loading-overlay').classList.remove('show');
-                    document.getElementById('step-3').classList.replace('exit-up', 'active');
+                    document.getElementById('step-4').classList.replace('exit-up', 'active');
                     document.getElementById('btn-submit-main').disabled = false;
                     isCalculating = false; 
                 }
