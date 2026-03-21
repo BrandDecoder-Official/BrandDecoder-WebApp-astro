@@ -135,7 +135,7 @@
             padding: 15px 50px; border-radius: 50px; font-weight: 900; font-size: 18px; letter-spacing: 2px;
             opacity: 0; transform: translateY(20px); transition: 0.5s; box-shadow: 0 0 20px rgba(212,175,55,0.5); 
             position: absolute; bottom: 40px; left: 50%; margin-left: -105px; pointer-events: none;
-            z-index: 999;
+            z-index: 998;
         }
         #submitBtn.active { opacity: 1; transform: translateY(0); pointer-events: auto; animation: pulse-btn 2s infinite; cursor: pointer; }
         #submitBtn:disabled { filter: grayscale(1); animation: none; pointer-events: none; }
@@ -159,6 +159,39 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .loader-text { color: var(--gold-light); font-size: 16px; font-weight: bold; letter-spacing: 4px; animation: pulse-text 2s infinite; }
         @keyframes pulse-text { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; text-shadow: 0 0 15px var(--gold); } }
+
+        /* ==========================================
+           🌌 沉浸式確認彈窗 (Custom Confirm Modal)
+           ========================================== */
+        #custom-confirm-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+            z-index: 9999; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        #custom-confirm-overlay.show { opacity: 1; pointer-events: auto; }
+        
+        .confirm-box {
+            background: #111; border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 16px; width: 85%; max-width: 320px;
+            padding: 25px 20px; text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(212,175,55,0.1) inset;
+            transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #custom-confirm-overlay.show .confirm-box { transform: scale(1); }
+        
+        .confirm-title { color: var(--gold); font-size: 18px; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
+        .confirm-desc { color: #ccc; font-size: 14px; line-height: 1.6; margin-bottom: 25px; }
+        .confirm-cost { color: var(--gold-light); font-weight: bold; font-size: 16px; margin: 8px 0; background: rgba(212,175,55,0.1); display: inline-block; padding: 4px 12px; border-radius: 20px;}
+        
+        .confirm-actions { display: flex; gap: 12px; }
+        .btn-confirm-cancel, .btn-confirm-ok {
+            flex: 1; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; border: none; letter-spacing: 1px;
+        }
+        .btn-confirm-cancel { background: rgba(255,255,255,0.1); color: #aaa; }
+        .btn-confirm-cancel:active { background: rgba(255,255,255,0.2); }
+        .btn-confirm-ok { background: linear-gradient(135deg, #D4AF37, #AA7C11); color: #000; }
+        .btn-confirm-ok:active { opacity: 0.8; }
     </style>
 </head>
 <body>
@@ -198,6 +231,18 @@
         <button id="submitBtn">解開結界</button>
     </div>
 
+    <div id="custom-confirm-overlay">
+        <div class="confirm-box">
+            <div class="confirm-title" id="confirm-title">【 🔮 塔羅星陣解碼 】</div>
+            <div class="confirm-desc" id="confirm-desc">
+                </div>
+            <div class="confirm-actions">
+                <button class="btn-confirm-cancel" onclick="closeCustomConfirm()">取消</button>
+                <button class="btn-confirm-ok" id="btn-confirm-ok">確認啟動</button>
+            </div>
+        </div>
+    </div>
+
     <div id="ritual-loader">
         <div class="loader-ring"></div>
         <div class="loader-text">靈力運作中，請稍待...</div>
@@ -206,6 +251,32 @@
     <div id="particle-container"></div>
 
     <script>
+        // ==========================================
+        // 🌌 沉浸式彈窗控制器 (新)
+        // ==========================================
+        let confirmActionCallback = null;
+
+        function showCustomConfirm(title, desc, cost, callback) {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-desc').innerHTML = `
+                ${desc}<br>
+                <div class="confirm-cost">消耗靈力：<span id="confirm-cost-value">${cost}</span> 點</div>
+                是否確認啟動？
+            `;
+            confirmActionCallback = callback;
+            document.getElementById('custom-confirm-overlay').classList.add('show');
+        }
+
+        function closeCustomConfirm() {
+            document.getElementById('custom-confirm-overlay').classList.remove('show');
+            confirmActionCallback = null;
+        }
+
+        document.getElementById('btn-confirm-ok').addEventListener('click', () => {
+            closeCustomConfirm();
+            if (confirmActionCallback) confirmActionCallback();
+        });
+
         // --- 🚩 2. 動態套用 ENV 變數中的圖片資源 ---
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof ENV !== 'undefined') {
@@ -275,9 +346,9 @@
         let isSubmitting = false;
 
         // ==========================================
-        // 🕵️‍♂️ 隱形發報機：發送漏斗追蹤訊號 (塔羅專用)
+        // 🕵️‍♂️ 隱形發報機：發送漏斗追蹤訊號
         // ==========================================
-        let currentIdToken = ""; // 儲存 Token
+        let currentIdToken = "";
         async function sendTrackingLog(stageName) {
             if (!currentIdToken) return;
             try {
@@ -288,7 +359,7 @@
                         'Authorization': `Bearer ${currentIdToken}` 
                     },
                     body: JSON.stringify({ 
-                        type: 'tarot', // 塔羅埋點標籤
+                        type: 'tarot',
                         stage: stageName 
                     })
                 });
@@ -301,7 +372,6 @@
         // 🚀 6. 初始化 LIFF 與 門禁防護系統
         // ==========================================
         liff.init({ liffId: ENV.TAROT_LIFF_ID }).then(async () => {
-            
             if (!liff.isInClient()) {
                 document.body.innerHTML = `
                     <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #0A0B10; color: #D4AF37; text-align: center; padding: 20px; font-family: 'Noto Serif TC', serif, sans-serif;">
@@ -322,10 +392,7 @@
                 return;
             }
 
-            // 取得並儲存 Token 給發報機使用
-            currentIdToken = liff.getAccessToken(); // LINE LIFF 習慣用 AccessToken
-
-            // 🚀 執行 Stage 1 埋點 (進入結界)
+            currentIdToken = liff.getAccessToken();
             sendTrackingLog("Stage 1: Page View");
             
         }).catch((err) => {
@@ -456,74 +523,74 @@
         });
 
         // ==========================================
-        // 🚀 API 背景傳送邏輯 (具備嚴格 AccessToken 防護)
+        // 🚀 提交解碼 (沉浸式彈窗版)
         // ==========================================
         document.getElementById('submitBtn').addEventListener('click', async () => {
             if (isSubmitting) return;
 
-            // 👇👇👇 CTO 埋點新增：當用戶點擊「解開結界」啟動時，發送漏斗 Stage 2 訊號 👇👇👇
-            if(!confirm("確認耗費靈力啟動塔羅解碼？")) return;
-            sendTrackingLog("Stage 2: Ticket Created");
-            // 👆👆👆 埋點結束 👆👆👆
+            const tarotCost = window.tarotCost || 10;
+            const desc = `解開三張命運之牌的深層啟示。<br>針對領域：【${currentTopic}】`;
 
-            isSubmitting = true;
-            const btn = document.getElementById('submitBtn');
-            btn.disabled = true;
-            btn.innerText = "結界凝聚中...";
-
-            const loader = document.getElementById('ritual-loader');
-            loader.classList.add('active');
-
-            try {
-                // 🛡️ 嚴格防禦：必須確認登入狀態，否則直接拋出錯誤
-                if (!liff.isLoggedIn()) {
-                    throw new Error("尚未登入 LINE，請重新開啟此視窗");
-                }
-
-                const profile = await liff.getProfile();
-                const userId = profile.userId;
-                const accessToken = liff.getAccessToken();
-
-                if (!accessToken) {
-                    throw new Error("無法取得安全通行證 (Access Token)");
-                }
-
-                const cardNames = selectedCards.map(c => c.name);
-
-                // 🌟 使用 ENV.API_BASE 呼叫後端
-                const response = await fetch(`${ENV.API_BASE}/api/tarot/ticket`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}` 
-                    },
-                    body: JSON.stringify({
-                        userId: userId,
-                        topic: currentTopic,
-                        cards: cardNames
-                    })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    const spell = `🔮 祈求宇宙指引：[${currentTopic}] 領域`;
-                    await liff.sendMessages([{ type: 'text', text: spell }]);
-                    liff.closeWindow(); 
-                } else {
-                    throw new Error(data.message || "結界異常，票根核發失敗");
-                }
-
-            } catch (error) {
-                // 🚨 捕捉到任何錯誤，優雅地關閉動畫並印出實話
-                alert("🚨 系統錯誤: " + error.message);
-                console.error("詳細錯誤:", error);
+            // 🌟 呼叫沉浸式確認彈窗
+            showCustomConfirm("【 🔮 塔羅星陣解碼 】", desc, tarotCost, async () => {
                 
-                loader.classList.remove('active');
-                btn.disabled = false;
-                btn.innerText = "解開結界";
-                isSubmitting = false;
-            }
+                // --- 以下為按下確認後的執行邏輯 ---
+                sendTrackingLog("Stage 2: Ticket Created");
+
+                isSubmitting = true;
+                const btn = document.getElementById('submitBtn');
+                btn.disabled = true;
+                btn.innerText = "結界凝聚中...";
+
+                const loader = document.getElementById('ritual-loader');
+                loader.classList.add('active');
+
+                try {
+                    if (!liff.isLoggedIn()) {
+                        throw new Error("尚未登入 LINE，請重新開啟此視窗");
+                    }
+
+                    const profile = await liff.getProfile();
+                    const userId = profile.userId;
+                    const accessToken = liff.getAccessToken();
+
+                    if (!accessToken) {
+                        throw new Error("無法取得安全通行證 (Access Token)");
+                    }
+
+                    const cardNames = selectedCards.map(c => c.name);
+
+                    const response = await fetch(`${ENV.API_BASE}/api/tarot/ticket`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}` 
+                        },
+                        body: JSON.stringify({
+                            userId: userId,
+                            topic: currentTopic,
+                            cards: cardNames
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        const spell = `🔮 祈求宇宙指引：[${currentTopic}] 領域`;
+                        await liff.sendMessages([{ type: 'text', text: spell }]);
+                        liff.closeWindow(); 
+                    } else {
+                        throw new Error(data.message || "結界異常，票根核發失敗");
+                    }
+
+                } catch (error) {
+                    alert("🚨 系統錯誤: " + error.message);
+                    loader.classList.remove('active');
+                    btn.disabled = false;
+                    btn.innerText = "解開結界";
+                    isSubmitting = false;
+                }
+            });
         });
     </script>
 </body>
