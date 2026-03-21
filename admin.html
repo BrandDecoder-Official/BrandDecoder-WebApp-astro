@@ -389,8 +389,9 @@
                 const d = new Date(log.timestamp);
                 const timeStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                 
+                // 🌟 CTO 修正：優先讀取後端傳來的精美 summary
+                let summary = log.summary || log.topic || ''; 
                 let typeBadge = "";
-                let summary = log.topic || '';
                 let rowStyle = "";
                 let rawPoints = log.points_change !== undefined ? log.points_change : (log.points || 0);
                 let pointClass = "point-zero";
@@ -423,6 +424,15 @@
 
                 let showName = log.displayName || log.userName || '未知用戶';
 
+                // 👇👇👇 CTO 新增：解析 AI Token 成本並產生標籤 👇👇👇
+                let tokenBadge = "";
+                if (log.metrics && log.metrics.model) {
+                    tokenBadge = `<br><span style="color:#8E24AA; font-size:11px; background:#F3E5F5; padding:2px 6px; border-radius:4px; margin-top:4px; display:inline-block;">
+                        🤖 ${log.metrics.model} | Token消耗: ${log.metrics.tokens_in} In / ${log.metrics.tokens_out} Out
+                    </span>`;
+                }
+                // 👆👆👆 標籤邏輯結束 👆👆👆
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td ${rowStyle}>${timeStr}</td>
@@ -432,7 +442,7 @@
                         <span style="color:var(--primary); font-weight:bold;">👤 ${showName}</span> 
                         <br> <span style="color:#aaa; font-size:10px;">${log.userId}</span> 
                         <br> <span style="font-size:12px;">${summary}</span>
-                    </td>
+                        ${tokenBadge} </td>
                 `;
                 tbody.appendChild(tr);
             });
