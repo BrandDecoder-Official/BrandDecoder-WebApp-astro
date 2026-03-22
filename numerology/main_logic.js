@@ -1,34 +1,60 @@
 // ==========================================
 // 1. 全域變數與設定
 // ==========================================
-let userId = "Udddc1d94a101d4b7eded5d65a1b07648";
-let userPoints = 520;
-const COST_POINTS = 10;
+let userId = "";
+let dynamicCost = 10; // 預設值，稍後會被後台覆蓋
+
+// 你的 Cloud Run 網址
+const API_BASE_URL = 'https://bastro-bot-217800246535.asia-east1.run.app';
 
 // PixiJS 專用變數
 let pixiApp;
-let magicCircle; // 法陣容器
-let particles = []; // 星塵粒子陣列
-let floatingNumbers = []; // 漂浮數字陣列
-let isRitualActive = false; // 是否進入「爆發狀態」
+let magicCircle; 
+let particles = []; 
+let floatingNumbers = []; 
+let isRitualActive = false; 
 
 // ==========================================
-// 2. 初始化 (Initialization)
+// 2. 初始化 (LIFF 登入 & 抓取後台價格)
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("系統啟動：開始掛載大師引擎...");
+    initPixiBackground(); // 先讓背景動起來
 
-    // 1. 啟動視覺拉滿的 PixiJS 引擎
-    initPixiBackground();
-
-    // 2. 模擬去後台驗證身分與點數
-    setTimeout(() => {
-        if (userPoints >= COST_POINTS) {
-            switchScreen('step-calibration', 'step-ritual');
-            // 校準完成，法陣稍微加速
-            isRitualActive = false; 
+    try {
+        // --- A. 初始化 LIFF ---
+        await liff.init({ liffId: "2009490171-krjD4SBL" }); // 填入你的專屬 LIFF ID
+        
+        if (!liff.isLoggedIn()) {
+            liff.login({ redirectUri: window.location.href });
+            return;
         }
-    }, 2000);
+        
+        const profile = await liff.getProfile();
+        userId = profile.userId;
+        console.log("真實用戶已登入 UID:", userId);
+
+        // --- B. 動態抓取後台 AI 定價 ---
+        try {
+            const configRes = await fetch(`${API_BASE_URL}/api/public/config/ai`);
+            const configData = await configRes.json();
+            if (configData.success && configData.data.numerology) {
+                dynamicCost = configData.data.numerology.cost;
+                // 動態更新按鈕上的價格文字
+                document.querySelector('.cost-text').innerText = `(消耗 ${dynamicCost} 靈力值)`;
+            }
+        } catch(e) {
+            console.warn("無法取得動態定價，使用預設值 10", e);
+        }
+
+        // --- C. 檢查點數 (這部分交給點擊時後端驗證，前端先切換畫面) ---
+        switchScreen('step-calibration', 'step-ritual');
+
+    } catch (error) {
+        console.error("初始化失敗:", error);
+        document.querySelector('.status-text').innerText = "連線異常，請從 LINE 重新開啟";
+        document.querySelector('.status-text').style.color = "#ff4d4f";
+    }
 });
 
 // ==========================================
@@ -47,13 +73,13 @@ function switchScreen(hideId, showId) {
     }
 }
 
-// 點擊啟動按鈕 (換成真實 API 呼叫版)
+// 點擊啟動按鈕 (真實 API 呼叫版)
 document.getElementById('btn-activate').addEventListener('click', async () => {
     // 1. 切換畫面並觸發動畫
     switchScreen('step-ritual', 'step-result');
     triggerPixiBlast(); // 觸發視覺爆發！
     
-    // 先在畫面上顯示「讀取中」的提示，以免網路慢時畫面空白
+    // 先在畫面上顯示「讀取中」的提示
     document.getElementById('numbers-grid').innerHTML = `
         <div style="font-size: 1.5rem; color: #E5C07B; animation: pulseText 2s infinite;">
             正在與宇宙頻率共振...
@@ -62,17 +88,13 @@ document.getElementById('btn-activate').addEventListener('click', async () => {
     document.getElementById('interpretation-text').innerHTML = "大師正在為您解碼...";
 
     try {
-        // 2. 向你的 Cloud Run 後端發送請求 (請確認這是你真實的網址)
-        // 注意：路徑是你在 index.js 掛載的 /api/numerology/generate
-        const cloudRunUrl = 'https://bastro-bot-217800246535.asia-east1.run.app/api/numerology/generate'; 
+        // 2. 向 Cloud Run 後端發送請求
+        const cloudRunUrl = `${API_BASE_URL}/api/numerology/generate`; 
         
         const response = await fetch(cloudRunUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                userId: userId, // 測試階段是 "Udddc1d94a101d4b7eded5d65a1b07648"，後續換成 LIFF 抓到的真實 UID
-                cost: COST_POINTS 
-            })
+            body: JSON.stringify({ userId: userId }) // 費用由後端決定，不從前端傳
         });
 
         const result = await response.json();
@@ -93,10 +115,7 @@ document.getElementById('btn-activate').addEventListener('click', async () => {
             `;
             // 填入真實的 AI 解析文案
             document.getElementById('interpretation-text').innerHTML = aiData.interpretation;
-            
-            // 更新本地顯示的餘額 (可選)
-            userPoints = result.balance;
-            console.log("扣款成功，伺服器回傳剩餘點數:", userPoints);
+            console.log(`扣款成功，伺服器回傳剩餘點數: ${result.balance}`);
 
         } else {
             // 處理後端報錯 (例如點數不足)
@@ -112,14 +131,18 @@ document.getElementById('btn-activate').addEventListener('click', async () => {
     }
 });
 
-
 // ==========================================
 // 4. PixiJS 視覺引擎 (核心特效區)
 // ==========================================
 function initPixiBackground() {
     const container = document.getElementById('pixi-container');
     
-    // 建立應用程式 (透明背景，讓 CSS 的深邃黑透出來)
+    // 如果沒有引入 Pixi，防呆
+    if (typeof PIXI === 'undefined') {
+        console.warn("未偵測到 PixiJS，跳過背景動畫");
+        return;
+    }
+
     pixiApp = new PIXI.Application({
         resizeTo: window,
         backgroundAlpha: 0,
@@ -134,15 +157,14 @@ function initPixiBackground() {
     magicCircle.y = pixiApp.screen.height / 2;
     pixiApp.stage.addChild(magicCircle);
 
-    // 畫外圓環 (虛線感)
     const outerRing = new PIXI.Graphics();
     outerRing.lineStyle(2, 0xE5C07B, 0.4);
     outerRing.drawCircle(0, 0, 180);
-    // 畫內圓環
+    
     const innerRing = new PIXI.Graphics();
     innerRing.lineStyle(1, 0x7B84E5, 0.6);
     innerRing.drawCircle(0, 0, 160);
-    // 畫幾何多邊形 (八角星)
+    
     const starG = new PIXI.Graphics();
     starG.lineStyle(1.5, 0xE5C07B, 0.5);
     for (let i = 0; i < 8; i++) {
@@ -172,11 +194,7 @@ function initPixiBackground() {
 
     // --- C. 建立漂浮數字 ---
     const textStyle = new PIXI.TextStyle({
-        fontFamily: 'Arial',
-        fontSize: 24,
-        fill: '#E5C07B',
-        opacity: 0.3,
-        fontWeight: 'bold'
+        fontFamily: 'Arial', fontSize: 24, fill: '#E5C07B', opacity: 0.3, fontWeight: 'bold'
     });
 
     for (let i = 0; i < 15; i++) {
@@ -191,21 +209,17 @@ function initPixiBackground() {
 
     // --- D. 動畫渲染迴圈 (Ticker) ---
     pixiApp.ticker.add((delta) => {
-        // 法陣旋轉 (如果觸發儀式，轉速暴增)
         const rotationSpeed = isRitualActive ? 0.05 : 0.002;
         magicCircle.rotation += rotationSpeed * delta;
         
-        // 如果觸發儀式，法陣脈衝放大
         if (isRitualActive) {
             magicCircle.scale.x = 1 + Math.sin(Date.now() / 100) * 0.1;
             magicCircle.scale.y = 1 + Math.sin(Date.now() / 100) * 0.1;
         } else {
-            // 恢復平穩
             magicCircle.scale.x += (1 - magicCircle.scale.x) * 0.05;
             magicCircle.scale.y += (1 - magicCircle.scale.y) * 0.05;
         }
 
-        // 粒子緩慢上升
         particles.forEach(p => {
             p.y -= p.speed * delta * (isRitualActive ? 10 : 1);
             if (p.y < 0) {
@@ -214,29 +228,22 @@ function initPixiBackground() {
             }
         });
 
-        // 數字緩慢漂浮與閃爍
         floatingNumbers.forEach(num => {
             num.y -= num.speed * delta * (isRitualActive ? 5 : 1);
-            num.alpha += (Math.random() - 0.5) * 0.05; // 閃爍效果
+            num.alpha += (Math.random() - 0.5) * 0.05; 
             if (num.alpha < 0) num.alpha = 0;
             if (num.alpha > 0.5) num.alpha = 0.5;
 
             if (num.y < -50) {
                 num.y = pixiApp.screen.height + 50;
                 num.x = Math.random() * pixiApp.screen.width;
-                num.text = Math.floor(Math.random() * 10).toString(); // 換個數字
+                num.text = Math.floor(Math.random() * 10).toString(); 
             }
         });
     });
 }
 
-// 觸發視覺爆發
 function triggerPixiBlast() {
-    console.log("PixiJS: 啟動超空間震盪特效！");
     isRitualActive = true;
-    
-    // 震盪 1.5 秒後恢復平靜的高級質感
-    setTimeout(() => {
-        isRitualActive = false;
-    }, 1500);
+    setTimeout(() => { isRitualActive = false; }, 1500);
 }
