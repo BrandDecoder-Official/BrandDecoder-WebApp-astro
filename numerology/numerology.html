@@ -1,1 +1,45 @@
 
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>律動能量 - 數位命理大師</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+    <div id="pixi-container"></div>
+
+    <div id="ui-layer">
+        
+        <div id="step-calibration" class="screen active">
+            <p class="status-text">能量校準中...</p>
+        </div>
+
+        <div id="step-ritual" class="screen hidden">
+            <button id="btn-activate" class="glow-button">
+                啟動律動能量 <br>
+                <span class="cost-text">(消耗 10 靈力值)</span>
+            </button>
+        </div>
+
+        <div id="step-result" class="screen hidden">
+            <div id="numbers-grid"></div>
+            <div id="ai-interpretation" class="glass-panel">
+                <p id="interpretation-text">請點擊數字查看能量指引...</p>
+            </div>
+            <div class="action-bar">
+                <button id="btn-share" class="secondary-button">生成分享字卡</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="../pixi.min.js"></script> 
+    <script src="../env.js"></script>      
+    <script src="main_logic.js"></script>  
+
+</body>
+</html>
