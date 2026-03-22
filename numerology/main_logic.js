@@ -4,9 +4,6 @@
 let userId = "";
 let dynamicCost = 10; // 預設值，稍後會被後台覆蓋
 
-// 你的 Cloud Run 網址
-const API_BASE_URL = 'https://bastro-bot-217800246535.asia-east1.run.app';
-
 // PixiJS 專用變數
 let pixiApp;
 let magicCircle; 
@@ -22,8 +19,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     initPixiBackground(); // 先讓背景動起來
 
     try {
-        // --- A. 初始化 LIFF ---
-        await liff.init({ liffId: "2009490171-krjD4SBL" }); // 填入你的專屬 LIFF ID
+        // --- A. 初始化 LIFF (使用 env.js 的設定) ---
+        await liff.init({ liffId: ENV.NUMEROLOGY_LIFF_ID }); 
         
         if (!liff.isLoggedIn()) {
             liff.login({ redirectUri: window.location.href });
@@ -34,9 +31,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         userId = profile.userId;
         console.log("真實用戶已登入 UID:", userId);
 
-        // --- B. 動態抓取後台 AI 定價 ---
+        // --- B. 動態抓取後台 AI 定價 (使用 env.js 的網址) ---
         try {
-            const configRes = await fetch(`${API_BASE_URL}/api/public/config/ai`);
+            const configRes = await fetch(`${ENV.API_BASE}/api/public/config/ai`);
             const configData = await configRes.json();
             if (configData.success && configData.data.numerology) {
                 dynamicCost = configData.data.numerology.cost;
@@ -44,7 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 document.querySelector('.cost-text').innerText = `(消耗 ${dynamicCost} 靈力值)`;
             }
         } catch(e) {
-            console.warn("無法取得動態定價，使用預設值 10", e);
+            console.warn("無法取得動態定價，使用預設值", e);
         }
 
         // --- C. 檢查點數 (這部分交給點擊時後端驗證，前端先切換畫面) ---
@@ -88,8 +85,8 @@ document.getElementById('btn-activate').addEventListener('click', async () => {
     document.getElementById('interpretation-text').innerHTML = "大師正在為您解碼...";
 
     try {
-        // 2. 向 Cloud Run 後端發送請求
-        const cloudRunUrl = `${API_BASE_URL}/api/numerology/generate`; 
+        // 2. 向 Cloud Run 後端發送請求 (使用 env.js 的網址)
+        const cloudRunUrl = `${ENV.API_BASE}/api/numerology/generate`; 
         
         const response = await fetch(cloudRunUrl, {
             method: 'POST',
@@ -137,7 +134,6 @@ document.getElementById('btn-activate').addEventListener('click', async () => {
 function initPixiBackground() {
     const container = document.getElementById('pixi-container');
     
-    // 如果沒有引入 Pixi，防呆
     if (typeof PIXI === 'undefined') {
         console.warn("未偵測到 PixiJS，跳過背景動畫");
         return;
@@ -151,7 +147,6 @@ function initPixiBackground() {
     });
     container.appendChild(pixiApp.view);
 
-    // --- A. 建立神聖幾何法陣 ---
     magicCircle = new PIXI.Container();
     magicCircle.x = pixiApp.screen.width / 2;
     magicCircle.y = pixiApp.screen.height / 2;
@@ -178,7 +173,6 @@ function initPixiBackground() {
     
     magicCircle.addChild(outerRing, innerRing, starG);
 
-    // --- B. 建立星塵粒子 ---
     for (let i = 0; i < 60; i++) {
         const p = new PIXI.Graphics();
         const color = Math.random() > 0.5 ? 0xE5C07B : 0x7B84E5;
@@ -192,7 +186,6 @@ function initPixiBackground() {
         pixiApp.stage.addChild(p);
     }
 
-    // --- C. 建立漂浮數字 ---
     const textStyle = new PIXI.TextStyle({
         fontFamily: 'Arial', fontSize: 24, fill: '#E5C07B', opacity: 0.3, fontWeight: 'bold'
     });
@@ -207,7 +200,6 @@ function initPixiBackground() {
         pixiApp.stage.addChild(numText);
     }
 
-    // --- D. 動畫渲染迴圈 (Ticker) ---
     pixiApp.ticker.add((delta) => {
         const rotationSpeed = isRitualActive ? 0.05 : 0.002;
         magicCircle.rotation += rotationSpeed * delta;
