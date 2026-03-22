@@ -56,10 +56,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // ==========================================
-// 🔮 算命 ritual & 深度 AI 呼叫
+// 🔮 算命 ritual & 深度 AI 呼叫 (無 alert 沉浸版)
 // ==========================================
 btnActivate.addEventListener('click', async () => {
-    switchScreen('step-ritual', 'step-result');
+    // 1. 抓取 Loading 畫面的文字元素，並重置為原本的金光狀態
+    const loadingText = document.querySelector('#step-calibration .status-text');
+    if(loadingText) {
+        loadingText.style.color = "var(--gold-light)";
+        loadingText.innerText = "宇宙頻率共振中，請稍候...";
+    }
+    
+    switchScreen('step-ritual', 'step-calibration');
     triggerPixiBlast(); // 視覺爆發！
     
     try {
@@ -75,27 +82,38 @@ btnActivate.addEventListener('click', async () => {
         if (result.status === "success") {
             const aiData = result.data;
             
-            // --- 填入數據 (乾淨陣列版) ---
             document.getElementById('result-core').innerText = aiData.coreNumber;
-            
             const lucky = aiData.luckySet || ['--','--','--'];
             document.getElementById('result-lucky').innerText = lucky.join(' · ');
-            
             const wealth = aiData.wealthSet || ['--','--'];
             document.getElementById('result-wealth').innerText = wealth.join(' · ');
-
-            // --- 解除封印！顯示深度解析 ---
             document.getElementById('interpretation-text').innerHTML = aiData.interpretation;
 
+            // 成功：華麗切換到結果畫面
+            switchScreen('step-calibration', 'step-result');
+
         } else {
-            document.getElementById('numbers-grid').innerHTML = `<span style='color:#ff4d4f'>具現失敗：${result.message}</span>`;
-            document.getElementById('interpretation-text').innerText = "";
+            // ❌ 沉浸式錯誤處理 (取代 alert)
+            if(loadingText) {
+                loadingText.style.color = "#ff4d4f"; // 變成警示紅
+                loadingText.innerText = `靈力共振失敗：${result.message}`;
+            }
+            // 讓錯誤訊息停留 3 秒，再優雅地退回啟動畫面
+            setTimeout(() => {
+                switchScreen('step-calibration', 'step-ritual');
+            }, 3000);
         }
 
     } catch (error) {
         console.error("Fetch Error:", error);
-        document.getElementById('numbers-grid').innerHTML = "";
-        document.getElementById('interpretation-text').innerHTML = `<span style='color:#ff4d4f'>宇宙網路異常，請稍後重試。</span>`;
+        // ❌ 沉浸式錯誤處理 (網路斷線)
+        if(loadingText) {
+            loadingText.style.color = "#ff4d4f";
+            loadingText.innerText = "宇宙網路干擾，請稍後重試。";
+        }
+        setTimeout(() => {
+            switchScreen('step-calibration', 'step-ritual');
+        }, 3000);
     }
 });
 
