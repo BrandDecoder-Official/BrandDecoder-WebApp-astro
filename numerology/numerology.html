@@ -42,31 +42,22 @@
 
         <div id="step-result" class="screen hidden">
             
-            <div id="numbers-grid" class="glass-panel">
-                <div class="numbers-grid-inner">
-                    <div class="number-box" style="grid-column: span 3; border-color: var(--gold);">
-                        <h4>您的核心能量</h4>
-                        <p id="result-core">--</p>
+            <div id="numbers-grid" class="glass-panel" style="padding: 25px;">
+                <div style="display: flex; flex-direction: column; gap: 20px; text-align: center;">
+                    <div>
+                        <h4 style="color: #A0A0B0; font-size: 14px; margin: 0 0 10px 0; font-weight: normal; letter-spacing: 2px;">核心能量</h4>
+                        <p id="result-core" style="font-size: 72px; font-weight: bold; color: #E5C07B; text-shadow: 0 0 30px rgba(229,192,123,0.6); margin: 0; line-height: 1;">--</p>
                     </div>
-                    <div class="number-box">
-                        <h4>幸運共振</h4>
-                        <p id="result-lucky-1" style="font-size: 24px;">--</p>
-                    </div>
-                    <div class="number-box">
-                        <h4>幸運共振</h4>
-                        <p id="result-lucky-2" style="font-size: 24px;">--</p>
-                    </div>
-                    <div class="number-box">
-                        <h4>幸運共振</h4>
-                        <p id="result-lucky-3" style="font-size: 24px;">--</p>
-                    </div>
-                    <div class="number-box" style="grid-column: span 2;">
-                        <h4>財富金鑰</h4>
-                        <p id="result-wealth-1" style="font-size: 24px; color: #F2D3A1;">--</p>
-                    </div>
-                    <div class="number-box">
-                        <h4>財富金鑰</h4>
-                        <p id="result-wealth-2" style="font-size: 24px; color: #F2D3A1;">--</p>
+                    
+                    <div style="display: flex; justify-content: space-between; gap: 15px; margin-top: 10px; padding-top: 20px; border-top: 1px solid rgba(212, 175, 55, 0.2);">
+                        <div style="flex: 1;">
+                            <h4 style="color: #888; font-size: 12px; margin: 0 0 8px 0; font-weight: normal;">幸運共振</h4>
+                            <p id="result-lucky" style="font-size: 20px; color: #FFFFFF; letter-spacing: 4px; margin: 0;">-- · -- · --</p>
+                        </div>
+                        <div style="flex: 1; border-left: 1px solid rgba(255,255,255,0.1);">
+                            <h4 style="color: #888; font-size: 12px; margin: 0 0 8px 0; font-weight: normal;">財富金鑰</h4>
+                            <p id="result-wealth" style="font-size: 20px; color: #F2D3A1; letter-spacing: 4px; margin: 0; font-weight: bold;">-- · --</p>
+                        </div>
                     </div>
                 </div>
             </div>
