@@ -6,6 +6,9 @@ const ENV = {
     TAROT_LIFF_ID: "2009490171-yQF5PguK", 
     ZIWEI_LIFF_ID: "2009490171-8nISSem3", // 🔮 新增：紫微斗數專屬 LIFF ID
     MEMBER_LIFF_ID: "2009490171-ZuAjXwno",
+    // 👇 新增這行：數字能量專屬 LIFF ID
+    NUMEROLOGY_LIFF_ID: "2009490171-krjD4SBL",
+    
     
     // 🌐 後端 API 基底網址
     API_BASE: "https://bastro-bot-217800246535.asia-east1.run.app",
