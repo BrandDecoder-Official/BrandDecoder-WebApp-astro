@@ -1,7 +1,7 @@
 // ==========================================
 // 1. 全域變數與設定
 // ==========================================
-let userId = "U_TEST_88888888";
+let userId = "Udddc1d94a101d4b7eded5d65a1b07648";
 let userPoints = 520;
 const COST_POINTS = 10;
 
@@ -47,25 +47,69 @@ function switchScreen(hideId, showId) {
     }
 }
 
-// 點擊啟動按鈕
-document.getElementById('btn-activate').addEventListener('click', () => {
+// 點擊啟動按鈕 (換成真實 API 呼叫版)
+document.getElementById('btn-activate').addEventListener('click', async () => {
+    // 1. 切換畫面並觸發動畫
     switchScreen('step-ritual', 'step-result');
     triggerPixiBlast(); // 觸發視覺爆發！
     
-    // 模擬 AI 運算延遲後顯示結果
-    setTimeout(() => {
-        document.getElementById('numbers-grid').innerHTML = `
-            <div style="margin-bottom: 30px;">
-                <span style="font-size: 1.2rem; color: #A0A0B0;">核心能量</span><br>
-                <span style="font-size: 4.5rem; color: #E5C07B; font-weight: bold; text-shadow: 0 0 20px rgba(229,192,123,0.8);">8</span>
-            </div>
-            <div style="font-size: 1.5rem; color: #E0E0E0; letter-spacing: 4px;">
-                26 · 47 · 11 · 12 · 35
-            </div>
-        `;
-        document.getElementById('interpretation-text').innerHTML = 
-            "<span style='color:#E5C07B'>【豐盛之鑰】</span><br>今日磁場強大，數字 8 為您匯聚財富頻率。<br>請留意身邊帶有 26 與 12 的人事物。";
-    }, 1500);
+    // 先在畫面上顯示「讀取中」的提示，以免網路慢時畫面空白
+    document.getElementById('numbers-grid').innerHTML = `
+        <div style="font-size: 1.5rem; color: #E5C07B; animation: pulseText 2s infinite;">
+            正在與宇宙頻率共振...
+        </div>
+    `;
+    document.getElementById('interpretation-text').innerHTML = "大師正在為您解碼...";
+
+    try {
+        // 2. 向你的 Cloud Run 後端發送請求 (請確認這是你真實的網址)
+        // 注意：路徑是你在 index.js 掛載的 /api/numerology/generate
+        const cloudRunUrl = 'https://bastro-bot-217800246535.asia-east1.run.app/api/numerology/generate'; 
+        
+        const response = await fetch(cloudRunUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                userId: userId, // 測試階段是 "Udddc1d94a101d4b7eded5d65a1b07648"，後續換成 LIFF 抓到的真實 UID
+                cost: COST_POINTS 
+            })
+        });
+
+        const result = await response.json();
+
+        // 3. 處理大腦回傳的結果
+        if (result.status === "success") {
+            const aiData = result.data;
+            
+            // 填入真實的 AI 數據
+            document.getElementById('numbers-grid').innerHTML = `
+                <div style="margin-bottom: 30px;">
+                    <span style="font-size: 1.2rem; color: #A0A0B0;">核心能量</span><br>
+                    <span style="font-size: 4.5rem; color: #E5C07B; font-weight: bold; text-shadow: 0 0 20px rgba(229,192,123,0.8);">${aiData.coreNumber}</span>
+                </div>
+                <div style="font-size: 1.5rem; color: #E0E0E0; letter-spacing: 4px;">
+                    ${aiData.luckySet.join(' · ')} · ${aiData.wealthSet.join(' · ')}
+                </div>
+            `;
+            // 填入真實的 AI 解析文案
+            document.getElementById('interpretation-text').innerHTML = aiData.interpretation;
+            
+            // 更新本地顯示的餘額 (可選)
+            userPoints = result.balance;
+            console.log("扣款成功，伺服器回傳剩餘點數:", userPoints);
+
+        } else {
+            // 處理後端報錯 (例如點數不足)
+            document.getElementById('numbers-grid').innerHTML = "";
+            document.getElementById('interpretation-text').innerHTML = `<span style='color:#ff4d4f'>能量連線失敗：${result.message}</span>`;
+        }
+
+    } catch (error) {
+        // 處理網路斷線或 Server 500 錯誤
+        console.error("Fetch Error:", error);
+        document.getElementById('numbers-grid').innerHTML = "";
+        document.getElementById('interpretation-text').innerHTML = `<span style='color:#ff4d4f'>宇宙網路干擾，請稍後再試。</span>`;
+    }
 });
 
 
