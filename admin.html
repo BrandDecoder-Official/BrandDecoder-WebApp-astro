@@ -191,6 +191,7 @@
                             <option value="tarot">🔮 塔羅解碼</option>
                             <option value="ziwei">🏮 紫微斗數</option>
                             <option value="daily_draw">✨ 每日一抽</option>
+                            <option value="numerology">✨ 律動能量</option>
                             <option value="face">👁️ 面手相學</option> 
                         </select>
 
@@ -279,6 +280,26 @@
                             <input type="number" id="daily-cost" value="0" disabled style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background:#eee;" title="每日一抽固定為免費/簽到">
                         </div>
                     </div>
+                </div>
+
+                <div style="background: #fff8e1; padding: 20px; border-radius: 8px; border: 1px solid #ffe082; margin-bottom: 20px;">
+                    <h4 style="margin-top: 0; color: #f57f17; margin-bottom: 15px;">✨ 律動能量 (Numerology)</h4>
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <div style="flex: 2; min-width: 200px;">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">運算模型 (Model)</label>
+                            <select id="numerology-model" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                                <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (極速低成本)</option>
+                                <option value="gemini-3-flash-preview" selected>Gemini 3 Flash (標準)</option>
+                                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (深度邏輯)</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 100px;">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">扣除靈力 (Cost)</label>
+                            <input type="number" id="numerology-cost" value="10" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                        </div>
+                    </div>
+                    <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">系統指令 (System Prompt)</label>
+                    <textarea id="numerology-prompt" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;" placeholder="輸入律動能量提示詞..."></textarea>
                 </div>
 
                 <button onclick="saveAISettings()" class="btn-primary" style="width: 100%; padding: 15px; font-size: 16px;">
@@ -418,6 +439,8 @@
                     if(serviceType === 'tarot') { typeBadge = '<span class="badge badge-tarot">🔮 塔羅解碼</span>'; }
                     else if(serviceType === 'ziwei') { typeBadge = '<span class="badge" style="background:#F3E5F5; color:#8E24AA; border:1px solid #CE93D8;">🏮 紫微大運</span>'; }
                     else if(serviceType === 'daily_draw') { typeBadge = '<span class="badge badge-ai">✨ 每日一抽</span>'; }
+                    // 👇 新增律動能量的專屬橘色標籤
+                    else if(serviceType === 'numerology') { typeBadge = '<span class="badge" style="background:#FFF8E1; color:#F57F17; border: 1px solid #FFE082;">✨ 律動能量</span>'; }
                     else if(serviceType === 'face' || serviceType === 'palm') { typeBadge = '<span class="badge badge-face">👁️ 面手相學</span>'; }
                     else { typeBadge = `<span class="badge">${serviceType || '未知服務'}</span>`; }
                 }
@@ -550,6 +573,16 @@
                         const dailyModel = document.getElementById('daily-model');
                         if(dailyModel) dailyModel.value = data.daily.model;
                     }
+                    // 👇 讀取律動能量設定
+                    if(data.numerology) {
+                        const numModel = document.getElementById('numerology-model');
+                        const numCost = document.getElementById('numerology-cost');
+                        const numPrompt = document.getElementById('numerology-prompt');
+                        if(numModel) numModel.value = data.numerology.model || 'gemini-3-flash-preview';
+                        if(numCost) numCost.value = data.numerology.cost || 10;
+                        if(numPrompt) numPrompt.value = data.numerology.prompt || '';
+                    }
+                    
                 }
             } catch (e) { 
                 console.error("❌ 讀取 AI 設定失敗：", e); 
@@ -577,6 +610,12 @@
                     daily: {
                         model: document.getElementById('daily-model').value,
                         cost: 0 
+                    },
+                    // 👇 新增律動能量儲存資料
+                    numerology: {
+                        model: document.getElementById('numerology-model').value,
+                        cost: parseInt(document.getElementById('numerology-cost').value) || 10,
+                        prompt: document.getElementById('numerology-prompt').value
                     }
                 };
 
