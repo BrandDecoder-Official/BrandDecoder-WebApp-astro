@@ -149,3 +149,12 @@ body, html {
     0% { opacity: 0.6; text-shadow: 0 0 5px rgba(229, 192, 123, 0.2); }
     100% { opacity: 1; text-shadow: 0 0 15px rgba(229, 192, 123, 0.8); }
 }
+
+/* ⏳ 按鈕 Loading 專屬 (如果 style.css 裡沒有，請補上) */
+.spinner {
+    width: 20px; height: 20px;
+    border: 3px solid rgba(212,175,55,0.3); border-top-color: #D4AF37;
+    border-radius: 50%;
+    animation: spinButton 1s linear infinite;
+}
+@keyframes spinButton { 100% { transform: rotate(360deg); } }
