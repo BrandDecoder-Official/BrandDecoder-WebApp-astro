@@ -1,120 +1,198 @@
 // ==========================================
 // 1. 全域變數與設定
 // ==========================================
-let userId = "";
-let userPoints = 0;
+let userId = "U_TEST_88888888";
+let userPoints = 520;
 const COST_POINTS = 10;
 
+// PixiJS 專用變數
+let pixiApp;
+let magicCircle; // 法陣容器
+let particles = []; // 星塵粒子陣列
+let floatingNumbers = []; // 漂浮數字陣列
+let isRitualActive = false; // 是否進入「爆發狀態」
+
 // ==========================================
-// 2. 生命週期初始化 (Initialization)
+// 2. 初始化 (Initialization)
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("系統啟動：開始掛載大師引擎...");
 
-    // 1. 先啟動背景的 PixiJS 動畫畫布 (讓畫面立刻有反應)
+    // 1. 啟動視覺拉滿的 PixiJS 引擎
     initPixiBackground();
 
-    try {
-        // 2. 初始化 LIFF (請替換為你在 env.js 中的 liffId)
-        /* await liff.init({ liffId: "YOUR_LIFF_ID" });
-        if (!liff.isLoggedIn()) {
-            liff.login();
-            return;
+    // 2. 模擬去後台驗證身分與點數
+    setTimeout(() => {
+        if (userPoints >= COST_POINTS) {
+            switchScreen('step-calibration', 'step-ritual');
+            // 校準完成，法陣稍微加速
+            isRitualActive = false; 
         }
-        const profile = await liff.getProfile();
-        userId = profile.userId;
-        */
-
-        // !! 測試階段：模擬取得 LINE UID !!
-        userId = "U_TEST_88888888";
-        console.log("用戶已登入 UID:", userId);
-
-        // 3. 向後端/Firebase 查詢用戶點數
-        await checkUserStatus(userId);
-
-    } catch (error) {
-        console.error("LIFF 初始化失敗:", error);
-        document.querySelector('.status-text').innerText = "連線異常，請重新開啟";
-    }
+    }, 2000);
 });
 
 // ==========================================
-// 3. 數據與後端串接 (Firebase/API)
-// ==========================================
-async function checkUserStatus(uid) {
-    // 這裡模擬去 Firebase 讀取資料的時間 (1.5秒)，讓用戶看到「校準中」的動畫
-    setTimeout(() => {
-        // 假設從資料庫讀取到該用戶有 520 點
-        userPoints = 520; 
-        console.log(`用戶剩餘點數: ${userPoints}`);
-
-        if (userPoints >= COST_POINTS) {
-            // 點數足夠，切換到「啟動儀式」按鈕
-            switchScreen('step-calibration', 'step-ritual');
-        } else {
-            // 點數不足
-            document.querySelector('.status-text').innerText = "靈力值不足，請前往會員中心";
-            document.querySelector('.status-text').style.color = "#ff4d4f";
-        }
-    }, 1500);
-}
-
-// ==========================================
-// 4. UI 互動與畫面控制
+// 3. UI 控制邏輯
 // ==========================================
 function switchScreen(hideId, showId) {
-    document.getElementById(hideId).classList.add('hidden');
-    document.getElementById(hideId).classList.remove('active');
-
-    document.getElementById(showId).classList.remove('hidden');
-    document.getElementById(showId).classList.add('active');
+    const hideEl = document.getElementById(hideId);
+    const showEl = document.getElementById(showId);
+    if(hideEl) {
+        hideEl.classList.remove('active');
+        hideEl.classList.add('hidden');
+    }
+    if(showEl) {
+        showEl.classList.remove('hidden');
+        showEl.classList.add('active');
+    }
 }
 
-// 綁定「啟動律動能量」按鈕點擊事件
-document.getElementById('btn-activate').addEventListener('click', async () => {
-    // 1. 隱藏第二階段的 UI
-    document.getElementById('step-ritual').classList.add('hidden');
+// 點擊啟動按鈕
+document.getElementById('btn-activate').addEventListener('click', () => {
+    switchScreen('step-ritual', 'step-result');
+    triggerPixiBlast(); // 觸發視覺爆發！
     
-    // 2. 觸發 PixiJS 能量爆發特效
-    triggerRitualAnimation();
-
-    // 3. (預留) 這裡之後會放：扣除 Firebase 點數 + 呼叫 Gemini API 算數字
-    console.log(`已扣除 ${COST_POINTS} 點，準備呼叫大腦...`);
+    // 模擬 AI 運算延遲後顯示結果
+    setTimeout(() => {
+        document.getElementById('numbers-grid').innerHTML = `
+            <div style="margin-bottom: 30px;">
+                <span style="font-size: 1.2rem; color: #A0A0B0;">核心能量</span><br>
+                <span style="font-size: 4.5rem; color: #E5C07B; font-weight: bold; text-shadow: 0 0 20px rgba(229,192,123,0.8);">8</span>
+            </div>
+            <div style="font-size: 1.5rem; color: #E0E0E0; letter-spacing: 4px;">
+                26 · 47 · 11 · 12 · 35
+            </div>
+        `;
+        document.getElementById('interpretation-text').innerHTML = 
+            "<span style='color:#E5C07B'>【豐盛之鑰】</span><br>今日磁場強大，數字 8 為您匯聚財富頻率。<br>請留意身邊帶有 26 與 12 的人事物。";
+    }, 1500);
 });
 
-// ==========================================
-// 5. PixiJS 視覺引擎 (背景與特效)
-// ==========================================
-let pixiApp;
 
+// ==========================================
+// 4. PixiJS 視覺引擎 (核心特效區)
+// ==========================================
 function initPixiBackground() {
-    // 建立 Pixi 應用程式
     const container = document.getElementById('pixi-container');
+    
+    // 建立應用程式 (透明背景，讓 CSS 的深邃黑透出來)
     pixiApp = new PIXI.Application({
         resizeTo: window,
-        backgroundAlpha: 0, // 透明背景，露出 CSS 的深邃黑
+        backgroundAlpha: 0,
+        antialias: true,
         resolution: window.devicePixelRatio || 1,
     });
     container.appendChild(pixiApp.view);
 
-    // (下一階段：我們將在這裡畫出緩慢旋轉的星軌與粒子)
-    console.log("PixiJS 畫布掛載完成");
+    // --- A. 建立神聖幾何法陣 ---
+    magicCircle = new PIXI.Container();
+    magicCircle.x = pixiApp.screen.width / 2;
+    magicCircle.y = pixiApp.screen.height / 2;
+    pixiApp.stage.addChild(magicCircle);
+
+    // 畫外圓環 (虛線感)
+    const outerRing = new PIXI.Graphics();
+    outerRing.lineStyle(2, 0xE5C07B, 0.4);
+    outerRing.drawCircle(0, 0, 180);
+    // 畫內圓環
+    const innerRing = new PIXI.Graphics();
+    innerRing.lineStyle(1, 0x7B84E5, 0.6);
+    innerRing.drawCircle(0, 0, 160);
+    // 畫幾何多邊形 (八角星)
+    const starG = new PIXI.Graphics();
+    starG.lineStyle(1.5, 0xE5C07B, 0.5);
+    for (let i = 0; i < 8; i++) {
+        const angle = (i * Math.PI) / 4;
+        const x = Math.cos(angle) * 160;
+        const y = Math.sin(angle) * 160;
+        if (i === 0) starG.moveTo(x, y);
+        else starG.lineTo(x, y);
+    }
+    starG.closePath();
+    
+    magicCircle.addChild(outerRing, innerRing, starG);
+
+    // --- B. 建立星塵粒子 ---
+    for (let i = 0; i < 60; i++) {
+        const p = new PIXI.Graphics();
+        const color = Math.random() > 0.5 ? 0xE5C07B : 0x7B84E5;
+        p.beginFill(color, Math.random() * 0.5 + 0.2);
+        p.drawCircle(0, 0, Math.random() * 2 + 1);
+        p.endFill();
+        p.x = Math.random() * pixiApp.screen.width;
+        p.y = Math.random() * pixiApp.screen.height;
+        p.speed = Math.random() * 0.5 + 0.1;
+        particles.push(p);
+        pixiApp.stage.addChild(p);
+    }
+
+    // --- C. 建立漂浮數字 ---
+    const textStyle = new PIXI.TextStyle({
+        fontFamily: 'Arial',
+        fontSize: 24,
+        fill: '#E5C07B',
+        opacity: 0.3,
+        fontWeight: 'bold'
+    });
+
+    for (let i = 0; i < 15; i++) {
+        const numText = new PIXI.Text(Math.floor(Math.random() * 10).toString(), textStyle);
+        numText.x = Math.random() * pixiApp.screen.width;
+        numText.y = Math.random() * pixiApp.screen.height;
+        numText.alpha = Math.random() * 0.4;
+        numText.speed = Math.random() * 0.3 + 0.1;
+        floatingNumbers.push(numText);
+        pixiApp.stage.addChild(numText);
+    }
+
+    // --- D. 動畫渲染迴圈 (Ticker) ---
+    pixiApp.ticker.add((delta) => {
+        // 法陣旋轉 (如果觸發儀式，轉速暴增)
+        const rotationSpeed = isRitualActive ? 0.05 : 0.002;
+        magicCircle.rotation += rotationSpeed * delta;
+        
+        // 如果觸發儀式，法陣脈衝放大
+        if (isRitualActive) {
+            magicCircle.scale.x = 1 + Math.sin(Date.now() / 100) * 0.1;
+            magicCircle.scale.y = 1 + Math.sin(Date.now() / 100) * 0.1;
+        } else {
+            // 恢復平穩
+            magicCircle.scale.x += (1 - magicCircle.scale.x) * 0.05;
+            magicCircle.scale.y += (1 - magicCircle.scale.y) * 0.05;
+        }
+
+        // 粒子緩慢上升
+        particles.forEach(p => {
+            p.y -= p.speed * delta * (isRitualActive ? 10 : 1);
+            if (p.y < 0) {
+                p.y = pixiApp.screen.height;
+                p.x = Math.random() * pixiApp.screen.width;
+            }
+        });
+
+        // 數字緩慢漂浮與閃爍
+        floatingNumbers.forEach(num => {
+            num.y -= num.speed * delta * (isRitualActive ? 5 : 1);
+            num.alpha += (Math.random() - 0.5) * 0.05; // 閃爍效果
+            if (num.alpha < 0) num.alpha = 0;
+            if (num.alpha > 0.5) num.alpha = 0.5;
+
+            if (num.y < -50) {
+                num.y = pixiApp.screen.height + 50;
+                num.x = Math.random() * pixiApp.screen.width;
+                num.text = Math.floor(Math.random() * 10).toString(); // 換個數字
+            }
+        });
+    });
 }
 
-function triggerRitualAnimation() {
-    console.log("PixiJS: 播放能量匯聚特效...");
+// 觸發視覺爆發
+function triggerPixiBlast() {
+    console.log("PixiJS: 啟動超空間震盪特效！");
+    isRitualActive = true;
     
-    // 模擬算命與特效播放時間 (2.5秒)，然後切換到結果頁
+    // 震盪 1.5 秒後恢復平靜的高級質感
     setTimeout(() => {
-        switchScreen('step-ritual', 'step-result');
-        
-        // 填入測試用假數字，確保版面正常
-        document.getElementById('numbers-grid').innerHTML = `
-            <h1 style="color:#E5C07B; font-size: 3rem; margin-bottom: 20px;">8</h1>
-            <h3 style="color:#A0A0B0; letter-spacing: 5px;">26 · 47 · 11 · 12 · 35</h3>
-        `;
-        document.getElementById('interpretation-text').innerHTML = 
-            "<strong>【今日主旋律】</strong><br>今日頻率為 8，象徵豐盛與權力。<br>適合推動延宕已久的重大決策。";
-            
-    }, 2500);
+        isRitualActive = false;
+    }, 1500);
 }
