@@ -1,11 +1,25 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>律動能量 - 數位命理大師</title>
-    <link rel="stylesheet" href="style.css">
+    <title>律動能量 | 命運解碼室</title>
+    <link rel="stylesheet" href="https://branddecoderai.com/astro-bot/style_pk_v3.css?v=2">
+    <style>
+        /* 專屬數字能量的微調 CSS (如果 style_pk_v3.css 已包含，可刪除此段) */
+        #pixi-container { position: fixed; inset: 0; z-index: -10; pointer-events: none; opacity: 0.6; }
+        
+        .numbers-grid-inner {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px;
+        }
+        .number-box {
+            background: rgba(212, 175, 55, 0.1); border: 1px solid var(--glass-border); border-radius: 12px;
+            padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: center;
+        }
+        .number-box h4 { margin: 0; font-size: 11px; color: #888; font-weight: normal; letter-spacing: 1px; }
+        .number-box p { margin: 5px 0 0 0; font-size: 36px; font-weight: bold; color: var(--gold-light); text-shadow: 0 0 10px var(--gold); }
+        .interpretation-content { line-height: 1.8; color: #E0E0E0; font-size: 14px; white-space: pre-wrap; margin-top: 10px; }
+    </style>
 </head>
 <body>
     
@@ -14,31 +28,67 @@
     <div id="ui-layer">
         
         <div id="step-calibration" class="screen active">
-            <p class="status-text">能量校準中...</p>
+            <div class="loader-ripple"></div>
+            <p class="status-text">同步星軌數據中...</p>
         </div>
 
         <div id="step-ritual" class="screen hidden">
+            <h1 class="master-title">歡迎來到解碼室，<span id="ui-name"></span></h1>
             <button id="btn-activate" class="glow-button">
                 啟動律動能量 <br>
-                 <span class="cost-text">(靈力準備中...)</span>
+                <span class="cost-text">(靈力準備中...)</span>
             </button>
         </div>
 
         <div id="step-result" class="screen hidden">
-            <div id="numbers-grid"></div>
-            <div id="ai-interpretation" class="glass-panel">
-                <p id="interpretation-text">請點擊數字查看能量指引...</p>
+            
+            <div id="numbers-grid" class="glass-panel">
+                <div class="numbers-grid-inner">
+                    <div class="number-box" style="grid-column: span 3; border-color: var(--gold);">
+                        <h4>您的核心能量</h4>
+                        <p id="result-core">--</p>
+                    </div>
+                    <div class="number-box">
+                        <h4>幸運共振</h4>
+                        <p id="result-lucky-1" style="font-size: 24px;">--</p>
+                    </div>
+                    <div class="number-box">
+                        <h4>幸運共振</h4>
+                        <p id="result-lucky-2" style="font-size: 24px;">--</p>
+                    </div>
+                    <div class="number-box">
+                        <h4>幸運共振</h4>
+                        <p id="result-lucky-3" style="font-size: 24px;">--</p>
+                    </div>
+                    <div class="number-box" style="grid-column: span 2;">
+                        <h4>財富金鑰</h4>
+                        <p id="result-wealth-1" style="font-size: 24px; color: #F2D3A1;">--</p>
+                    </div>
+                    <div class="number-box">
+                        <h4>財富金鑰</h4>
+                        <p id="result-wealth-2" style="font-size: 24px; color: #F2D3A1;">--</p>
+                    </div>
+                </div>
             </div>
-            <div class="action-bar">
-                <button id="btn-share" class="secondary-button">生成分享字卡</button>
+
+            <div id="ai-interpretation" class="glass-panel" style="margin-top: 20px; text-align: left;">
+                <h3 style="margin-top:0; font-size: 14px; color: var(--gold);">大師指引：</h3>
+                <div id="interpretation-text" class="interpretation-content">大師正在為您具現報告...</div>
+            </div>
+
+            <div class="action-bar" style="margin-top: 30px;">
+                <button id="btn-close-result" class="glow-button" style="width: 100%; padding: 15px; font-size: 16px;">
+                    關閉頁面回 LINE 查看
+                </button>
+                <button id="btn-share" class="secondary-button" style="width: 100%; margin-top: 15px;">生成分享字卡</button>
             </div>
         </div>
 
     </div>
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="/pixi.min.js"></script> 
-    <script src="/env.js"></script>      
+    <script src="https://branddecoderai.com/astro-bot/pixi.min.js"></script> 
+    <script src="/env.js?v=6"></script>      
     <script src="main_logic.js"></script>  
 
 </body>
