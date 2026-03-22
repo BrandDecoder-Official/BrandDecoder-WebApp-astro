@@ -57,7 +57,20 @@
                 <button id="btn-close-result" class="glow-button" style="width: 100%; font-size: 15px; padding: 12px;">
                     關閉頁面回 LINE 查看
                 </button>
-                <button id="btn-share" class="secondary-button" style="width: 100%; margin: 0;">生成分享字卡</button>
+                <div class="action-bar" style="margin-top: 25px; width: 100%;">
+                <button id="btn-close-result" class="glow-button" style="margin-bottom: 15px; padding: 12px;">
+                    <span style="font-size: 15px;">關閉頁面回 LINE 查看</span>
+                </button>
+                
+                <button id="btn-share-canvas" class="secondary-button" style="width: 100%; position: relative;">
+                    <span id="btn-share-text">生成分享字卡</span>
+                    <span id="btn-share-loading" class="spinner" style="width: 15px; height: 15px; border-width: 2px; position: absolute; right: 15px; top: 12px; display: none;"></span>
+                </button>
+                
+                <a id="btn-download-image" class="secondary-button" style="width: 100%; display: none; text-align: center; text-decoration: none; background: rgba(76,175,80,0.2); border-color: #4CAF50; color: #4CAF50;">
+                    儲存圖片 (去 LINE 分享)
+                </a>
+            </div>
             </div>
         </div>
 
@@ -67,5 +80,6 @@
     <script src="/pixi.min.js"></script> 
     <script src="/env.js?v=9"></script>      
     <script src="main_logic.js?v=4"></script>  
+    <canvas id="share-canvas" width="1080" height="1920" style="display: none;"></canvas>
 </body>
 </html>
