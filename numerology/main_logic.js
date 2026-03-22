@@ -75,21 +75,16 @@ btnActivate.addEventListener('click', async () => {
         if (result.status === "success") {
             const aiData = result.data;
             
-            // --- 填入數據 ---
+            // --- 填入數據 (乾淨陣列版) ---
             document.getElementById('result-core').innerText = aiData.coreNumber;
             
-            // 防呆地填入幸運數陣列
             const lucky = aiData.luckySet || ['--','--','--'];
-            document.getElementById('result-lucky-1').innerText = lucky[0];
-            document.getElementById('result-lucky-2').innerText = lucky[1];
-            document.getElementById('result-lucky-3').innerText = lucky[2];
+            document.getElementById('result-lucky').innerText = lucky.join(' · ');
             
-            // 防呆地填入財富數陣列
             const wealth = aiData.wealthSet || ['--','--'];
-            document.getElementById('result-wealth-1').innerText = wealth[0];
-            document.getElementById('result-wealth-2').innerText = wealth[1];
+            document.getElementById('result-wealth').innerText = wealth.join(' · ');
 
-            // --- 🌟 解除封印！顯示深度解析 ---
+            // --- 解除封印！顯示深度解析 ---
             document.getElementById('interpretation-text').innerHTML = aiData.interpretation;
 
         } else {
