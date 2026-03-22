@@ -490,10 +490,19 @@
                     window.overviewChartInstance = new Chart(ctx, {
                         type: 'doughnut',
                         data: {
-                            labels: ['🔮 塔羅', '🏮 紫微', '✨ 每日一抽', '👁️ 面手相'],
+                            // 👇 加上「律動能量」標籤
+                            labels: ['🔮 塔羅', '🏮 紫微', '✨ 每日一抽', '✨ 律動能量', '👁️ 面手相'],
                             datasets: [{
-                                data: [data.serviceDist.tarot, data.serviceDist.ziwei, data.serviceDist.daily, data.serviceDist.face],
-                                backgroundColor: ['#1a73e8', '#8E24AA', '#34a853', '#F57C00']
+                                // 👇 加上 data.serviceDist.numerology，並加上 || 0 防呆
+                                data: [
+                                    data.serviceDist.tarot || 0, 
+                                    data.serviceDist.ziwei || 0, 
+                                    data.serviceDist.daily || data.serviceDist.daily_draw || 0, 
+                                    data.serviceDist.numerology || 0, 
+                                    data.serviceDist.face || 0
+                                ],
+                                // 👇 加上專屬的橘金色 '#F57F17'
+                                backgroundColor: ['#1a73e8', '#8E24AA', '#34a853', '#F57F17', '#F57C00']
                             }]
                         },
                         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
