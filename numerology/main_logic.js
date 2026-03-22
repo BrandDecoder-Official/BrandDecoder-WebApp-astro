@@ -19,37 +19,48 @@ document.addEventListener("DOMContentLoaded", async () => {
     initPixiBackground(); // 先讓背景動起來
 
     try {
-        // --- A. 初始化 LIFF (使用 env.js 的設定) ---
+        // --- A. 初始化 LIFF ---
+        console.log("1. 正在初始化 LIFF ID:", ENV.NUMEROLOGY_LIFF_ID);
         await liff.init({ liffId: ENV.NUMEROLOGY_LIFF_ID }); 
         
         if (!liff.isLoggedIn()) {
+            console.log("2. 尚未登入 LINE，準備跳轉...");
             liff.login({ redirectUri: window.location.href });
             return;
         }
         
         const profile = await liff.getProfile();
         userId = profile.userId;
-        console.log("真實用戶已登入 UID:", userId);
+        console.log("3. ✅ 真實用戶已登入 UID:", userId);
 
-        // --- B. 動態抓取後台 AI 定價 (使用 env.js 的網址) ---
+        // --- B. 動態抓取後台 AI 定價 ---
         try {
+            console.log("4. 準備向後台請求最新定價...");
             const configRes = await fetch(`${ENV.API_BASE}/api/public/config/ai`);
+            console.log("   - API 回應狀態:", configRes.status);
+            
             const configData = await configRes.json();
-            if (configData.success && configData.data.numerology) {
+            console.log("   - API 回傳資料:", configData);
+
+            if (configData.success && configData.data && configData.data.numerology) {
                 dynamicCost = configData.data.numerology.cost;
+                console.log(`5. ✅ 成功取得後台定價：${dynamicCost} 點`);
                 // 動態更新按鈕上的價格文字
                 document.querySelector('.cost-text').innerText = `(消耗 ${dynamicCost} 靈力值)`;
+            } else {
+                console.warn("   - ⚠️ API 成功，但資料庫裡找不到 numerology 欄位");
             }
-        } catch(e) {
-            console.warn("無法取得動態定價，使用預設值", e);
+        } catch(apiError) {
+            console.warn("4. ❌ 無法取得動態定價 API (請檢查 CORS 或網址)", apiError);
         }
 
-        // --- C. 檢查點數 (這部分交給點擊時後端驗證，前端先切換畫面) ---
+        // --- C. 切換到啟動畫面 ---
+        console.log("6. 系統就緒，開放點擊！");
         switchScreen('step-calibration', 'step-ritual');
 
     } catch (error) {
-        console.error("初始化失敗:", error);
-        document.querySelector('.status-text').innerText = "連線異常，請從 LINE 重新開啟";
+        console.error("❌ 系統初始化遭到結界阻擋:", error);
+        document.querySelector('.status-text').innerText = "連線異常，請從 LINE 內部重新開啟";
         document.querySelector('.status-text').style.color = "#ff4d4f";
     }
 });
