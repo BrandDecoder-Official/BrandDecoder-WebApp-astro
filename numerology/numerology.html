@@ -4,22 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>律動能量 | 命運解碼室</title>
-    <link rel="stylesheet" href="https://branddecoderai.com/astro-bot/style_pk_v3.css?v=2">
-    <style>
-        /* 專屬數字能量的微調 CSS (如果 style_pk_v3.css 已包含，可刪除此段) */
-        #pixi-container { position: fixed; inset: 0; z-index: -10; pointer-events: none; opacity: 0.6; }
-        
-        .numbers-grid-inner {
-            display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px;
-        }
-        .number-box {
-            background: rgba(212, 175, 55, 0.1); border: 1px solid var(--glass-border); border-radius: 12px;
-            padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: center;
-        }
-        .number-box h4 { margin: 0; font-size: 11px; color: #888; font-weight: normal; letter-spacing: 1px; }
-        .number-box p { margin: 5px 0 0 0; font-size: 36px; font-weight: bold; color: var(--gold-light); text-shadow: 0 0 10px var(--gold); }
-        .interpretation-content { line-height: 1.8; color: #E0E0E0; font-size: 14px; white-space: pre-wrap; margin-top: 10px; }
-    </style>
+    <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
     
@@ -28,21 +13,22 @@
     <div id="ui-layer">
         
         <div id="step-calibration" class="screen active">
-            <div class="loader-ripple"></div>
             <p class="status-text">同步星軌數據中...</p>
         </div>
 
         <div id="step-ritual" class="screen hidden">
-            <h1 class="master-title">歡迎來到解碼室，<span id="ui-name"></span></h1>
+            <h1 style="color: #E5C07B; font-size: 24px; margin-bottom: 30px; text-shadow: 0 0 10px rgba(212,175,55,0.5); text-align: center;">
+                歡迎來到解碼室，<br><span id="ui-name" style="color: #fff; font-size: 20px;"></span>
+            </h1>
             <button id="btn-activate" class="glow-button">
                 啟動律動能量 <br>
-                <span class="cost-text">(靈力準備中...)</span>
+                <span class="cost-text" style="color: rgba(255,255,255,0.6);">(靈力準備中...)</span>
             </button>
         </div>
 
         <div id="step-result" class="screen hidden">
             
-            <div id="numbers-grid" class="glass-panel" style="padding: 25px;">
+            <div id="numbers-grid" class="glass-panel" style="padding: 25px; box-sizing: border-box;">
                 <div style="display: flex; flex-direction: column; gap: 20px; text-align: center;">
                     <div>
                         <h4 style="color: #A0A0B0; font-size: 14px; margin: 0 0 10px 0; font-weight: normal; letter-spacing: 2px;">核心能量</h4>
@@ -56,22 +42,22 @@
                         </div>
                         <div style="flex: 1; border-left: 1px solid rgba(255,255,255,0.1);">
                             <h4 style="color: #888; font-size: 12px; margin: 0 0 8px 0; font-weight: normal;">財富金鑰</h4>
-                            <p id="result-wealth" style="font-size: 20px; color: #F2D3A1; letter-spacing: 4px; margin: 0; font-weight: bold;">-- · --</p>
+                            <p id="result-wealth" style="font-size: 20px; color: #E5C07B; letter-spacing: 4px; margin: 0; font-weight: bold;">-- · --</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="ai-interpretation" class="glass-panel" style="margin-top: 20px; text-align: left;">
-                <h3 style="margin-top:0; font-size: 14px; color: var(--gold);">大師指引：</h3>
-                <div id="interpretation-text" class="interpretation-content">大師正在為您具現報告...</div>
+            <div id="ai-interpretation" class="glass-panel" style="margin-top: 20px; padding: 20px; text-align: left; max-height: 35vh; overflow-y: auto;">
+                <h3 style="margin-top:0; font-size: 14px; color: #E5C07B; border-bottom: 1px solid rgba(212,175,55,0.3); padding-bottom: 8px;">大師指引：</h3>
+                <div id="interpretation-text" style="line-height: 1.8; color: #E0E0E0; font-size: 14px; white-space: pre-wrap; margin-top: 10px;">大師正在為您具現報告...</div>
             </div>
 
-            <div class="action-bar" style="margin-top: 30px;">
-                <button id="btn-close-result" class="glow-button" style="width: 100%; padding: 15px; font-size: 16px;">
+            <div style="margin-top: 20px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 15px;">
+                <button id="btn-close-result" class="glow-button" style="width: 100%; font-size: 15px; padding: 12px;">
                     關閉頁面回 LINE 查看
                 </button>
-                <button id="btn-share" class="secondary-button" style="width: 100%; margin-top: 15px;">生成分享字卡</button>
+                <button id="btn-share" class="secondary-button" style="width: 100%; margin: 0;">生成分享字卡</button>
             </div>
         </div>
 
@@ -79,8 +65,7 @@
 
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="/pixi.min.js"></script> 
-    <script src="/env.js?v=6"></script>      
-    <script src="main_logic.js"></script>  
-
+    <script src="/env.js?v=9"></script>      
+    <script src="main_logic.js?v=4"></script>  
 </body>
 </html>
