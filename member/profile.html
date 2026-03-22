@@ -272,29 +272,38 @@
                     return;
                 }
 
-                currentIdToken = liff.getIDToken(); // 取代 AccessToken，確保後端解析 userId
-                currentAccessToken = liff.getAccessToken(); // 🌟 新增：取得 Access Token 供金流使用
+                currentIdToken = liff.getIDToken(); 
+                currentAccessToken = liff.getAccessToken(); 
                 
                 if(!currentIdToken || !currentAccessToken) throw new Error("無法取得安全通行證");
 
-                // 取得 LINE 使用者外觀資料
                 const profile = await liff.getProfile();
 
-                // 🚀 使用單一且最強大的 Backend API：取得點數、生辰座標、歷史紀錄
-                const response = await fetch(`${ENV.API_BASE}/api/member/profile`, {
-                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
-                });
-                const result = await response.json();
+                // 🚀 關鍵架構升級：雙管齊下！
+                // 1. 抓取會員基本盤 (含有限筆數的 logs)
+                // 2. 抓取專屬圖表的「近7日無限筆數」資料
+                const [profileRes, chartRes] = await Promise.all([
+                    fetch(`${ENV.API_BASE}/api/member/profile`, { headers: { 'Authorization': `Bearer ${currentIdToken}` } }),
+                    fetch(`${ENV.API_BASE}/api/user/history?days=7`, { headers: { 'Authorization': `Bearer ${currentIdToken}` } })
+                ]);
 
-                if(result.success) {
-                    const data = result.data;
+                const profileResult = await profileRes.json();
+                const chartResult = await chartRes.json();
+
+                if(profileResult.success) {
+                    const data = profileResult.data;
                     userProfileData = data; 
                     rawHistoryData = data.logs || [];
 
-                    // 渲染三大區塊
+                    // 👤 渲染會員卡片
                     renderProfile(profile, data.points, data.birthData);
+                    
+                    // 📜 命運回顧清單：吃 profile 有限的資料 (保持畫面輕量)
                     renderHistory(rawHistoryData);
-                    renderChart(rawHistoryData);
+                    
+                    // 📈 能量波動圖表：吃專屬的 7 天無限量數據！
+                    const sevenDaysData = chartResult.success ? chartResult.data : rawHistoryData;
+                    renderChart(sevenDaysData);
 
                     // 隱藏載入畫面
                     document.getElementById('loader').style.opacity = '0';
@@ -303,7 +312,7 @@
                         document.getElementById('main-content').style.display = 'block';
                     }, 500);
                 } else {
-                    throw new Error(result.msg || "伺服器結界異常，請稍後再試");
+                    throw new Error(profileResult.msg || "伺服器結界異常，請稍後再試");
                 }
 
             } catch (error) {
@@ -431,10 +440,12 @@
                 const dateStr = `${d.getMonth()+1}/${d.getDate()}`;
                 
                 if (dateMap[dateStr]) {
-                    // 塔羅或紫微可以加入綜合評分
-                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : 50;
+                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : 80;
                     
-                    if (item.type === 'tarot' || item.serviceType === 'ziwei') {
+                    // 🌟 把所有深度解碼的服務都包進來
+                    const isDeepDecoded = (item.type === 'tarot' || item.type === 'ziwei' || item.serviceType === 'ziwei' || item.type === 'numerology');
+                    
+                    if (isDeepDecoded) {
                         dateMap[dateStr].sum += score;
                         dateMap[dateStr].count += 1;
                     } else if (item.type === 'daily_draw') {
