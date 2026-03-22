@@ -1,1 +1,151 @@
 
+/* ==========================================
+   全局重置與字體設定
+========================================== */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Helvetica Neue', Helvetica, Arial, 'PingFang TC', '微軟正黑體', sans-serif;
+}
+
+body, html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* 禁止畫面上下滾動，保持 APP 質感 */
+    background-color: #05050A; /* 深邃宇宙黑底色 */
+    color: #FFFFFF;
+}
+
+/* ==========================================
+   圖層系統 (Z-Index)
+========================================== */
+#pixi-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0; /* 底層：Pixi 動畫 */
+}
+
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10; /* 表層：UI 互動 */
+    pointer-events: none; /* 讓點擊穿透到畫布 (重要) */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 讓 UI 元素本身可以被點擊 */
+#ui-layer > * {
+    pointer-events: auto; 
+}
+
+/* ==========================================
+   螢幕切換邏輯 (Screens)
+========================================== */
+.screen {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.screen.hidden {
+    opacity: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.screen.active {
+    opacity: 1;
+    z-index: 20;
+}
+
+/* ==========================================
+   質感元件設計
+========================================== */
+/* 狀態文字 (帶有神祕金光) */
+.status-text {
+    font-size: 1.2rem;
+    color: #E5C07B;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(229, 192, 123, 0.5);
+    animation: pulseText 2s infinite alternate;
+}
+
+/* 發光啟動按鈕 (金屬質感) */
+.glow-button {
+    background: linear-gradient(135deg, #1A1A24, #2D2D3F);
+    border: 1px solid #E5C07B;
+    color: #E5C07B;
+    padding: 15px 30px;
+    border-radius: 30px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    box-shadow: 0 0 15px rgba(229, 192, 123, 0.3), inset 0 0 10px rgba(229, 192, 123, 0.1);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.glow-button:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 30px rgba(229, 192, 123, 0.6), inset 0 0 15px rgba(229, 192, 123, 0.3);
+}
+
+.cost-text {
+    font-size: 0.8rem;
+    font-weight: normal;
+    color: #A0A0B0;
+}
+
+/* 玻璃透視面板 (Glassmorphism) */
+.glass-panel {
+    background: rgba(20, 20, 30, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 20px;
+    width: 90%;
+    max-width: 400px;
+    margin-top: 20px;
+    text-align: center;
+    line-height: 1.6;
+    color: #E0E0E0;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+/* 分享按鈕 */
+.secondary-button {
+    margin-top: 20px;
+    background: transparent;
+    border: 1px solid #7B84E5;
+    color: #7B84E5;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(123, 132, 229, 0.2);
+}
+
+/* 文字呼吸燈動畫 */
+@keyframes pulseText {
+    0% { opacity: 0.6; text-shadow: 0 0 5px rgba(229, 192, 123, 0.2); }
+    100% { opacity: 1; text-shadow: 0 0 15px rgba(229, 192, 123, 0.8); }
+}
