@@ -523,22 +523,36 @@
             });
         }
 
-        // --- 🪟 Modal 控制區 (支援紫微斗數) ---
+        // --- 🪟 Modal 控制區 (支援紫微斗數與數字學) ---
         function showHistoryModal(index) {
             const item = rawHistoryData[index];
             const title = document.getElementById('modal-title');
             const body = document.getElementById('modal-body');
 
+            // 統一防彈：優先抓 aiText，如果沒有才抓舊版的 aiResult
+            const contentText = item.aiText || item.aiResult || "（詳細解析處理中...）";
+
             if (item.type === 'ziwei' || item.serviceType === 'ziwei') {
+                // 🏮 紫微斗數
                 title.innerText = `🏮 紫微斗數：${item.summary || '排盤解碼'}`;
-                body.innerText = item.aiResult || "（詳細解析處理中...）";
+                body.innerText = contentText;
+                
             } else if (item.type === 'tarot') {
+                // 🔮 塔羅解碼
                 title.innerText = `🔮 塔羅解碼：${item.topic}`;
-                body.innerHTML = `<b>牌陣：</b>${(item.cards || []).join('、')}<br><br>${item.aiText || item.aiResult || "（資料同步中...）"}`;
+                body.innerHTML = `<b>牌陣：</b>${(item.cards || []).join('、')}<br><br>${contentText}`;
+                
+            } else if (item.type === 'numerology') {
+                // 🌌 數字學 (律動能量)
+                title.innerText = `🌌 律動能量：核心數 [${item.result_card || '?'}]`;
+                body.innerText = contentText;
+                
             } else {
-                title.innerText = `✨ 每日一抽：${item.result_card || item.topic}`;
-                body.innerText = item.aiText || item.aiResult || "（資料同步中...）";
+                // ✨ 每日一抽或其他
+                title.innerText = `✨ 每日一抽：${item.result_card || item.topic || '指引'}`;
+                body.innerText = contentText;
             }
+            
             document.getElementById('detail-modal').classList.add('active');
         }
 
