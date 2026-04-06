@@ -226,15 +226,6 @@
         <button id="btn-submit-main" class="btn-submit" onclick="submitAstrolabe()">啟動 108 星曜解碼</button>
     </div>
 
-    <div id="step-5" class="step-section" style="max-width: 90%; background: rgba(10, 11, 16, 0.85);">
-        <h2>天命具現化完成</h2>
-        <div style="font-size: 13px; color: #4CAF50; margin-bottom: 15px; border: 1px solid rgba(76, 175, 80, 0.4); padding: 10px; border-radius: 8px; background: rgba(76, 175, 80, 0.1);">
-            ✨ 尊爵版命盤報告已同步推播至您的 LINE 聊天室
-        </div>
-        <div id="result-text" style="text-align: left; background: rgba(0,0,0,0.4); padding: 20px; border-radius: 8px; font-size: 14px; line-height: 1.8; color: #E0E0E0; max-height: 45vh; overflow-y: auto; white-space: pre-wrap; border-left: 3px solid var(--gold);">
-            </div>
-        <button class="btn-submit" style="margin-top: 20px;" onclick="liff.closeWindow();">關閉星盤回 LINE 查看</button>
-    </div>
 
     <div id="loading-overlay">
         <div class="ritual-container">
@@ -535,22 +526,25 @@
                 try {
                     setTimeout(() => { msgEl.innerText = "五行能量注入，解析阿卡西紀錄..."; }, 3500);
 
+                    // 呼叫後端 API
                     const response = await fetch(`${ENV.API_BASE}/api/divination/ziwei`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentIdToken}` },
-                        body: JSON.stringify({ birthData: userAstrolabeData }) // 🌟 這裡會把 topic 一起送給後端
+                        body: JSON.stringify({ birthData: userAstrolabeData })
                     });
 
                     const result = await response.json();
 
                     if (result.success) {
-                        msgEl.innerText = "天命具現化完成！";
+                        // 🌟 CTO AGUI 終極版：收到後端確認接單後，立刻關閉網頁！
+                        msgEl.innerText = "命盤已送達大師手中！";
+                        msgEl.style.color = "#4CAF50"; // 變成成功綠色
+                        
+                        // 停頓 1.5 秒讓使用者看清楚成功訊息，然後強制關閉 LIFF！
                         setTimeout(() => {
-                            isCalculating = false;
-                            document.getElementById('loading-overlay').classList.remove('show');
-                            document.getElementById('step-5').classList.add('active'); // 🌟 顯示最後的結果容器
-                            document.getElementById('result-text').innerText = result.replyText;
+                            liff.closeWindow(); 
                         }, 1500);
+                        
                     } else {
                         throw new Error(result.msg || "解碼失敗，請稍後再試。");
                     }
@@ -559,6 +553,7 @@
                     console.error("API 錯誤：", error);
                     alert("🚨 結界異常：" + error.message);
                     document.getElementById('loading-overlay').classList.remove('show');
+                    // 因為 step-5 被刪了，如果有錯，讓它退回 step-4 重新送出
                     document.getElementById('step-4').classList.replace('exit-up', 'active');
                     document.getElementById('btn-submit-main').disabled = false;
                     isCalculating = false; 
