@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>命運解碼室 | 紫微大運</title>
     
+    <script src="/env.js?v=8"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="/env.js?V=5"></script>
-    <script src="/liff-pc-allowlist.js?v=1"></script>
+    <script src="/liff-mobile-only.js?v=1"></script>
     <script src="/pixi.min.js"></script>
     
     <style>
@@ -289,7 +289,8 @@
 
         // 🌟 新增 topic 變數
         const userAstrolabeData = { topic: '', gender: '', calendar: '', date: '', time: '' };
-        let currentIdToken = ""; 
+        let currentAccessToken = "";
+        let lineUserIdForTracking = ""; 
         let pixiApp;
         let astrolabeGrid, astrolabeCore;
         let isCalculating = false; 
@@ -416,12 +417,12 @@
 
         // 🕵️‍♂️ 隱形發報機
         async function sendTrackingLog(stageName) {
-            if (!currentIdToken) return;
+            if (!currentAccessToken || !lineUserIdForTracking) return;
             try {
                 await fetch(`${ENV.API_BASE}/api/log/stage`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentIdToken}` },
-                    body: JSON.stringify({ type: 'ziwei', stage: stageName })
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
+                    body: JSON.stringify({ type: 'ziwei', stage: stageName, userId: lineUserIdForTracking })
                 });
             } catch (e) { console.log("Tracking Error:", e); }
         }
@@ -430,8 +431,11 @@
             try {
                 await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
                 if (!liff.isLoggedIn()) { liff.login(); return; }
-                if (typeof LiffPcAllowlist !== 'undefined' && !LiffPcAllowlist.enforceDesktopAllowlist()) return;
-                currentIdToken = liff.getIDToken();
+                if (typeof LiffMobileOnly !== 'undefined' && !LiffMobileOnly.enforceMobileLiffOnly()) return;
+                const prof = await liff.getProfile();
+                lineUserIdForTracking = prof.userId;
+                currentAccessToken = liff.getAccessToken();
+                if (!currentAccessToken) { alert("無法取得安全通行證，請重新開啟。"); return; }
                 sendTrackingLog("Stage 1: Page View");
             } catch (err) { alert("無法開啟結界，請在 LINE 內部開啟！"); }
         }
@@ -531,7 +535,7 @@
                     // 呼叫後端 API
                     const response = await fetch(`${ENV.API_BASE}/api/divination/ziwei`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentIdToken}` },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
                         body: JSON.stringify({ birthData: userAstrolabeData })
                     });
 

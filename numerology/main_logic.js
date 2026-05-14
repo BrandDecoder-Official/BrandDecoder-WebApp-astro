@@ -2,7 +2,8 @@
 // 🌌 BrandDecoder | 律動能量核心邏輯 (AGUI 秒關 + 雙重保險 + PixiJS 完整版)
 // ==========================================
 let userId = "";
-let currentIdToken = "";
+/** LIFF OAuth access token（後端若驗 LINE 使用者須用此，勿用 ID Token） */
+let currentAccessToken = "";
 let dynamicCost = 10; 
 
 // UI 元素 Ref
@@ -31,13 +32,14 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
-        if (typeof LiffPcAllowlist !== 'undefined' && !LiffPcAllowlist.enforceDesktopAllowlist()) {
+        if (typeof LiffMobileOnly !== 'undefined' && !LiffMobileOnly.enforceMobileLiffOnly()) {
             return;
         }
 
         const profile = await liff.getProfile();
         userId = profile.userId;
-        currentIdToken = liff.getIDToken(); // 取得 Token 以便後續呼叫 API
+        currentAccessToken = liff.getAccessToken();
+        if (!currentAccessToken) throw new Error("無法取得安全通行證");
         
         const uiNameEl = document.getElementById('ui-name');
         if(uiNameEl) uiNameEl.innerText = profile.displayName || "神祕旅人";
@@ -93,7 +95,7 @@ btnActivate.addEventListener('click', async (e) => {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentIdToken}` // 帶上安全憑證
+                'Authorization': `Bearer ${currentAccessToken}`
             },
             body: JSON.stringify({ userId: userId })
         });

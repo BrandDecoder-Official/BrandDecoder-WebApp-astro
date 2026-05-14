@@ -1,5 +1,5 @@
 ---
-description: MVP 節流、變更同意、GitHub 部署與資料庫治理（BrandDecoder / Astro + bastro-bot）
+description: MVP 節流、變更同意、測試／推 GitHub／GCR 須先告知、GitHub 部署流程與資料庫治理（BrandDecoder / Astro + bastro-bot）
 alwaysApply: true
 ---
 
@@ -21,7 +21,13 @@ alwaysApply: true
 - **前端（GitHub Pages）**：推送至 `main`（或專案設定的分支）後，由 Pages／Actions 發佈靜態檔（含 `env.js`、`member/`、`tarot/` 等）。
 - **後端（Cloud Run `bastro-bot`）**：程式在 repo 的 **`bastro-bot/`**；若 Cloud Run 已連線同一 GitHub 分支，**push 後觸發建置與部署**（實際以 GCP 主控台「連續部署／觸發條件」為準）。環境變數與金鑰在 **Cloud Run** 設定，不進 Git。
 
-## 4. 資料庫（Firestore 等）
+## 4. 測試、GitHub 與 GCR／部署（由使用者決定）
+
+- 若本次變更**需要或強烈建議**進行：**本機／整合測試**、**推送到 GitHub**、或 **GCR／Cloud Run／Pages 等遠端更新／建置**，應**先簡短告知**：變更摘要、為何需要推或部署、建議怎麼驗證。
+- **不得逕自**執行 `git push`、觸發 CI、或代為部署至 GCR／Cloud Run 等，**除非使用者已對該次操作明示同意**。
+- 是否更新 repo、是否觸發部署或只保留本機變更，**一律由使用者決定**。
+
+## 5. 資料庫（Firestore 等）
 
 - **新增或修改欄位／集合結構**：實作前先**向使用者說明**用途、讀寫位置與相容性（舊資料是否需遷移）。
 - **刪除資料庫資料**：**必須先取得使用者明示同意**。說明須包含：**刪除範圍、原因、不可回復風險、備份／還原是否可行**。未同意前**不得**執行刪除或破壞性指令。

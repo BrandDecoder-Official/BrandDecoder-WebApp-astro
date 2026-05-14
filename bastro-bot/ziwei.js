@@ -75,8 +75,11 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, msg: "未授權的請求。" });
-        const idToken = authHeader.split(' ')[1];
-        const userId = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString()).sub;
+        const token = authHeader.split(' ')[1];
+        const profileRes = await fetch('https://api.line.me/v2/profile', { headers: { Authorization: `Bearer ${token}` } });
+        if (!profileRes.ok) return res.status(401).json({ success: false, msg: "通行證驗證失敗" });
+        const lineProfile = await profileRes.json();
+        const userId = lineProfile.userId;
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const aiConfig = configDoc.exists && configDoc.data().ziwei ? configDoc.data().ziwei : { model: "gemini-3.1-pro-preview", cost: 39 };

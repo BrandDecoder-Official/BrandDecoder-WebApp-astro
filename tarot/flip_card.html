@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>命運解碼室-靈能調頻</title>
     
-    <script src="/env.js?v=2"></script>
+    <script src="/env.js?v=8"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="/liff-pc-allowlist.js?v=1"></script>
+    <script src="/liff-mobile-only.js?v=1"></script>
 
     <style>
         :root {
@@ -375,19 +375,25 @@
         // ==========================================
         // 🕵️‍♂️ 隱形發報機：發送漏斗追蹤訊號
         // ==========================================
-        let currentIdToken = "";
+        let lineUserIdForTracking = "";
+        let lineAccessToken = "";
+
+        // ==========================================
+        // 🕵️‍♂️ 隱形發報機：發送漏斗追蹤訊號（body 須帶 userId：access token 可能非 JWT）
+        // ==========================================
         async function sendTrackingLog(stageName) {
-            if (!currentIdToken) return;
+            if (!lineAccessToken || !lineUserIdForTracking) return;
             try {
                 await fetch(`${ENV.API_BASE}/api/log/stage`, {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentIdToken}` 
+                        'Authorization': `Bearer ${lineAccessToken}` 
                     },
                     body: JSON.stringify({ 
                         type: 'tarot',
-                        stage: stageName 
+                        stage: stageName,
+                        userId: lineUserIdForTracking
                     })
                 });
             } catch (e) {
@@ -399,31 +405,20 @@
         // 🚀 6. 初始化 LIFF 與 門禁防護系統
         // ==========================================
         liff.init({ liffId: ENV.TAROT_LIFF_ID }).then(async () => {
-            if (!liff.isInClient()) {
-                document.body.innerHTML = `
-                    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #0A0B10; color: #D4AF37; text-align: center; padding: 20px; font-family: 'Noto Serif TC', serif, sans-serif;">
-                        <div style="font-size: 60px; margin-bottom: 20px; animation: float 3s ease-in-out infinite;">🔮</div>
-                        <h2 style="margin-bottom: 15px; letter-spacing: 2px;">結界能量不穩</h2>
-                        <p style="color: #E0E0E0; line-height: 1.8; font-size: 16px;">
-                            為了維持靈能結界的純粹與穩定，<br>
-                            請關閉此網頁，並回到 <b>LINE 官方帳號</b> 內<br>
-                            點擊圖文選單重新開啟此空間。
-                        </p>
-                    </div>
-                `;
-                return;
-            }
-
             if (!liff.isLoggedIn()) {
                 liff.login();
                 return;
             }
 
-            if (typeof LiffPcAllowlist !== 'undefined' && !LiffPcAllowlist.enforceDesktopAllowlist()) {
+            if (typeof LiffMobileOnly !== 'undefined' && !LiffMobileOnly.enforceMobileLiffOnly()) {
                 return;
             }
 
-            currentIdToken = liff.getAccessToken();
+            lineAccessToken = liff.getAccessToken();
+            if (!lineAccessToken) return;
+            const profile = await liff.getProfile();
+            lineUserIdForTracking = profile.userId;
+
             sendTrackingLog("Stage 1: Page View");
             
             await fetchAiConfig();

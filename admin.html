@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BrandDecoder | Super Admin 戰情室</title>
-    <script src="/env.js?v=4"></script>
+    <script src="/env.js?v=8"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -328,7 +328,7 @@
         const provider = new GoogleAuthProvider();
 
         let currentIdToken = "";
-        const API_URL = typeof ENV !== 'undefined' && ENV.API_BASE ? ENV.API_BASE : "https://bastro-bot-217800246535.asia-east1.run.app"; 
+        const API_URL = typeof ENV !== 'undefined' && ENV && ENV.API_BASE ? ENV.API_BASE : '';
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -338,7 +338,12 @@
                 document.getElementById('admin-avatar').src = user.photoURL;
                 
                 currentIdToken = await user.getIdToken();
-                
+
+                if (!API_URL) {
+                    alert('後端網址未設定：請確認已載入 /env.js 且內含 ENV.API_BASE。');
+                    return;
+                }
+
                 loadLogs();         
                 loadAISettings();   
                 loadOverview();     
@@ -364,6 +369,10 @@
 
         window.loadLogs = async function() {
             if (!currentIdToken) return;
+            if (!API_URL) {
+                alert('後端網址未設定：請確認已載入 /env.js 且內含 ENV.API_BASE。');
+                return;
+            }
             showLoading(true);
             try {
                 const logClass = document.getElementById('filter-log-class').value; 
@@ -473,6 +482,7 @@
 
         window.loadOverview = async function() {
             if (!currentIdToken) return;
+            if (!API_URL) return;
             try {
                 const response = await fetch(`${API_URL}/api/admin/overview`, {
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
@@ -551,6 +561,7 @@
 
         window.loadAISettings = async function() {
             if (!currentIdToken) return;
+            if (!API_URL) return;
             try {
                 const response = await fetch(`${API_URL}/api/admin/config/ai`, {
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
@@ -600,6 +611,10 @@
 
         window.saveAISettings = async function() {
             if (!currentIdToken) return;
+            if (!API_URL) {
+                alert('後端網址未設定：請確認已載入 /env.js 且內含 ENV.API_BASE。');
+                return;
+            }
             const btn = document.querySelector('button[onclick="saveAISettings()"]');
             const originalText = btn.innerText;
             btn.innerText = "💾 儲存中..."; btn.disabled = true;

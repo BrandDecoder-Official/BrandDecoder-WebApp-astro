@@ -64,7 +64,8 @@ app.use('/api/admin', express.json(), adminAiRouter);
 app.use('/api/admin', express.json(), adminKpiRouter);
 app.use('/api/numerology', express.json(), numerologyRouter);
 
-// 🛡️ JWT 通行證驗證結界
+// 🛡️ LINE OAuth 2.0 User Access Token（LIFF：`liff.getAccessToken()`）。
+// 客戶端請勿用 ID Token 呼叫帶此 middleware 的 API：https://api.line.me/v2/profile 需使用 access token。
 async function verifyLineToken(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -85,6 +86,32 @@ async function verifyLineToken(req, res, next) {
         console.error("Token 驗證失敗:", error.message);
         res.status(401).json({ success: false, message: '結界阻擋：通行證驗證失敗' });
     }
+}
+
+/** 會員儀表板用：自 divination_logs 組 logs + 最近紫微生辰（Firestore 複合索引：collection=divination_logs, userId ASC, timestamp DESC） */
+async function loadDivinationLogsForDashboard(userId) {
+    const logs = [];
+    let latestBirthData = null;
+    const logsSnapshot = await db.collection('divination_logs').where('userId', '==', userId).orderBy('timestamp', 'desc').limit(200).get();
+    if (!logsSnapshot.empty) {
+        logsSnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.log_class === 'system') return;
+            let isoTime = null;
+            if (data.timestamp) {
+                try {
+                    if (typeof data.timestamp.toDate === 'function') isoTime = data.timestamp.toDate().toISOString();
+                    else if (data.timestamp._seconds) isoTime = new Date(data.timestamp._seconds * 1000).toISOString();
+                    else isoTime = new Date(data.timestamp).toISOString();
+                } catch (e) {
+                    isoTime = null;
+                }
+            }
+            logs.push({ ...data, timestamp: isoTime });
+            if (!latestBirthData && (data.type === 'ziwei' || data.serviceType === 'ziwei') && data.birthData) latestBirthData = data.birthData;
+        });
+    }
+    return { logs, latestBirthData };
 }
 
 async function sendTelegramRevenueAlert({ userName, amount, pointsGiven, paymentMethod }) {
@@ -153,27 +180,48 @@ async function fulfillRechargeOrder(orderId, ecpayBody) {
 }
 
 // ==========================================
-// 👤 用戶與歷史紀錄 API
+// 👤 用戶 API（Bearer = LIFF access token，經 verifyLineToken）
+// GET /api/user/profile — 合併「基本資料 + 儀表板 logs + birthData」（原 /api/member/profile 已廢止）
+// GET /api/user/history — 子集合 users/{uid}/history（圖表／明細）
 // ==========================================
 app.get('/api/user/profile', verifyLineToken, async (req, res) => {
     try {
-        const userId = req.user.userId; 
+        const userId = req.user.userId;
         const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) return res.status(404).json({ success: false, message: "查無此星盤紀錄" });
-        
-        const data = userDoc.data();
+        const line = req.user;
+        let displayName = line.displayName;
+        let pictureUrl = line.pictureUrl;
+        let points = 0;
+        let createdAt = null;
+        let lastDrawDate = null;
+        let lastFirstRechargePeriod = null;
+        if (userDoc.exists) {
+            const data = userDoc.data();
+            displayName = data.displayName || displayName;
+            pictureUrl = data.pictureUrl || pictureUrl;
+            points = data.points || 0;
+            createdAt = data.createdAt ? data.createdAt.toDate().toISOString() : null;
+            lastDrawDate = data.lastDrawDate;
+            lastFirstRechargePeriod = data.lastFirstRechargePeriod || null;
+        }
+        const { logs, latestBirthData } = await loadDivinationLogsForDashboard(userId);
         res.status(200).json({
             success: true,
             data: {
-                displayName: data.displayName || req.user.displayName,
-                pictureUrl: data.pictureUrl || req.user.pictureUrl,
-                points: data.points || 0,
-                createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
-                lastDrawDate: data.lastDrawDate,
-                lastFirstRechargePeriod: data.lastFirstRechargePeriod || null
-            }
+                displayName,
+                pictureUrl,
+                points,
+                createdAt,
+                lastDrawDate,
+                lastFirstRechargePeriod,
+                birthData: latestBirthData,
+                logs,
+            },
         });
-    } catch (error) { res.status(500).json({ success: false }); }
+    } catch (error) {
+        console.error('GET /api/user/profile:', error.message);
+        res.status(500).json({ success: false });
+    }
 });
 
 app.post('/api/user/sync-profile', express.json(), verifyLineToken, async (req, res) => {
@@ -295,6 +343,7 @@ app.post('/api/pay/ecpay/notify', payFormParser, async (req, res) => {
 // ==========================================
 // 📊 API: 埋點與票根
 // ==========================================
+// 建議 body 帶 userId：LIFF OAuth access token 多為不透明字串，無法像 ID Token 般解出 sub。
 app.post('/api/log/stage', express.json(), async (req, res) => {
     try {
         const { stage, type } = req.body;
@@ -305,9 +354,12 @@ app.post('/api/log/stage', express.json(), async (req, res) => {
         if (authHeader && authHeader.startsWith('Bearer ')) {
             const token = authHeader.split(' ')[1];
             try {
-                const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-                userId = userId || payload.sub; 
-            } catch(e) { console.log("埋點 Token 解析略過"); }
+                const parts = token.split('.');
+                if (parts.length === 3) {
+                    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+                    userId = userId || payload.sub;
+                }
+            } catch (e) { /* ignore */ }
         }
 
         if (!userId) return res.status(200).json({ success: true, msg: "無 userId，忽略埋點" });
@@ -374,50 +426,6 @@ app.get('/api/public/config/ai', async (req, res) => {
         const doc = await docRef.get();
         res.json({ success: true, data: doc.exists ? doc.data() : {} });
     } catch (error) { res.status(500).json({ success: false, msg: "讀取公開定價資料失敗" }); }
-});
-
-// ==========================================
-// 🌟 靈魂儀表板 API
-// ==========================================
-app.get('/api/member/profile', async (req, res) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, msg: "未授權的請求，請從 LINE 內部開啟。" });
-        
-        const idToken = authHeader.split(' ')[1];
-        const jsonPayload = Buffer.from(idToken.split('.')[1], 'base64').toString('utf-8');
-        const userId = JSON.parse(jsonPayload).sub;
-        if (!userId) throw new Error("無效的用戶身分");
-
-        const userRef = db.collection('users').doc(userId);
-        const userDoc = await userRef.get();
-        const currentPoints = userDoc.exists ? (userDoc.data().points || 0) : 0;
-
-        const logsSnapshot = await db.collection('divination_logs').where('userId', '==', userId).orderBy('timestamp', 'desc').limit(200).get();
-
-        let logs = [];
-        let latestBirthData = null; 
-
-        if (!logsSnapshot.empty) {
-            logsSnapshot.forEach(doc => {
-                const data = doc.data();
-                if (data.log_class === 'system') return; 
-                
-                let isoTime = null;
-                if (data.timestamp) {
-                    try {
-                        if (typeof data.timestamp.toDate === 'function') isoTime = data.timestamp.toDate().toISOString();
-                        else if (data.timestamp._seconds) isoTime = new Date(data.timestamp._seconds * 1000).toISOString();
-                        else isoTime = new Date(data.timestamp).toISOString();
-                    } catch (e) { isoTime = null; }
-                }
-
-                logs.push({ ...data, timestamp: isoTime });
-                if (!latestBirthData && (data.type === 'ziwei' || data.serviceType === 'ziwei') && data.birthData) latestBirthData = data.birthData;
-            });
-        }
-        res.json({ success: true, data: { points: currentPoints, birthData: latestBirthData, logs: logs } });
-    } catch (error) { res.status(500).json({ success: false, msg: "讀取靈魂檔案失敗，請聯絡客服。" }); }
 });
 
 // ==========================================

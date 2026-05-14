@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>靈魂儀表板 | 命運解碼室</title>
     
-    <script src="/env.js?v=6"></script>
+    <script src="/env.js?v=8"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="/liff-pc-allowlist.js?v=1"></script>
+    <script src="/liff-mobile-only.js?v=1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -123,6 +123,15 @@
         .tier-card.popular::before {
             content: '推薦主力'; position: absolute; top: 0; left: 0; background: var(--gold); color: #000;
             font-size: 10px; font-weight: bold; padding: 2px 8px; border-bottom-right-radius: 8px;
+        }
+        /* TODO(測試完刪): 綠界小額煙測檔 */
+        .tier-card.ecpay-test-pack {
+            border-color: rgba(255, 152, 0, 0.7);
+            box-shadow: 0 0 12px rgba(255, 152, 0, 0.2);
+        }
+        .tier-card.ecpay-test-pack::after {
+            content: '金流測試'; position: absolute; top: 0; right: 0; background: #E65100; color: #fff;
+            font-size: 10px; font-weight: bold; padding: 2px 8px; border-bottom-left-radius: 8px;
         }
         .tier-info { display: flex; flex-direction: column; gap: 5px; }
         .tier-points { font-size: 20px; font-weight: bold; color: var(--gold-light); }
@@ -252,11 +261,13 @@
         // --- ⚙️ 核心數據邏輯 ---
         let rawHistoryData = [];
         let userProfileData = null; 
-        let currentIdToken = ""; // 🛡️ 改用 ID Token ( JWT 安全驗證 )
-        let currentAccessToken = ""; // 🌟 新增：用來過金流門神的鑰匙
+        /** LIFF OAuth access token：呼叫後端 verifyLineToken API 一律用此（勿用 ID Token） */
+        let currentAccessToken = "";
 
         // 定義計費方案
         const pricingTiers = [
+            // TODO(測試完刪): 5 元／50 點 — 不參與首充加碼、不帶 periodCode（避免吃掉真實首充資格）
+            { price: 5, points: 50, isPopular: false, testPack: true },
             { price: 99, points: 990, isPopular: false },
             { price: 199, points: 2000, isPopular: true },
             { price: 299, points: 3100, isPopular: true },
@@ -273,21 +284,16 @@
                     return;
                 }
 
-                currentIdToken = liff.getIDToken(); 
-                currentAccessToken = liff.getAccessToken(); 
-                
-                if(!currentIdToken || !currentAccessToken) throw new Error("無法取得安全通行證");
+                currentAccessToken = liff.getAccessToken();
+                if (!currentAccessToken) throw new Error("無法取得安全通行證");
 
-                if (typeof LiffPcAllowlist !== 'undefined' && !LiffPcAllowlist.enforceDesktopAllowlist()) return;
+                if (typeof LiffMobileOnly !== 'undefined' && !LiffMobileOnly.enforceMobileLiffOnly()) return;
 
                 const profile = await liff.getProfile();
 
-                // 🚀 關鍵架構升級：雙管齊下！
-                // 1. 抓取會員基本盤 (含有限筆數的 logs)
-                // 2. 抓取專屬圖表的「近7日無限筆數」資料
                 const [profileRes, chartRes] = await Promise.all([
-                    fetch(`${ENV.API_BASE}/api/member/profile`, { headers: { 'Authorization': `Bearer ${currentIdToken}` } }),
-                    fetch(`${ENV.API_BASE}/api/user/history?days=7`, { headers: { 'Authorization': `Bearer ${currentIdToken}` } })
+                    fetch(`${ENV.API_BASE}/api/user/profile`, { headers: { 'Authorization': `Bearer ${currentAccessToken}` } }),
+                    fetch(`${ENV.API_BASE}/api/user/history?days=7`, { headers: { 'Authorization': `Bearer ${currentAccessToken}` } })
                 ]);
 
                 const profileResult = await profileRes.json();
@@ -590,16 +596,19 @@
             pricingTiers.forEach(tier => {
                 let finalPoints = tier.points;
                 let bonusHtml = "";
-                
-                if (isFirstRechargeAvailable) {
+                const applyFirstBonus = isFirstRechargeAvailable && !tier.testPack;
+
+                if (applyFirstBonus) {
                     const bonusPoints = Math.floor(tier.points * 0.1); 
                     finalPoints += bonusPoints;
                     bonusHtml = `<span class="tier-bonus" style="display:inline;">首充 +${bonusPoints} 點</span>`;
                 }
 
                 const popularClass = tier.isPopular ? "popular" : "";
+                const testClass = tier.testPack ? " ecpay-test-pack" : "";
+                const periodForCheckout = tier.testPack ? "" : currentPeriod;
                 const html = `
-                    <div class="tier-card ${popularClass}" onclick="requestEcpayCheckout(${tier.price}, ${finalPoints}, '${currentPeriod}')">
+                    <div class="tier-card ${popularClass}${testClass}" onclick="requestEcpayCheckout(${tier.price}, ${finalPoints}, '${periodForCheckout}')">
                         <div class="tier-info">
                             <span class="tier-points">💎 ${finalPoints} 靈力</span>
                             ${bonusHtml}
