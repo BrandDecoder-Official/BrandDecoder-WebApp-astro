@@ -34,7 +34,7 @@ const app = express();
 app.set('trust proxy', 1);
 const payFormParser = express.urlencoded({ extended: false });
 
-const memberProfileUrl = (process.env.MEMBER_PROFILE_URL || 'https://branddecoderai.com/member/profile.html').replace(/\/$/, '');
+const memberProfileUrl = (process.env.MEMBER_PROFILE_URL || 'https://astro.branddecoderai.com/member/profile.html').replace(/\/$/, '');
 
 /** 綠界 ReturnURL 基底：優先環境變數；未設時在 Cloud Run 上可用 Host 推斷為 https://… */
 function resolvePublicBaseUrl(req) {
