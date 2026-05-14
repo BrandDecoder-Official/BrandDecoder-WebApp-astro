@@ -151,7 +151,7 @@
 
     <div id="pay-loader">
         <div class="spinner"></div>
-        <p style="color: #00C300; letter-spacing: 2px; margin-top: 20px; font-size: 14px;">正在連結 LINE Pay 結界...</p>
+        <p style="color: #00C300; letter-spacing: 2px; margin-top: 20px; font-size: 14px;">正在前往綠界付款頁...</p>
     </div>
 
     <div class="container" style="display: none;" id="main-content">
@@ -596,7 +596,7 @@
 
                 const popularClass = tier.isPopular ? "popular" : "";
                 const html = `
-                    <div class="tier-card ${popularClass}" onclick="requestLinePay(${tier.price}, ${finalPoints}, '${currentPeriod}')">
+                    <div class="tier-card ${popularClass}" onclick="requestEcpayCheckout(${tier.price}, ${finalPoints}, '${currentPeriod}')">
                         <div class="tier-info">
                             <span class="tier-points">💎 ${finalPoints} 靈力</span>
                             ${bonusHtml}
@@ -610,8 +610,23 @@
             document.getElementById('recharge-modal').classList.add('active');
         }
 
-        async function requestLinePay(amount, pointsToGive, periodCode) {
-            const confirmMsg = `即將透過 LINE Pay 支付 NT$ ${amount} 元\n獲取 ${pointsToGive} 點靈力。\n\n確定前往結帳嗎？`;
+        function submitEcpayForm(action, fields) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = action;
+            Object.keys(fields).forEach((name) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = name;
+                input.value = String(fields[name] != null ? fields[name] : '');
+                form.appendChild(input);
+            });
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        async function requestEcpayCheckout(amount, pointsToGive, periodCode) {
+            const confirmMsg = `即將透過綠界金流支付 NT$ ${amount} 元\n獲取 ${pointsToGive} 點靈力。\n\n確定前往結帳嗎？`;
             if(!confirm(confirmMsg)) return;
 
             document.getElementById('pay-loader').classList.add('active');
@@ -619,7 +634,6 @@
             try {
                 const response = await fetch(`${ENV.API_BASE}/api/pay/request`, {
                     method: 'POST',
-                    // 👇 🌟 關鍵修正：這裡換成 currentAccessToken (過金流門神專用的鑰匙)
                     headers: { 'Authorization': `Bearer ${currentAccessToken}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         amount: amount, 
@@ -631,11 +645,10 @@
 
                 const data = await response.json();
                 
-                if(data.success && data.url) {
-                    window.location.href = data.url;
+                if (data.success && data.action && data.fields) {
+                    submitEcpayForm(data.action, data.fields);
                 } else {
-                    // 👇 🌟 優化：同時捕捉 msg 或 message，避免顯示未知錯誤
-                    alert("🚨 呼叫 LINE Pay 結界失敗：" + (data.msg || data.message || "未知錯誤"));
+                    alert("🚨 無法建立付款單：" + (data.msg || data.message || "未知錯誤"));
                     document.getElementById('pay-loader').classList.remove('active');
                 }
 

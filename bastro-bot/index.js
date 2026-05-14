@@ -3,7 +3,7 @@
 // 版本：v5.0 (全模組化微服務架構 + AGUI 播報台)
 // ==========================================
 
-const payments = require('./payments'); 
+const ecpay = require('./ecpay');
 const express = require('express');
 const { middleware, Client } = require('@line/bot-sdk');
 const { initializeApp } = require('firebase-admin/app');
@@ -31,6 +31,10 @@ const config = {
 
 const client = new Client(config);
 const app = express();
+const payFormParser = express.urlencoded({ extended: false });
+
+const publicBaseUrl = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+const memberProfileUrl = (process.env.MEMBER_PROFILE_URL || 'https://branddecoderai.com/member/profile.html').replace(/\/$/, '');
 
 const PLATFORM_VERSION = "v5.0";
 const AI_MODEL = "gemini-3-flash-preview"; 
@@ -72,6 +76,71 @@ async function verifyLineToken(req, res, next) {
         console.error("Token 驗證失敗:", error.message);
         res.status(401).json({ success: false, message: '結界阻擋：通行證驗證失敗' });
     }
+}
+
+async function sendTelegramRevenueAlert({ userName, amount, pointsGiven, paymentMethod }) {
+    const token = process.env.TELEGRAM_BOT_TOKEN || process.env.TG_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID || process.env.TG_CHAT_ID;
+    if (!token || !chatId) return;
+    const now = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
+    const tgMessage = `🚀 【新香油錢入帳捷報】\n\n👤 靈魂代號：${userName}\n💎 儲值金額：NT$ ${amount}\n🔋 獲得靈力：${pointsGiven} 點\n💳 付款方式：${paymentMethod}\n⏱️ 交易時間：${now}\n\n✨ 命運解碼室營收持續增長中！`;
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: tgMessage }),
+    }).catch((err) => console.error('TG推播連線錯誤:', err));
+}
+
+async function fulfillRechargeOrder(orderId, ecpayBody) {
+    const orderRef = db.collection('orders').doc(orderId);
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) throw new Error('訂單不存在');
+    const { amount, pointsGiven, periodCode, userId, status, paymentMethod } = orderDoc.data();
+    if (status === 'success') return { already: true };
+
+    const tradeAmt = parseInt(ecpayBody.TradeAmt, 10);
+    if (!Number.isFinite(tradeAmt) || tradeAmt !== amount) {
+        throw new Error(`金額不符: TradeAmt=${ecpayBody.TradeAmt} order=${amount}`);
+    }
+
+    const batch = db.batch();
+    batch.update(orderRef, {
+        status: 'success',
+        ecpayTradeNo: ecpayBody.TradeNo || '',
+        completedAt: Timestamp.now(),
+    });
+
+    const userUpdateData = { points: FieldValue.increment(pointsGiven) };
+    if (periodCode) userUpdateData.lastFirstRechargePeriod = periodCode;
+    batch.update(db.collection('users').doc(userId), userUpdateData);
+
+    const userDocRef = await db.collection('users').doc(userId).get();
+    const userName = userDocRef.exists ? (userDocRef.data().displayName || '未知用戶') : '未知用戶';
+
+    const historyRef = db.collection('users').doc(userId).collection('history').doc();
+    batch.set(historyRef, { type: 'recharge', amount_paid: amount, points_change: pointsGiven, timestamp: Timestamp.now() });
+
+    const globalLogRef = db.collection('divination_logs').doc();
+    batch.set(globalLogRef, {
+        userId,
+        userName,
+        type: 'recharge',
+        log_class: 'revenue',
+        paymentMethod: paymentMethod || 'ECPay',
+        summary: `透過 ${paymentMethod || 'ECPay'} 儲值：獲取 ${pointsGiven} 點`,
+        amount_paid: amount,
+        points_change: pointsGiven,
+        timestamp: Timestamp.now(),
+    });
+
+    await batch.commit();
+
+    try {
+        await sendTelegramRevenueAlert({ userName, amount, pointsGiven, paymentMethod: paymentMethod || 'ECPay' });
+    } catch (e) {
+        console.error('TG捷報系統發生例外:', e);
+    }
+    return { already: false };
 }
 
 // ==========================================
@@ -149,83 +218,68 @@ app.get('/api/user/history', verifyLineToken, async (req, res) => {
 });
 
 // ==========================================
-// 💳 LINE Pay 金流區
+// 💳 綠界 ECPay 金流（全方位 AioCheckOut / V5）
 // ==========================================
 app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) => {
     try {
-        const { amount, productName, pointsGiven, periodCode } = req.body;
-        const userId = req.user.userId; 
-        const orderId = `ORD_${Date.now()}_${userId.slice(-4)}`; 
-
-        const result = await payments.requestPayment(orderId, amount, productName);
-
-        if (result.returnCode === '0000') {
-            await db.collection('orders').doc(orderId).set({
-                userId, amount, pointsGiven: pointsGiven || amount, periodCode: periodCode || null,    
-                status: 'pending', paymentMethod: 'LINE Pay', createdAt: Timestamp.now()
+        if (!publicBaseUrl) {
+            return res.status(500).json({
+                success: false,
+                msg: '伺服器未設定 PUBLIC_BASE_URL（供綠界 ReturnURL 回呼），請於 Cloud Run 環境變數設定，例如 https://bastro-bot-xxxx.asia-east1.run.app',
             });
-            res.json({ success: true, url: result.info.paymentUrl.web });
-        } else {
-            res.status(400).json({ success: false, msg: 'LINE Pay 請求失敗' });
         }
-    } catch (error) { res.status(500).json({ success: false, msg: error.message }); }
+        const { amount, productName, pointsGiven, periodCode } = req.body;
+        const userId = req.user.userId;
+        const merchantTradeNo = ecpay.buildMerchantTradeNo(userId);
+
+        const returnUrl = `${publicBaseUrl}/api/pay/ecpay/notify`;
+        if (returnUrl.length > 200) {
+            return res.status(500).json({ success: false, msg: 'ReturnURL 超過 200 字元，請縮短 PUBLIC_BASE_URL 或改用自訂網域' });
+        }
+
+        const fields = ecpay.buildAioCheckoutFields({
+            merchantTradeNo,
+            totalAmount: amount,
+            tradeDesc: `靈力儲值${pointsGiven || amount}點`,
+            itemName: productName || `${pointsGiven || amount}點靈力`,
+            returnUrl,
+            clientBackUrl: memberProfileUrl,
+        });
+
+        await db.collection('orders').doc(merchantTradeNo).set({
+            userId,
+            amount: Math.floor(Number(amount)),
+            pointsGiven: pointsGiven || amount,
+            periodCode: periodCode || null,
+            status: 'pending',
+            paymentMethod: 'ECPay',
+            createdAt: Timestamp.now(),
+        });
+
+        res.json({ success: true, action: ecpay.getCheckoutActionUrl(), fields });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, msg: error.message });
+    }
 });
 
-app.get('/api/pay/confirm', async (req, res) => {
+/** 綠界幕後通知：必須回傳字串 1|OK */
+app.post('/api/pay/ecpay/notify', payFormParser, async (req, res) => {
     try {
-        const { transactionId, orderId } = req.query;
-        const orderDoc = await db.collection('orders').doc(orderId).get();
-        if (!orderDoc.exists) return res.status(404).send('訂單不存在');
-        
-        const { amount, pointsGiven, periodCode, userId, status, paymentMethod = 'LINE Pay' } = orderDoc.data();
-        if (status === 'success') return res.send('此訂單已完成，請勿重複跳轉');
-
-        const result = await payments.confirmPayment(transactionId, amount);
-
-        if (result.returnCode === '0000') {
-            const batch = db.batch();
-            batch.update(db.collection('orders').doc(orderId), { status: 'success', transactionId, completedAt: Timestamp.now() });
-
-            let userUpdateData = { points: FieldValue.increment(pointsGiven) };
-            if (periodCode) userUpdateData.lastFirstRechargePeriod = periodCode;
-            batch.update(db.collection('users').doc(userId), userUpdateData);
-
-            const userDocRef = await db.collection('users').doc(userId).get();
-            const userName = userDocRef.exists ? (userDocRef.data().displayName || '未知用戶') : '未知用戶';
-
-            const historyRef = db.collection('users').doc(userId).collection('history').doc();
-            batch.set(historyRef, { type: 'recharge', amount_paid: amount, points_change: pointsGiven, timestamp: Timestamp.now() });
-
-            const globalLogRef = db.collection('divination_logs').doc();
-            batch.set(globalLogRef, {
-                userId, userName, type: 'recharge', log_class: 'revenue', paymentMethod, 
-                summary: `透過 ${paymentMethod} 儲值：獲取 ${pointsGiven} 點`, amount_paid: amount, points_change: pointsGiven, timestamp: Timestamp.now()
-            });
-
-            await batch.commit();
-
-            // 🚀 TG 戰情室即時捷報推播
-            try {
-                const TG_BOT_TOKEN = '8723941323:AAEE5fPueDK5xdf4XD6WzH-LgjeGFwj7FKQ';
-                const TG_CHAT_ID = '8549380045';
-                const now = new Date().toLocaleString("zh-TW", { timeZone: "Asia/Taipei", hour12: false });
-                const tgMessage = `🚀 【新香油錢入帳捷報】\n\n👤 靈魂代號：${userName}\n💎 儲值金額：NT$ ${amount}\n🔋 獲得靈力：${pointsGiven} 點\n💳 付款方式：${paymentMethod}\n⏱️ 交易時間：${now}\n\n✨ 命運解碼室營收持續增長中！`;
-                
-                fetch(`https://api.telegram.org/bot${TG_BOT_TOKEN}/sendMessage`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: TG_CHAT_ID, text: tgMessage })
-                }).catch(err => console.error("TG推播連線錯誤:", err));
-            } catch(e) { console.error("TG捷報系統發生例外:", e); }
-
-            res.send(`
-                <script>
-                    alert('✨ 靈力注入成功！已為您補充 ${pointsGiven} 點靈力');
-                    window.location.href = 'https://astro.branddecoderai.com/member/profile.html'; 
-                </script>
-            `);
-        } else {
-            res.status(400).send('LINE Pay 扣款確認失敗');
+        if (!ecpay.verifyCheckMacValue(req.body)) {
+            console.error('ECPay notify CheckMacValue 驗證失敗');
+            return res.status(400).send('0|FAIL');
         }
-    } catch (error) { res.status(500).send('系統發生錯誤'); }
+        if (!ecpay.isPaymentSuccess(req.body.RtnCode)) {
+            return res.send('1|OK');
+        }
+        const orderId = req.body.MerchantTradeNo;
+        await fulfillRechargeOrder(orderId, req.body);
+        return res.send('1|OK');
+    } catch (e) {
+        console.error('ECPay notify:', e);
+        return res.status(500).send('0|FAIL');
+    }
 });
 
 // ==========================================

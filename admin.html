@@ -426,7 +426,7 @@
                 else if (log.log_class === 'revenue') {
                     rowStyle = "style='background-color: #e8f5e9;'"; 
                     typeBadge = '<span class="badge badge-pay">💰 金流紀錄</span>';
-                    const gateway = log.paymentMethod || 'LINE Pay';
+                    const gateway = log.paymentMethod || 'ECPay';
                     summary = `💳 透過 [${gateway}] 儲值獲取 ${rawPoints} 點`;
                     pointClass = "point-plus";
                     pointText = `+${rawPoints}`;
