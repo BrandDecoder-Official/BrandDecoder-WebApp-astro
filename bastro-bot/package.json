@@ -2,7 +2,7 @@
   "name": "bastro-bot",
   "version": "1.0.0",
   "private": true,
-  "description": "LINE OA webhook for BrandDecoder (Cloud Run)",
+  "description": "BrandDecoder LINE OA webhook (Cloud Run)",
   "main": "index.js",
   "engines": {
     "node": ">=20"
@@ -12,10 +12,12 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
-    "@line/bot-sdk": "^8.4.1",
-    "express": "^4.21.2",
-    "firebase-admin": "^12.7.0"
+    "@google/generative-ai": "^0.11.0",
+    "@line/bot-sdk": "^8.0.0",
+    "axios": "^1.6.8",
+    "express": "^4.18.2",
+    "firebase-admin": "^12.0.0",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
     "dotenv": "^16.4.5"

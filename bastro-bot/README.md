@@ -20,10 +20,11 @@
 
 3. 用 **ngrok**（或同類工具）把 `http://localhost:8080` 暴露出去，在 LINE Developers 暫時把 Webhook 指到 `https://你的網域/webhook` 做測試。
 
-## 把雲端既有程式放進這個 repo
+## 與 Cloud Run 原始碼同步
 
-目前 GitHub 上只有靜態站；你在 Cloud Run 主控台裡的 `index.js`、`admin.js`、`tarot.js` 等，請用 **「下載原始碼」** 取得後，**覆蓋或合併**到本資料夾（與 `package.json` 同層），再依你原本的 `require` 結構調整 `index.js` 的進入點。  
-合併後在本機執行 `npm install` 補齊缺的套件，確認能跑再 `git push`。
+`bastro-bot/` 內的 `.js` 已從專案 **lllcnd** 的 Cloud Run 建置暫存（`run-sources-…/bastro-bot/*.zip`）還原，並在 `index.js` 末尾加上 **`require.main` 時 `app.listen`**，以便本機與 Docker 執行 `node index.js`（雲端從原始碼建置時仍使用 `exports.webhook`）。
+
+若你在主控台又部署了新版本、想更新本機檔案：可用 `gcloud run services describe bastro-bot --project=lllcnd --region=asia-east1 --format='value(metadata.annotations.run.googleapis.com/build-source-location)'` 取得新的 zip 路徑，再以 `gsutil cp` 下載解壓後覆蓋對應檔案。
 
 ## GitHub → Cloud Run（鏡像部署）
 
