@@ -24,6 +24,7 @@
 
 - 建單：`POST /api/pay/request`（需 LINE Bearer）→ 回傳 `{ action, fields }`，前端以 **POST form** 導轉至綠界 `Cashier/AioCheckOut/V5`。
 - 入帳：綠界 **幕後** `POST` 至 **`/api/pay/ecpay/notify`**（`ReturnURL`），驗證 **CheckMacValue**、`RtnCode === 1` 後寫入 Firestore 並加點；回應字串必須為 **`1|OK`**。
+- **ClientBackURL**（`MEMBER_PROFILE_URL`）：預設為會員 **LIFF 入口**（`liff.line.me/…`），讓使用者在 LINE 內按「返回商店」回到同一 LIFF。
 - 請勿將 **HashKey / HashIV** 提交至 Git；測試／正式網址與商店代號需一致（見 `.env.example`）。
 
 ## 與 Cloud Run 原始碼同步
@@ -43,7 +44,7 @@
    - **Dockerfile 路徑**：`bastro-bot/Dockerfile`
    - **來源 / 建置背景目錄**（Build context）：`bastro-bot`  
      （若介面只有「根目錄」，選到 `bastro-bot` 子資料夾，讓建置在該目錄執行。）
-5. 在 Cloud Run **環境變數** 中設定：`LINE_CHANNEL_*`、`GEMINI_API_KEY`、`ADMIN_EMAILS`、Firebase（若需）、**`PUBLIC_BASE_URL`**（Cloud Run HTTPS 基底網址，供綠界 **ReturnURL**）、**`ECPAY_MERCHANT_ID` / `ECPAY_HASH_KEY` / `ECPAY_HASH_IV`**（取自綠界後台 **系統設定 → 介接資訊 →「金流、MPOS」** 那一列；物流／電子收據列若未開通請勿誤用）、**`ECPAY_STAGE`**（正式環境設 `production`，測試留空或 `stage`）、選填 **`ECPAY_CHOOSE_PAYMENT`**（預設 `ALL`）、**`MEMBER_PROFILE_URL`**（返回商店按鈕）、**`TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID`**（或 `TG_BOT_TOKEN` / `TG_CHAT_ID`）。並**移除**已停用的 `LINEPAY_*`。
+5. 在 Cloud Run **環境變數** 中設定：`LINE_CHANNEL_*`、`GEMINI_API_KEY`、`ADMIN_EMAILS`、Firebase（若需）、**`PUBLIC_BASE_URL`**（Cloud Run HTTPS 基底網址，供綠界 **ReturnURL**）、**`ECPAY_MERCHANT_ID` / `ECPAY_HASH_KEY` / `ECPAY_HASH_IV`**（取自綠界後台 **系統設定 → 介接資訊 →「金流、MPOS」** 那一列；物流／電子收據列若未開通請勿誤用）、**`ECPAY_STAGE`**（正式環境設 `production`，測試留空或 `stage`）、選填 **`ECPAY_CHOOSE_PAYMENT`**（預設 `ALL`）、**`MEMBER_PROFILE_URL`**（綠界 **ClientBackURL**「返回商店」；預設為會員 **LIFF 入口** `https://liff.line.me/…` 以留在 LINE 內）、**`TG_BOT_TOKEN` + `TG_CHAT_ID`**（或 `TELEGRAM_*`）。並**移除**已停用的 `LINEPAY_*`。
 6. 確認 **容器連接埠** 與程式一致：本專案使用 `PORT`（預設 `8080`），Cloud Run 一般設為 **8080**；LINE Webhook URL 路徑為 **`/webhook`**（若你改成別的路徑，請同步 LINE 後台與程式）。
 
 第一次連線 repo 時，Google 會引導建立 **Cloud Build 觸發條件**；之後每次 push 到指定分支就會自動建置並發布（實際觸發條件以你在主控台設定的為準）。

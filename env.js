@@ -5,7 +5,7 @@ const ENV = {
     // 🏷️ LINE LIFF 相關 (每個功能可能不同)
     TAROT_LIFF_ID: "2009490171-yQF5PguK", 
     ZIWEI_LIFF_ID: "2009490171-8nISSem3", // 🔮 新增：紫微斗數專屬 LIFF ID
-    MEMBER_LIFF_ID: "2009490171-ZuAjXwno",
+    MEMBER_LIFF_ID: "2009490171-ZuAjXwno", // 與後端 MEMBER_PROFILE_URL 預設（liff.line.me/…）同一支 LIFF
     // 👇 新增這行：數字能量專屬 LIFF ID
     NUMEROLOGY_LIFF_ID: "2009490171-krjD4SBL",
     
