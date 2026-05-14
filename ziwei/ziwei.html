@@ -7,6 +7,7 @@
     
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="/env.js?V=5"></script>
+    <script src="/liff-pc-allowlist.js?v=1"></script>
     <script src="/pixi.min.js"></script>
     
     <style>
@@ -429,6 +430,7 @@
             try {
                 await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
                 if (!liff.isLoggedIn()) { liff.login(); return; }
+                if (typeof LiffPcAllowlist !== 'undefined' && !LiffPcAllowlist.enforceDesktopAllowlist()) return;
                 currentIdToken = liff.getIDToken();
                 sendTrackingLog("Stage 1: Page View");
             } catch (err) { alert("無法開啟結界，請在 LINE 內部開啟！"); }

@@ -30,7 +30,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             liff.login({ redirectUri: window.location.href });
             return;
         }
-        
+
+        if (typeof LiffPcAllowlist !== 'undefined' && !LiffPcAllowlist.enforceDesktopAllowlist()) {
+            return;
+        }
+
         const profile = await liff.getProfile();
         userId = profile.userId;
         currentIdToken = liff.getIDToken(); // 取得 Token 以便後續呼叫 API

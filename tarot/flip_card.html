@@ -7,6 +7,7 @@
     
     <script src="/env.js?v=2"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="/liff-pc-allowlist.js?v=1"></script>
 
     <style>
         :root {
@@ -415,6 +416,10 @@
 
             if (!liff.isLoggedIn()) {
                 liff.login();
+                return;
+            }
+
+            if (typeof LiffPcAllowlist !== 'undefined' && !LiffPcAllowlist.enforceDesktopAllowlist()) {
                 return;
             }
 
