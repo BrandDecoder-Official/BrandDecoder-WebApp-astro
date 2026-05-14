@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>靈魂儀表板 | 命運解碼室</title>
     
-    <script src="/env.js?v=5"></script>
+    <script src="/env.js?v=6"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -263,6 +263,78 @@
             { price: 999, points: 10600, isPopular: false }
         ];
 
+        function getPcAllowUserIds() {
+            const raw = ENV.LIFF_PC_ALLOW_USER_IDS;
+            if (raw == null || raw === '') return [];
+            if (Array.isArray(raw)) return raw.map(String).map((s) => s.trim()).filter(Boolean);
+            return String(raw).split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+        }
+
+        function getIdTokenSub() {
+            try {
+                if (typeof liff.getDecodedIDToken === 'function') {
+                    const d = liff.getDecodedIDToken();
+                    if (d && d.sub) return d.sub;
+                }
+            } catch (e) { /* ignore */ }
+            try {
+                const t = liff.getIDToken();
+                if (!t) return null;
+                const p = t.split('.')[1];
+                const b = p.replace(/-/g, '+').replace(/_/g, '/');
+                const pad = b.length % 4 === 0 ? '' : '='.repeat(4 - (b.length % 4));
+                const json = JSON.parse(atob(b + pad));
+                return json.sub || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        /** 在 LINE 內且判斷為電腦／桌面類環境（非 iOS/Android 手機典型 UA） */
+        function isLikelyDesktopLineClient() {
+            if (!liff.isInClient()) return false;
+            let os = '';
+            try {
+                if (typeof liff.getOS === 'function') os = String(liff.getOS() || '');
+            } catch (e) { /* ignore */ }
+            if (os === 'ios' || os === 'android') return false;
+            if (os === 'mac' || os === 'windows' || os === 'linux') return true;
+            const ua = navigator.userAgent || '';
+            if (/(iPhone|iPod)(?!.*Simulator)/i.test(ua)) return false;
+            if (/Android.*Mobile/i.test(ua)) return false;
+            if (/Windows NT|Macintosh|Mac OS X|Win64|CrOS|X11; Linux x86_64|Linux x86_64/i.test(ua)) return true;
+            return false;
+        }
+
+        function showPlatformGate(title, detail) {
+            const loader = document.getElementById('loader');
+            loader.style.display = 'flex';
+            loader.style.opacity = '1';
+            loader.innerHTML = `
+                <div style="max-width:320px;text-align:center;padding:24px;color:#D4AF37;font-size:15px;line-height:1.7;">
+                    <p style="margin:0 0 12px;font-size:17px;font-weight:bold;">${title}</p>
+                    <p style="margin:0;color:#ccc;font-size:14px;">${detail}</p>
+                    <button type="button" onclick="liff.closeWindow()" style="margin-top:22px;padding:10px 24px;border-radius:22px;border:1px solid #D4AF37;background:transparent;color:#D4AF37;font-weight:bold;cursor:pointer;">關閉</button>
+                </div>`;
+        }
+
+        /**
+         * env.js 的 LIFF_PC_ALLOW_USER_IDS 非空時啟用：桌面 LINE 僅允許名單內 sub。
+         * 留空 = 不檢查（所有人可在 PC LINE 使用）。
+         */
+        function enforceDesktopMemberAllowlist() {
+            const allow = getPcAllowUserIds();
+            if (allow.length === 0) return true;
+            if (!isLikelyDesktopLineClient()) return true;
+            const sub = getIdTokenSub();
+            if (sub && allow.includes(sub)) return true;
+            showPlatformGate(
+                '請改用手機 LINE',
+                '此會員區在電腦／平板類環境僅限指定帳號使用。請以手機開啟官方帳號選單內的會員連結；若您為直播觀眾，無需於此頁登入。',
+            );
+            return false;
+        }
+
         async function initDashboard() {
             try {
                 await liff.init({ liffId: ENV.MEMBER_LIFF_ID });
@@ -276,6 +348,8 @@
                 currentAccessToken = liff.getAccessToken(); 
                 
                 if(!currentIdToken || !currentAccessToken) throw new Error("無法取得安全通行證");
+
+                if (!enforceDesktopMemberAllowlist()) return;
 
                 const profile = await liff.getProfile();
 
