@@ -31,10 +31,19 @@ const config = {
 
 const client = new Client(config);
 const app = express();
+app.set('trust proxy', 1);
 const payFormParser = express.urlencoded({ extended: false });
 
-const publicBaseUrl = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
 const memberProfileUrl = (process.env.MEMBER_PROFILE_URL || 'https://branddecoderai.com/member/profile.html').replace(/\/$/, '');
+
+/** 綠界 ReturnURL 基底：優先環境變數；未設時在 Cloud Run 上可用 Host 推斷為 https://… */
+function resolvePublicBaseUrl(req) {
+    const fromEnv = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+    if (fromEnv) return fromEnv;
+    const host = (req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim();
+    if (!host) return '';
+    return `https://${host}`.replace(/\/$/, '');
+}
 
 const PLATFORM_VERSION = "v5.0";
 const AI_MODEL = "gemini-3-flash-preview"; 
@@ -79,8 +88,8 @@ async function verifyLineToken(req, res, next) {
 }
 
 async function sendTelegramRevenueAlert({ userName, amount, pointsGiven, paymentMethod }) {
-    const token = process.env.TELEGRAM_BOT_TOKEN || process.env.TG_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID || process.env.TG_CHAT_ID;
+    const token = process.env.TG_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TG_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
     if (!token || !chatId) return;
     const now = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
     const tgMessage = `🚀 【新香油錢入帳捷報】\n\n👤 靈魂代號：${userName}\n💎 儲值金額：NT$ ${amount}\n🔋 獲得靈力：${pointsGiven} 點\n💳 付款方式：${paymentMethod}\n⏱️ 交易時間：${now}\n\n✨ 命運解碼室營收持續增長中！`;
@@ -222,19 +231,20 @@ app.get('/api/user/history', verifyLineToken, async (req, res) => {
 // ==========================================
 app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) => {
     try {
-        if (!publicBaseUrl) {
+        const base = resolvePublicBaseUrl(req);
+        if (!base) {
             return res.status(500).json({
                 success: false,
-                msg: '伺服器未設定 PUBLIC_BASE_URL（供綠界 ReturnURL 回呼），請於 Cloud Run 環境變數設定，例如 https://bastro-bot-xxxx.asia-east1.run.app',
+                msg: '無法決定綠界 ReturnURL 網域：請設定 PUBLIC_BASE_URL（例如 https://bastro-bot-xxxx.asia-east1.run.app），或確認請求帶有正確的 Host 標頭。',
             });
         }
         const { amount, productName, pointsGiven, periodCode } = req.body;
         const userId = req.user.userId;
         const merchantTradeNo = ecpay.buildMerchantTradeNo(userId);
 
-        const returnUrl = `${publicBaseUrl}/api/pay/ecpay/notify`;
+        const returnUrl = `${base}/api/pay/ecpay/notify`;
         if (returnUrl.length > 200) {
-            return res.status(500).json({ success: false, msg: 'ReturnURL 超過 200 字元，請縮短 PUBLIC_BASE_URL 或改用自訂網域' });
+            return res.status(500).json({ success: false, msg: 'ReturnURL 超過 200 字元，請縮短網域（PUBLIC_BASE_URL 或自訂網域）' });
         }
 
         const fields = ecpay.buildAioCheckoutFields({
