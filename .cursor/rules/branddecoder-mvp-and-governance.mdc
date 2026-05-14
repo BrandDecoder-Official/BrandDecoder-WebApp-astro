@@ -1,0 +1,27 @@
+---
+description: MVP 節流、變更同意、GitHub 部署與資料庫治理（BrandDecoder / Astro + bastro-bot）
+alwaysApply: true
+---
+
+# BrandDecoder 專案治理
+
+## 1. MVP 式建置
+
+- 優先最小可行交付：能跑、能驗證、少分支與少檔案變更。
+- 避免「順手重構、大範圍格式化、無關依賴升級」；除非使用者明確要求。
+
+## 2. 程式碼變更範圍與同意
+
+- **非必要不得修改**與當前任務無關的檔案或邏輯。
+- 若必須動到額外區域（例如牽連型別、共用設定、部署設定）：**先簡短說明原因、影響範圍與替代方案**，**取得使用者同意後再改**。
+
+## 3. 從本機／Cursor 到 GitHub 與後端更新（事實流程）
+
+- **原始碼**：在 Cursor 編輯 → `git commit` → `git push` 到 **GitHub**（`BrandDecoder-WebApp-astro`）。
+- **前端（GitHub Pages）**：推送至 `main`（或專案設定的分支）後，由 Pages／Actions 發佈靜態檔（含 `env.js`、`member/`、`tarot/` 等）。
+- **後端（Cloud Run `bastro-bot`）**：程式在 repo 的 **`bastro-bot/`**；若 Cloud Run 已連線同一 GitHub 分支，**push 後觸發建置與部署**（實際以 GCP 主控台「連續部署／觸發條件」為準）。環境變數與金鑰在 **Cloud Run** 設定，不進 Git。
+
+## 4. 資料庫（Firestore 等）
+
+- **新增或修改欄位／集合結構**：實作前先**向使用者說明**用途、讀寫位置與相容性（舊資料是否需遷移）。
+- **刪除資料庫資料**：**必須先取得使用者明示同意**。說明須包含：**刪除範圍、原因、不可回復風險、備份／還原是否可行**。未同意前**不得**執行刪除或破壞性指令。
