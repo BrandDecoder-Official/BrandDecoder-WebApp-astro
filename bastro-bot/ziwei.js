@@ -155,13 +155,39 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 });
 
                 const flexMessage = generateZiweiFlexMessage(userName, birthData, aiData.text, aiData.score, aiConfig.cost, remainPoints);
-                await client.pushMessage(userId, flexMessage);
+                try {
+                    await client.pushMessage(userId, flexMessage);
+                } catch (pushErr) {
+                    await userRef.set({ points: FieldValue.increment(aiConfig.cost) }, { merge: true });
+                    console.error('紫微 Flex 推播失敗，已退還靈力:', pushErr);
+                    await client.pushMessage(userId, {
+                        type: 'text',
+                        text: '⚠️ 解盤已完成，但訊息無法送達 LINE（連線或官方限制）。已為您退還本次靈力，請稍後再試。',
+                    });
+                    return;
+                }
 
             } catch (bgError) {
                 isDone = true;
                 clearTimeout(timer1); clearTimeout(timer3);
-                console.error("紫微背景失敗:", bgError);
-                await client.pushMessage(userId, { type: 'text', text: '⚠️ 星象干擾過強，大師解盤中斷。不會扣除您的靈力。' });
+                const errStr = (() => {
+                    try {
+                        return typeof bgError === 'string' ? bgError : JSON.stringify(bgError);
+                    } catch (e) {
+                        return String(bgError && bgError.message ? bgError.message : bgError);
+                    }
+                })();
+                console.error('紫微背景失敗:', { model: aiConfig.model, message: bgError && bgError.message, stack: bgError && bgError.stack, errStr });
+
+                const looksLikeModel404 =
+                    /404|"Not Found"|NOT_FOUND|is not found|not supported for generateContent/i.test(errStr) ||
+                    (bgError && (bgError.status === 404 || bgError.code === 404));
+
+                const lineText = looksLikeModel404
+                    ? '⚠️ 解盤中斷：目前設定的 AI 模型無法使用（可能已更名、未開放或專案未啟用）。請聯絡管理員檢查後台「紫微」模型 ID。本次不會扣除您的靈力。'
+                    : '⚠️ 星象干擾過強，大師解盤中斷。本次不會扣除您的靈力。';
+
+                await client.pushMessage(userId, { type: 'text', text: lineText });
             }
         })();
 
