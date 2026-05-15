@@ -39,21 +39,30 @@
 
 若你在主控台又部署了新版本、想更新本機檔案：可用 `gcloud run services describe bastro-bot --project=lllcnd --region=asia-east1 --format='value(metadata.annotations.run.googleapis.com/build-source-location)'` 取得新的 zip 路徑，再以 `gsutil cp` 下載解壓後覆蓋對應檔案。
 
-## GitHub → Cloud Run（鏡像部署）
+## 部署後端（一鍵，建議）
 
-做法：**Cursor 改程式 → `git push` → Google Cloud 從同一個 repo 建置並部署**。
+在 **repo 根目錄**（`Astro`，不是 `bastro-bot` 內）用 PowerShell：
 
-1. 把本 repo 的變更 **push 到 GitHub**（你目前有權限的 branch，例如 `main`）。
-2. 開啟 [Google Cloud Console](https://console.cloud.google.com/) → **Cloud Run** → 服務 **`bastro-bot`** → **編輯連續部署**（或「連線至存放區」）。
-3. 選擇同一個 GitHub 倉庫與要部署的**分支**。
-4. 建置設定（monorepo 重點）：
-   - **Dockerfile 路徑**：`bastro-bot/Dockerfile`
-   - **來源 / 建置背景目錄**（Build context）：`bastro-bot`  
-     （若介面只有「根目錄」，選到 `bastro-bot` 子資料夾，讓建置在該目錄執行。）
-5. 在 Cloud Run **環境變數** 中設定：`LINE_CHANNEL_*`、`GEMINI_API_KEY`、`ADMIN_EMAILS`、Firebase（若需）、**`PUBLIC_BASE_URL`**（Cloud Run HTTPS 基底網址，供綠界 **ReturnURL**）、**`ECPAY_MERCHANT_ID` / `ECPAY_HASH_KEY` / `ECPAY_HASH_IV`**（取自綠界後台 **系統設定 → 介接資訊 →「金流、MPOS」** 那一列；物流／電子收據列若未開通請勿誤用）、**`ECPAY_STAGE`**（正式環境設 `production`，測試留空或 `stage`）、選填 **`ECPAY_CHOOSE_PAYMENT`**（預設 `ALL`）、**`MEMBER_PROFILE_URL`**（綠界 **ClientBackURL**「返回商店」；預設為會員 **LIFF 入口** `https://liff.line.me/…` 以留在 LINE 內）、**`TG_BOT_TOKEN` + `TG_CHAT_ID`**（或 `TELEGRAM_*`）。並**移除**已停用的 `LINEPAY_*`。
-6. 確認 **容器連接埠** 與程式一致：本專案使用 `PORT`（預設 `8080`），Cloud Run 一般設為 **8080**；LINE Webhook URL 路徑為 **`/webhook`**（若你改成別的路徑，請同步 LINE 後台與程式）。
+```powershell
+# 只看本機與 Cloud Run 是否同一版
+.\scripts\deploy-backend.ps1
 
-第一次連線 repo 時，Google 會引導建立 **Cloud Build 觸發條件**；之後每次 push 到指定分支就會自動建置並發布（實際觸發條件以你在主控台設定的為準）。
+# 已 commit 後：推送 main 並等到上線（約 3～8 分鐘）
+.\scripts\deploy-backend.ps1 -Push
+
+# 一次完成提交、推送、等待
+.\scripts\deploy-backend.ps1 -Push -Message "fix: 說明"
+```
+
+流程：`push main` → GCP **Cloud Build**（`bastro-bot/Dockerfile`）→ **Cloud Run** `bastro-bot`（專案 `lllcnd`、區域 `asia-east1`）。  
+在 Cursor 也可直接說：**「部署後端」**（代理會跑上述腳本；**push 前會先問你是否同意**）。
+
+Firestore 的 prompt／扣點變更**不需** redeploy；只有改 `bastro-bot/*.js` 才需要。
+
+## GitHub → Cloud Run（主控台設定參考，已完成可略）
+
+連續部署已接：`BrandDecoder-Official/BrandDecoder-WebApp-astro` 的 **`main`**，context **`bastro-bot`**。  
+環境變數仍在 Cloud Run 主控台維護（`LINE_*`、`GEMINI_*`、`ECPAY_*`、`PUBLIC_BASE_URL` 等，見 `.env.example`）。
 
 ## Docker 本機建置（選用）
 

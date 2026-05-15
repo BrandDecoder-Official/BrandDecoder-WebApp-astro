@@ -20,7 +20,7 @@ function buildTarotZiweiOutputSuffix(focusTopic) {
 【解析】：
 （內文從下一行開始）
 2. 【解析】內文必須完整遵守你 Role 中的「報告結構」次序、Emoji、空行與手機閱讀排版；勿輸出「系統要求」或字數計算過程。
-3. 【解析】內文（不含【分數】那一行）總長度 ≤ ${MAX_TAROT_ZIWEI_BODY_CHARS} 字（含標點與換行）；超長請自行精簡各段，勿在文末註明刪修。
+3. 【解析】內文（不含【分數】那一行）總長度不得超過 ${MAX_TAROT_ZIWEI_BODY_CHARS} 字（含標點與換行）；此為上限，依分析需要撰寫，不必寫滿；若仍超長請自行精簡各段，勿在文末註明刪修。
 4. 探詢領域「${topic}」須貫穿全文論述。`;
 }
 
@@ -30,7 +30,7 @@ function buildNumerologyOutputSuffix() {
 
 🚨【系統輸出格式】(技術層，與上方 Role 並存；若有衝突以此段為準)
 - 僅輸出單一 JSON 物件，勿 \`\`\`json 或任何 Markdown 包裝，勿前後贅語。
-- interpretation 欄位 ≤ ${MAX_NUMEROLOGY_INTERPRETATION_CHARS} 字（含標點與換行），須符合上方「大師指引」與三位一體解碼要求。
+- interpretation 欄位不得超過 ${MAX_NUMEROLOGY_INTERPRETATION_CHARS} 字（含標點與換行）；此為上限，依分析需要撰寫，不必寫滿；須符合上方「大師指引」與三位一體解碼要求。
 - coreNumber、luckySet、wealthSet、score 等欄位規則依上方「生成規則」。`;
 }
 

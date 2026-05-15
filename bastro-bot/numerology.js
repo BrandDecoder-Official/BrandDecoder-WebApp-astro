@@ -170,7 +170,10 @@ function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, new
     const shareHead = buildNumerologyShareHead(aiData, fortuneScore, decodedAt);
     const shareBody = String(aiData.interpretation || '').trim();
     const shareUri = buildLineShareUriFromHeadAndBody(shareHead, shareBody);
-    const safeText = String(aiData.interpretation || '宇宙能量正在匯聚中...');
+    const safeText = clampTextChars(
+        String(aiData.interpretation || '宇宙能量正在匯聚中...'),
+        MAX_NUMEROLOGY_INTERPRETATION_CHARS
+    );
     const luckyStr = (aiData.luckySet || ['--','--','--']).join(' · ');
     const wealthStr = (aiData.wealthSet || ['--','--']).join(' · ');
     const coreNum = aiData.coreNumber || '--';

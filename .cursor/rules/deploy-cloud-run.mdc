@@ -1,0 +1,45 @@
+---
+description: 使用者要求部署後端／Cloud Run／上線 bastro-bot 時，用 repo 內腳本代為處理，勿重複講 GCP 主控台步驟
+alwaysApply: false
+---
+
+# Cloud Run 後端部署（代理接手）
+
+## 單一管道（已定案）
+
+- **有效路徑**：`git push origin main` → GCP **Cloud Build 觸發**（`bastro-bot`，context `bastro-bot/`）→ **Cloud Run** `lllcnd` / `asia-east1` / `bastro-bot`。
+- **勿再引導**使用者手動重跑 GitHub Actions `deploy-backend.yml`（repo 內無此檔；與 Cloud Run 修訂版常對不上）。
+- **勿逕自** `git push`，須使用者同意後再執行 `-Push`。
+
+## 安全（部署前）
+
+- 執行 `.\scripts\check-secrets.ps1`；失敗則**不 push、不部署**。
+- 涉金流／點數的變更：見 `security-payments-points.mdc` 檢查清單。
+
+## 代理應執行的指令
+
+在 repo 根目錄（`Astro`）：
+
+| 使用者意圖 | 指令 |
+|------------|------|
+| 看線上是否最新 | `.\scripts\deploy-backend.ps1` |
+| 部署後端（已 commit） | `.\scripts\deploy-backend.ps1 -Push`（**先問是否同意 push**） |
+| 提交並部署 | `.\scripts\deploy-backend.ps1 -Push -Message "…"`（**先問是否同意 commit+push**） |
+| 剛 push 完，等上線 | `.\scripts\deploy-backend.ps1 -Wait` |
+
+腳本會輪詢 Cloud Run 修訂版的 `commit-sha` 標籤，與本機 `HEAD` 一致即視為成功。
+
+## 回報格式（簡短）
+
+1. 本機 commit（短 SHA + 訊息）
+2. 線上修訂版名稱 + commit-sha
+3. 是否一致；若執行部署，成功或逾時／Cloud Build 失敗提示
+
+## 與前端的差異
+
+- **後端** `bastro-bot/`：上述腳本 + Cloud Build。
+- **前端**（GitHub Pages）：仍為 push `main` 後 Pages 建置；不混用 Cloud Run 腳本。
+
+## Firestore
+
+- Prompt／扣點若在 Firestore 已改，**不需** redeploy 才生效；部署只更新容器程式。

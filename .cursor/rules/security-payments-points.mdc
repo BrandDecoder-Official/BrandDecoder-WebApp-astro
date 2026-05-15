@@ -1,0 +1,63 @@
+---
+description: 安全優先 + MVP；秘密不外洩；金流／點數變更必做檢查清單與持續驗證
+alwaysApply: true
+---
+
+# 安全優先（與 MVP 並行）
+
+與 `branddecoder-mvp-and-governance.mdc` 同時適用：**功能要小步交付，但金流與點數不能為求快而跳過安全檢查**。
+
+## 1. 秘密與敏感資料（最高優先）
+
+- **絕不**將下列內容寫入 repo、commit、log、註解、截圖回覆、或 PR 說明：
+  - `ECPAY_HASH_KEY` / `ECPAY_HASH_IV`、`LINE_CHANNEL_SECRET`、`GEMINI_API_KEY`
+  - Firebase `serviceAccount*.json`、`.env`、Telegram `TG_BOT_TOKEN`
+- 憑證僅存在：**Cloud Run 環境變數**、本機 `.env`（已在 `.gitignore`）。
+- 變更完成後、**建議 push 前**：執行 `.\scripts\check-secrets.ps1`；若有命中，**先修復再 push**，並標示**不建議部署**。
+- 若 diff 含疑似金鑰或 `.env`，**停止 push**，告知使用者並協助從歷史移除（需使用者同意後再動 git 破壞性指令）。
+
+## 2. 金流（綠界 ECPay）— 改動必對照
+
+涉及 `bastro-bot/ecpay.js`、`index.js` 的 `/api/pay/*`、`orders` 集合時：
+
+| 必須 | 說明 |
+|------|------|
+| CheckMac | `notify` 僅在 `verifyCheckMacValue` 通過後處理入帳 |
+| 金額權威 | 入帳時 **`TradeAmt` 須等於訂單 `amount`**（現有 `fulfillRechargeOrder`） |
+| 冪等 | 訂單 `status === 'success'` 不得重複加點 |
+| 伺服器定價 | **`/api/pay/request` 的 `amount` / `pointsGiven` 須與 `legal-service-manifest.json` 儲值檔位一致**；不可信任前端任意傳入。若實作或修 bug，以 manifest 白名單驗證，拒絕不符組合 |
+| 回應 | 綠界 notify 成功路徑回 `1\|OK`；驗簽失敗回 `0\|FAIL` |
+| Log | 不記錄完整 notify body 中的敏感欄位；錯誤 log 不含 HashKey |
+
+**變更後最小驗證（能本機則本機）**：建單欄位含 CheckMac；notify 假資料驗簽失敗不入帳；合法 notify 僅加點一次。
+
+## 3. 點數（靈力）— 改動必對照
+
+涉及 `users.points`、`FieldValue.increment`、扣點服務（`tarot.js`、`ziwei.js`、`numerology.js`、`index.js` 票根）時：
+
+| 必須 | 說明 |
+|------|------|
+| 身分 | 扣點／查餘額 API 須經 **`verifyLineToken`**（或 Admin `verifyAdminToken`），`userId` 只取自 token，不信 client 自報 uid |
+| 扣點來源 | **扣點數額以伺服器設定為準**（`mergeModuleKey` / `aiSettingsDefaults`），不信前端傳的 cost |
+| 順序 | 先驗餘額 ≥ cost，再扣點／建票根；AI／推播失敗路徑須 **退點**（與現有 tarot/ziwei refund 一致） |
+| 並發 | 避免「只讀餘額後才扣」的 race；動到核心流程時考慮 transaction 或原子 increment + 事後校驗 |
+| Admin | 後台調點僅 `/api/admin/*` + `ADMIN_EMAILS` 白名單 |
+
+**變更後最小驗證**：餘額不足回 403 且不扣點；成功扣點與 history／log 一致；失敗退點後餘額恢復。
+
+## 4. 代理工作流程（每次相關 PR／任務）
+
+1. **範圍**：只改任務相關檔案（MVP）。
+2. **威脅想 1 分鐘**：誰能呼叫？能否伪造金額／點數／他人 uid？
+3. **實作**：優先伺服器驗證與既有 helper（`ecpay`、`legalManifest`、`mergeModuleKey`）。
+4. **自檢**：跑 `check-secrets.ps1`；相關邏輯用簡短測試或手動步驟列在回覆中。
+5. **推送／部署**：若涉金流或點數，回覆須含 **安全檢查清單打勾結果**；有未解風險則**不建議 push**（見治理規則「推送前同意」）。
+
+## 5. 與部署腳本
+
+- `scripts/deploy-backend.ps1` 僅部署程式；**不會**也**不應**帶入任何 secret。
+- 部署後金流驗證須在**測試商店／小額**進行，由使用者決定是否執行。
+
+## 6. 已知高風險區（動到就要修或向使用者說明）
+
+- `POST /api/pay/request`：若尚未以 manifest 檔位驗證 `amount`／`pointsGiven`，屬**信任客戶端**風險；相關任務應優先補伺服器端白名單驗證。

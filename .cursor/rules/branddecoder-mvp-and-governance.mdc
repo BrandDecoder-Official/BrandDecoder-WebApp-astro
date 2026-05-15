@@ -9,6 +9,7 @@ alwaysApply: true
 
 - 優先最小可行交付：能跑、能驗證、少分支與少檔案變更。
 - 避免「順手重構、大範圍格式化、無關依賴升級」；除非使用者明確要求。
+- **安全與 MVP 並行**：金流／點數相關變更須同時遵守 `security-payments-points.mdc`；push 前建議 `.\scripts\check-secrets.ps1`。
 
 ## 2. 程式碼變更範圍與同意
 
