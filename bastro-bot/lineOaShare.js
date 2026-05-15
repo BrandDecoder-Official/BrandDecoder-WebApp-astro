@@ -3,12 +3,12 @@
 /**
  * LINE 官方帳「分享至 LINE」+ 文末 OA 邀請連結（扣點服務 Flex 共用）。
  * 每日一抽等非扣點流程請勿使用。
- * 未來面相等扣點服務：組好 shareHead（無暱稱、無靈力）+ 全文 body 後呼叫 buildLineShareUriFromHeadAndBody，footer 加上 lineFlexShareButton(uri)。
+ * 未來面相等扣點服務：組好 shareHead（無暱稱、無靈力）+ 全文 body 後呼叫 buildLineShareUriFromHeadAndBody，footer 加上 lineFlexShareButton(uri)。`action.uri` 不得超過 1000 字元。
  */
 
 const LINE_SHARE_TEXT_BASE = 'https://line.me/R/share?text=';
-/** LINE `action.uri` 長度上限（保守值，見 Messaging API） */
-const LINE_SHARE_URI_MAX_LENGTH = 2000;
+/** LINE Messaging API：`action.uri` 上限 1000 字元（逾長 push 會 400） */
+const LINE_SHARE_URI_MAX_LENGTH = 1000;
 const LINE_SHARE_TRUNC_SUFFIX = '\n…(續見官方帳號對話)';
 
 const LINE_OA_INVITE_FOOTER =

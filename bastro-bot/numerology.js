@@ -134,7 +134,17 @@ router.post('/generate', async (req, res) => {
             } catch (error) {
                 isDone = true;
                 clearTimeout(timer1); clearTimeout(timer3);
-                console.error("數字學背景運算異常:", error);
+                const lineDetail =
+                    error && error.originalError && error.originalError.response && error.originalError.response.data
+                        ? error.originalError.response.data
+                        : error && error.response && error.response.data
+                          ? error.response.data
+                          : null;
+                console.error(
+                    '數字學背景運算異常:',
+                    error && error.message ? error.message : error,
+                    lineDetail != null ? JSON.stringify(lineDetail) : ''
+                );
                 await lineClient.pushMessage(userId, { type: 'text', text: '⚠️ 宇宙訊號受到干擾，解碼中斷。本次不會扣除您的靈力。' });
             }
         })();
@@ -174,7 +184,11 @@ function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, new
     return {
         type: "flex", altText: `您的律動能量解碼已具現 (核心能量: ${coreNum})`,
         contents: {
-            type: "bubble", size: "mega",
+            type: "bubble",
+            size: "mega",
+            styles: {
+                footer: { backgroundColor: '#05050A' },
+            },
             body: {
                 type: "box", layout: "vertical", backgroundColor: "#05050A", paddingAll: "20px",
                 contents: [
@@ -234,11 +248,19 @@ function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, new
                             { type: "text", text: `${newBalance} 點`, color: "#FFFFFF", size: "lg", weight: "bold", align: "end", flex: 1 }
                         ]
                     },
-                    { type: "separator", color: "#333333", margin: "md" },
-                    lineFlexShareButton(shareUri, { color: '#D4AF37' })
                 ]
-            }
-        }
+            },
+            footer: {
+                type: 'box',
+                layout: 'vertical',
+                spacing: 'md',
+                paddingAll: '12px',
+                contents: [
+                    { type: 'separator', color: '#333333' },
+                    lineFlexShareButton(shareUri, { color: '#D4AF37' }),
+                ],
+            },
+        },
     };
 }
 

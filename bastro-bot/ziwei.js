@@ -194,7 +194,17 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                     await client.pushMessage(userId, flexMessage);
                 } catch (pushErr) {
                     await userRef.set({ points: FieldValue.increment(aiConfig.cost) }, { merge: true });
-                    console.error('紫微 Flex 推播失敗，已退還靈力:', pushErr);
+                    const lineDetail =
+                        pushErr && pushErr.originalError && pushErr.originalError.response && pushErr.originalError.response.data
+                            ? pushErr.originalError.response.data
+                            : pushErr && pushErr.response && pushErr.response.data
+                              ? pushErr.response.data
+                              : null;
+                    console.error(
+                        '紫微 Flex 推播失敗，已退還靈力:',
+                        pushErr && pushErr.message ? pushErr.message : pushErr,
+                        lineDetail != null ? JSON.stringify(lineDetail) : ''
+                    );
                     await client.pushMessage(userId, {
                         type: 'text',
                         text: '⚠️ 解盤已完成，但訊息無法送達 LINE（連線或官方限制）。已為您退還本次靈力，請稍後再試。',
