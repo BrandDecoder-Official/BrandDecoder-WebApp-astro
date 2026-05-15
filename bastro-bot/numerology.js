@@ -16,7 +16,13 @@ const {
     sanitizeForFlexText,
 } = require('./lineOaShare');
 const { MAX_NUMEROLOGY_INTERPRETATION_CHARS, clampTextChars } = require('./aiReplyLimits');
-const { buildNumerologyOutputSuffix } = require('./aiPromptEnvelope');
+const {
+    rollNumerologyMatrix,
+    buildNumerologyMatrixBlock,
+    buildNumerologyInterpretationSuffix,
+    parseInterpretationFromAi,
+    normalizeNumerologyPayload,
+} = require('./numerologyMatrix');
 
 const db = getFirestore('astro-bot-db');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -78,32 +84,52 @@ router.post('/generate', async (req, res) => {
                 }, 15000);
 
                 const aiStartTime = Date.now();
+                const matrix = rollNumerologyMatrix();
                 const model = genAI.getGenerativeModel({
                     model: aiConfig.model,
-                    generationConfig: { temperature: 0.7, maxOutputTokens: 768 },
+                    generationConfig: {
+                        temperature: 0.75,
+                        maxOutputTokens: 1536,
+                        responseMimeType: 'application/json',
+                    },
                 });
-                
-                const finalPrompt = `${aiConfig.prompt}${buildNumerologyOutputSuffix()}`;
 
-                const aiResponse = await model.generateContent(finalPrompt);
-                let aiText = aiResponse.response.text().trim().replace(/```json/gi, '').replace(/```/g, '');
-                
+                const finalPrompt = `${aiConfig.prompt}${buildNumerologyMatrixBlock(matrix)}${buildNumerologyInterpretationSuffix()}`;
+
+                let interpretation = null;
+                let aiResponse;
+                let lastRaw = '';
+                for (let attempt = 1; attempt <= 2; attempt++) {
+                    aiResponse = await model.generateContent(finalPrompt);
+                    lastRaw = aiResponse.response.text();
+                    interpretation = parseInterpretationFromAi(lastRaw);
+                    if (interpretation) break;
+                    console.error(
+                        `數字學 JSON 解析失敗 (第 ${attempt} 次):`,
+                        String(lastRaw).slice(0, 800)
+                    );
+                }
+
                 isDone = true;
                 clearTimeout(timer1);
                 clearTimeout(timer3);
 
-                let aiData;
-                try {
-                    aiData = JSON.parse(aiText); 
-                } catch(e) {
-                    console.error("數字學 JSON 破裂:", aiText);
-                    aiData = { coreNumber: 7, luckySet: [11,22,33], wealthSet: [66,88], score: 80, interpretation: "宇宙頻率過強，文字無法完全解析，請靜心感受當下的直覺。" };
+                if (!interpretation) {
+                    await lineClient.pushMessage(userId, {
+                        type: 'text',
+                        text: '⚠️ 律動能量解碼未能完成（AI 回覆格式異常）。本次不會扣除您的靈力，請稍後再試。',
+                    });
+                    return;
                 }
-                aiData.interpretation = clampTextChars(aiData.interpretation, MAX_NUMEROLOGY_INTERPRETATION_CHARS);
-                
-                const fortuneScore = aiData.score || 80;
+
+                const aiData = normalizeNumerologyPayload(
+                    matrix,
+                    clampTextChars(interpretation, MAX_NUMEROLOGY_INTERPRETATION_CHARS)
+                );
+
+                const fortuneScore = aiData.score;
                 const aiLatency = Date.now() - aiStartTime;
-                const usage = aiResponse.response.usageMetadata || {};
+                const usage = (aiResponse && aiResponse.response.usageMetadata) || {};
 
                 const newBalance = await db.runTransaction(async (t) => {
                     const doc = await t.get(userRef);
