@@ -6,7 +6,8 @@ const { mergeModuleKey } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
     buildLineShareUriFromHeadAndBody,
-    lineFlexShareButton,
+    appendShareButtonToFooterContents,
+    sanitizeForFlexText,
 } = require('./lineOaShare');
 const {
     MAX_TAROT_ZIWEI_BODY_CHARS,
@@ -20,13 +21,11 @@ function buildTarotShareHead(cards, topic, score, decodedAt) {
     const c2 = cards && cards[2] != null ? cards[2] : '—';
     const scoreLabel = score != null && score !== '' && !Number.isNaN(Number(score)) ? String(score) : '--';
     return [
-        '【命運解碼室｜塔羅密訊】尊爵版（分享用）',
-        `解盤時間（台北）：${decodedAt}`,
-        `探尋領域：【${topic}】`,
-        `牌陣：過去【${c0}】→ 現在【${c1}】→ 未來【${c2}】`,
-        `靈能指數：${scoreLabel} 分`,
-        '',
-        '────────',
+        '【命運解碼室｜塔羅】',
+        `台北 ${decodedAt}`,
+        `領域:${topic}`,
+        `牌陣:${c0}→${c1}→${c2}`,
+        `指數:${scoreLabel}`,
         '',
     ].join('\n');
 }
@@ -89,17 +88,16 @@ function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cos
                     { type: "separator", margin: "md", color: "#333333" },
                     { type: "box", layout: "horizontal", spacing: "md", contents: cardBoxes },
                     { type: "separator", margin: "lg", color: "#333333" },
-                    { type: "text", text: clampTextChars(String(aiText || ''), MAX_FLEX_SINGLE_TEXT_CHARS), color: "#E0E0E0", size: "md", wrap: true, margin: "md" }
+                    { type: "text", text: sanitizeForFlexText(clampTextChars(String(aiText || ''), MAX_FLEX_SINGLE_TEXT_CHARS)), color: "#E0E0E0", size: "md", wrap: true, margin: "md" }
                 ]
             },
             footer: {
                 type: "box", layout: "vertical", spacing: "md", paddingAll: "lg",
-                contents: [
+                contents: appendShareButtonToFooterContents([
                     { type: "separator", color: "#333333" },
                     { type: "box", layout: "horizontal", margin: "md", contents: [ { type: "text", text: "⚡ 本次消耗靈力", color: "#A0A0A0", size: "md", align: "start" }, { type: "text", text: `- ${cost} 點`, color: "#FF6B6B", size: "md", weight: "bold", align: "end" } ] },
                     { type: "box", layout: "horizontal", contents: [ { type: "text", text: "🔋 剩餘靈力餘額", color: "#D4AF37", size: "md", align: "start" }, { type: "text", text: `${remainPoints} 點`, color: "#F9E498", size: "lg", weight: "bold", align: "end" } ] },
-                    lineFlexShareButton(shareUri, { color: '#B8860B' })
-                ]
+                ], shareUri, { color: '#B8860B' }),
             }
         }
     };
@@ -125,6 +123,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
     (async () => {
         let isDone = false;
         let timer1, timer2, timer3;
+        let tarotConfig = null;
         try {
             timer1 = setTimeout(async () => {
                 if (!isDone) {
@@ -148,7 +147,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             }, 15000);
 
             const configDoc = await db.collection('system_config').doc('ai_settings').get();
-            const tarotConfig = mergeModuleKey('tarot', configDoc);
+            tarotConfig = mergeModuleKey('tarot', configDoc);
 
             const { topic, cards } = userData.pendingDraw;
             const currentPoints = userData.points || 0;
@@ -191,13 +190,47 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
                 tarotConfig.cost,
                 decodedAt
             );
-            await client.pushMessage(userId, flexMessage);
+            try {
+                await client.pushMessage(userId, flexMessage);
+            } catch (pushErr) {
+                const lineDetail =
+                    pushErr && pushErr.originalError && pushErr.originalError.response && pushErr.originalError.response.data
+                        ? pushErr.originalError.response.data
+                        : pushErr && pushErr.response && pushErr.response.data
+                          ? pushErr.response.data
+                          : null;
+                console.error(
+                    '塔羅 Flex 推播失敗:',
+                    pushErr && pushErr.message ? pushErr.message : pushErr,
+                    lineDetail != null ? JSON.stringify(lineDetail) : ''
+                );
+                if (tarotConfig) {
+                    await userRef.update({ points: FieldValue.increment(tarotConfig.cost) });
+                }
+                await client.pushMessage(userId, {
+                    type: 'text',
+                    text: '⚠️ 解盤已完成，但字卡無法送達 LINE。已退還本次靈力，請稍後再試。',
+                });
+                return;
+            }
 
         } catch (aiError) {
             isDone = true;
             clearTimeout(timer1); clearTimeout(timer2); clearTimeout(timer3);
-            console.error("塔羅解盤發生錯誤:", aiError);
-            await userRef.update({ points: FieldValue.increment(tarotConfig.cost) }); 
+            const lineDetail =
+                aiError && aiError.originalError && aiError.originalError.response && aiError.originalError.response.data
+                    ? aiError.originalError.response.data
+                    : aiError && aiError.response && aiError.response.data
+                      ? aiError.response.data
+                      : null;
+            console.error(
+                '塔羅解盤發生錯誤:',
+                aiError && aiError.message ? aiError.message : aiError,
+                lineDetail != null ? JSON.stringify(lineDetail) : ''
+            );
+            if (tarotConfig) {
+                await userRef.update({ points: FieldValue.increment(tarotConfig.cost) });
+            }
             await client.pushMessage(userId, { type: 'text', text: '🌌 宇宙能量暫時受到干擾，解碼已取消並退還點數，請稍後再試。' });
         }
     })();

@@ -9,10 +9,10 @@
 const LINE_SHARE_TEXT_BASE = 'https://line.me/R/share?text=';
 /** LINE Messaging API：`action.uri` 上限 1000 字元（逾長 push 會 400） */
 const LINE_SHARE_URI_MAX_LENGTH = 1000;
-const LINE_SHARE_TRUNC_SUFFIX = '\n…(續見官方帳號對話)';
+const LINE_SHARE_TRUNC_SUFFIX = '\n…(全文見與官方帳號對話)';
 
-const LINE_OA_INVITE_FOOTER =
-    '\n\n加入「命運解碼室」LINE OA（點擊加好友）：\nhttps://lin.ee/yObB3Ga';
+/** 盡量短，為分享正文保留 URI 編碼後空間 */
+const LINE_OA_INVITE_FOOTER = '\n\n命運解碼室 OA\nhttps://lin.ee/yObB3Ga';
 
 function formatTaipeiDateTimeLine(date) {
     return date.toLocaleString('zh-TW', {
@@ -26,16 +26,28 @@ function formatTaipeiDateTimeLine(date) {
     });
 }
 
+/** Flex 內文：移除 Markdown 星號等，避免顯示異常 */
+function sanitizeForFlexText(str) {
+    return String(str == null ? '' : str).replace(/\*\*/g, '');
+}
+
 /**
  * @param {string} head 已含標題、解盤時間、服務參數、分隔線（至正文前）
  * @param {string} body 正文全文（分享用，可為解析純文字）
  */
 function buildLineShareUriFromHeadAndBody(head, body) {
-    const bodyTrim = String(body || '').trim();
-    const postBody = `\n────────${LINE_OA_INVITE_FOOTER}`;
+    const bodyTrim = sanitizeForFlexText(String(body || '')).trim();
+    const postBody = `\n──${LINE_OA_INVITE_FOOTER}`;
     const plainFull = `${head}${bodyTrim}${postBody}`;
     const fullUri = LINE_SHARE_TEXT_BASE + encodeURIComponent(plainFull);
     if (fullUri.length <= LINE_SHARE_URI_MAX_LENGTH) return fullUri;
+
+    const headUriLen = (LINE_SHARE_TEXT_BASE + encodeURIComponent(`${head}${postBody}`)).length;
+    if (headUriLen > LINE_SHARE_URI_MAX_LENGTH) {
+        const minimal = `${head.split('\n')[0] || '命運解碼室'}${postBody}`;
+        const minimalUri = LINE_SHARE_TEXT_BASE + encodeURIComponent(minimal);
+        if (minimalUri.length <= LINE_SHARE_URI_MAX_LENGTH) return minimalUri;
+    }
 
     let lo = 0;
     let hi = bodyTrim.length;
@@ -59,8 +71,9 @@ function buildLineShareUriFromHeadAndBody(head, body) {
     return LINE_SHARE_TEXT_BASE + encodeURIComponent(candidate);
 }
 
-/** Flex footer / body 底部共用按鈕 */
+/** Flex footer / body 底部共用按鈕；uri 逾長時略過按鈕以免整則 Flex push 400 */
 function lineFlexShareButton(shareUri, options = {}) {
+    if (!shareUri || shareUri.length > LINE_SHARE_URI_MAX_LENGTH) return null;
     const color = options.color || '#7B1FA2';
     return {
         type: 'button',
@@ -71,10 +84,18 @@ function lineFlexShareButton(shareUri, options = {}) {
     };
 }
 
+function appendShareButtonToFooterContents(contents, shareUri, options = {}) {
+    const btn = lineFlexShareButton(shareUri, options);
+    if (btn) contents.push(btn);
+    return contents;
+}
+
 module.exports = {
     LINE_OA_INVITE_FOOTER,
     LINE_SHARE_URI_MAX_LENGTH,
     formatTaipeiDateTimeLine,
     buildLineShareUriFromHeadAndBody,
     lineFlexShareButton,
+    appendShareButtonToFooterContents,
+    sanitizeForFlexText,
 };

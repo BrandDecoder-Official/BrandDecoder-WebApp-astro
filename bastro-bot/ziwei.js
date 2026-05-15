@@ -6,7 +6,8 @@ const { mergeModuleKey } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
     buildLineShareUriFromHeadAndBody,
-    lineFlexShareButton,
+    appendShareButtonToFooterContents,
+    sanitizeForFlexText,
 } = require('./lineOaShare');
 const { MAX_TAROT_ZIWEI_BODY_CHARS, MAX_FLEX_SINGLE_TEXT_CHARS, clampTextChars } = require('./aiReplyLimits');
 
@@ -17,13 +18,11 @@ function buildZiweiShareHead(birthData, score, decodedAt) {
     const topicStr = birthData.topic || '本命格局';
     const scoreLabel = score != null && score !== '' && !Number.isNaN(Number(score)) ? String(score) : '--';
     return [
-        '【命運解碼室｜紫微斗數】尊爵版（分享用）',
-        `解盤時間（台北）：${decodedAt}`,
-        `探詢領域：${topicStr}`,
-        `命造參數：【${genderStr}】${calStr} ${birthData.date} ${birthData.time}時`,
-        `綜合運勢指數：${scoreLabel} 分`,
-        '',
-        '────────',
+        '【命運解碼室｜紫微】',
+        `台北 ${decodedAt}`,
+        `領域:${topicStr}`,
+        `命造:${genderStr} ${calStr} ${birthData.date} ${birthData.time}時`,
+        `指數:${scoreLabel}`,
         '',
     ].join('\n');
 }
@@ -70,12 +69,12 @@ function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, 
                     },
                     { type: "separator", color: "#4A148C", margin: "md" },
                     { type: "text", text: "✨ 天命解碼精華：", color: "#F9E498", size: "md", weight: "bold", margin: "md" },
-                    { type: "text", text: clampTextChars(String(resultText || ''), MAX_FLEX_SINGLE_TEXT_CHARS), color: "#E0E0E0", size: "md", wrap: true, margin: "md" }
+                    { type: "text", text: sanitizeForFlexText(clampTextChars(String(resultText || ''), MAX_FLEX_SINGLE_TEXT_CHARS)), color: "#E0E0E0", size: "md", wrap: true, margin: "md" }
                 ]
             },
             footer: {
                 type: "box", layout: "vertical", spacing: "md", paddingAll: "lg",
-                contents: [
+                contents: appendShareButtonToFooterContents([
                     { type: "separator", color: "#4A148C" },
                     {
                         type: "box", layout: "horizontal", margin: "md",
@@ -91,8 +90,7 @@ function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, 
                             { type: "text", text: `${remainPoints} 點`, color: "#FFFFFF", size: "lg", weight: "bold", align: "end" }
                         ]
                     },
-                    lineFlexShareButton(shareUri, { color: '#7B1FA2' })
-                ]
+                ], shareUri, { color: '#7B1FA2' }),
             }
         }
     };

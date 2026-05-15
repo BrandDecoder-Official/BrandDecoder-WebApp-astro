@@ -12,7 +12,8 @@ const { mergeModuleKey } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
     buildLineShareUriFromHeadAndBody,
-    lineFlexShareButton,
+    appendShareButtonToFooterContents,
+    sanitizeForFlexText,
 } = require('./lineOaShare');
 const { MAX_NUMEROLOGY_INTERPRETATION_CHARS, clampTextChars } = require('./aiReplyLimits');
 
@@ -165,14 +166,12 @@ function buildNumerologyShareHead(aiData, fortuneScore, decodedAt) {
     const wealthStr = (aiData.wealthSet || ['—', '—']).join(' · ');
     const scoreLabel = fortuneScore != null && !Number.isNaN(Number(fortuneScore)) ? String(fortuneScore) : '--';
     return [
-        '【命運解碼室｜律動能量】尊爵版（分享用）',
-        `解盤時間（台北）：${decodedAt}`,
-        `核心能量數字：${coreNum}`,
-        `幸運共振組：${luckyStr}`,
-        `財富金鑰組：${wealthStr}`,
-        `今日綜合能量指數：${scoreLabel} 分`,
-        '',
-        '────────',
+        '【命運解碼室｜律動能量】',
+        `台北 ${decodedAt}`,
+        `核心:${coreNum}`,
+        `幸運:${luckyStr}`,
+        `財富:${wealthStr}`,
+        `指數:${scoreLabel}`,
         '',
     ].join('\n');
 }
@@ -235,7 +234,7 @@ function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, new
                         type: "box", layout: "vertical", margin: "xl", backgroundColor: "#1C1C22", cornerRadius: "md", paddingAll: "15px",
                         contents: [
                             { type: "text", text: "✨ 大師指引", color: "#D4AF37", size: "xs", weight: "bold" },
-                            { type: "text", text: safeText, color: "#E0E0E0", size: "sm", wrap: true, lineSpacing: "6px", margin: "md" }
+                            { type: "text", text: sanitizeForFlexText(safeText), color: "#E0E0E0", size: "sm", wrap: true, lineSpacing: "6px", margin: "md" }
                         ]
                     },
                     { type: "separator", color: "#333333", margin: "xl" },
@@ -260,10 +259,9 @@ function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, new
                 layout: 'vertical',
                 spacing: 'md',
                 paddingAll: '12px',
-                contents: [
+                contents: appendShareButtonToFooterContents([
                     { type: 'separator', color: '#333333' },
-                    lineFlexShareButton(shareUri, { color: '#D4AF37' }),
-                ],
+                ], shareUri, { color: '#D4AF37' }),
             },
         },
     };
