@@ -12,8 +12,8 @@
 //   gemini-3.1-pro-preview：約 2026-02-19 起，停用日期待公告。
 //   gemini-3-pro-image-preview：約 2025-11-20 起，停用日期待公告。
 //   gemini-3-flash-preview：約 2025-12-17 起，停用日期待公告。
-//   gemini-3-pro-preview：約 2025-11-18 起，約 2026-03-09 停用 → 建議改 gemini-3.1-pro-preview。
-// 其它：扣點／模型預設集中於 aiSettingsDefaults.js；LINE「每日一抽」實際呼叫模型另見 index.js 的 DAILY_DRAW_AI_MODEL（可環境變數覆寫）。
+//   gemini-3-pro-preview：約 2025-11-18 起，約 2026-03-09 停用 → 建議改 gemini-3.1-pro-preview（後台選單已移除，勿再使用）。
+// 後台可選 ID 僅見 aiModelCatalog.js（未列入官方對照表者不會出現在選單）。
 //
 const express = require('express');
 const router = express.Router();

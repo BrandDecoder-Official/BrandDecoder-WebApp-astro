@@ -11,10 +11,10 @@
  */
 const DEFAULT_AI_SETTINGS = Object.freeze({
     daily: { model: 'gemini-3.1-flash-lite', cost: 0 },
-    tarot: { model: 'gemini-3.1-flash-preview', cost: 10, prompt: '' },
+    tarot: { model: 'gemini-3-flash-preview', cost: 10, prompt: '' },
     ziwei: { model: 'gemini-3.1-pro-preview', cost: 39, prompt: '' },
     numerology: {
-        model: 'gemini-3.1-flash-preview',
+        model: 'gemini-3-flash-preview',
         cost: 10,
         prompt: '# Role: 律動能量大師\n你是一位精通生命靈數與宇宙頻率的導師。',
     },
