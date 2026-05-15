@@ -27,6 +27,7 @@ const {
     LINE_LOADING_EARLY_SECONDS,
     LINE_LOADING_FINAL_SECONDS,
 } = require('./lineLoading');
+const { formatFlexBodyParagraphs } = require('./lineFlexTextFormat');
 
 function buildTarotShareHead(cards, topic, score, decodedAt) {
     const c0 = cards && cards[0] != null ? cards[0] : '—';
@@ -182,7 +183,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             const textMatch = rawAiText.match(/【解析】[：:]\s*([\s\S]*)/);
             if (scoreMatch) aiData.score = parseInt(scoreMatch[1], 10);
             if (textMatch) aiData.text = textMatch[1].trim(); else aiData.text = rawAiText.replace(/【分數】[：:]\s*\d+/g, '').trim();
-            aiData.text = clampTextChars(aiData.text, MAX_TAROT_ZIWEI_BODY_CHARS);
+            aiData.text = clampTextChars(formatFlexBodyParagraphs(aiData.text), MAX_TAROT_ZIWEI_BODY_CHARS);
 
             await recordDivinationLog({
                 userId, userName: userData.displayName, type: 'tarot', topic, cards, summary: `塔羅解碼：領域【${topic}】`,

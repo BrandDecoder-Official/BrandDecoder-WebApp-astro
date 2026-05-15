@@ -22,6 +22,7 @@ const {
     LINE_LOADING_EARLY_SECONDS,
     LINE_LOADING_FINAL_SECONDS,
 } = require('./lineLoading');
+const { formatFlexBodyParagraphs } = require('./lineFlexTextFormat');
 
 /** 表頭至「────────」後換行為止；正文另傳，避免截斷時誤傷表頭 */
 function buildZiweiShareHead(birthData, score, decodedAt) {
@@ -175,7 +176,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 const textMatch = rawAiText.match(/【解析】[：:]\s*([\s\S]*)/);
                 if (scoreMatch) aiData.score = parseInt(scoreMatch[1], 10);
                 if (textMatch) aiData.text = textMatch[1].trim(); else aiData.text = rawAiText.replace(/【分數】[：:]\s*\d+/g, '').trim();
-                aiData.text = clampTextChars(aiData.text, MAX_TAROT_ZIWEI_BODY_CHARS);
+                aiData.text = clampTextChars(formatFlexBodyParagraphs(aiData.text), MAX_TAROT_ZIWEI_BODY_CHARS);
 
                 await userRef.set({ points: FieldValue.increment(-aiConfig.cost), lastDivination: FieldValue.serverTimestamp() }, { merge: true });
                 const remainPoints = currentPoints - aiConfig.cost;

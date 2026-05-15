@@ -1,6 +1,7 @@
 'use strict';
 
 const { MAX_NUMEROLOGY_INTERPRETATION_CHARS, clampTextChars } = require('./aiReplyLimits');
+const { formatFlexBodyParagraphs } = require('./lineFlexTextFormat');
 
 const CORE_MASTER_NUMBERS = new Set([11, 22, 33]);
 
@@ -130,6 +131,8 @@ function parseNumerologyFromAi(rawText) {
         }
     }
     if (interpretation.length < 60) return null;
+
+    interpretation = formatFlexBodyParagraphs(interpretation);
 
     return {
         coreNumber,
