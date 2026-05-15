@@ -24,14 +24,15 @@ function buildTarotZiweiOutputSuffix(focusTopic) {
 4. 探詢領域「${topic}」須貫穿全文論述。`;
 }
 
-/** 律動能量：後台 Prompt 已含 JSON 欄位說明，此處只補技術約束 */
+/** 律動能量：數字與解讀規則在 Firestore Prompt；此處僅技術格式 */
 function buildNumerologyOutputSuffix() {
     return `
 
-🚨【系統輸出格式】(技術層，與上方 Role 並存；若有衝突以此段為準)
-- 僅輸出單一 JSON 物件，勿 \`\`\`json 或任何 Markdown 包裝，勿前後贅語。
-- interpretation 欄位不得超過 ${MAX_NUMEROLOGY_INTERPRETATION_CHARS} 字（含標點與換行）；此為上限，依分析需要撰寫，不必寫滿；須符合上方「大師指引」與三位一體解碼要求。
-- coreNumber、luckySet、wealthSet、score 等欄位規則依上方「生成規則」。`;
+🚨【系統輸出格式】(技術層；與上方 Role／生成規則並存，衝突時以此段為準)
+- 僅輸出單一 JSON 物件，勿 \`\`\`json 或 Markdown，勿前後贅語。
+- 鍵名固定：coreNumber、luckySet、wealthSet、score、interpretation（缺一不可）。
+- luckySet 為長度 3 的整數陣列；wealthSet 為長度 2 的整數陣列。
+- interpretation 不得超過 ${MAX_NUMEROLOGY_INTERPRETATION_CHARS} 字（含標點與換行）；上限而非目標，請控制篇幅避免 JSON 被截斷。`;
 }
 
 module.exports = {

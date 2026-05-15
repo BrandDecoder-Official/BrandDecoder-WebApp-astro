@@ -17,6 +17,11 @@ const {
 } = require('./lineFlexTypography');
 const { MAX_TAROT_ZIWEI_BODY_CHARS, MAX_FLEX_SINGLE_TEXT_CHARS, clampTextChars } = require('./aiReplyLimits');
 const { buildTarotZiweiOutputSuffix } = require('./aiPromptEnvelope');
+const {
+    startLineChatLoading,
+    LINE_LOADING_EARLY_SECONDS,
+    LINE_LOADING_FINAL_SECONDS,
+} = require('./lineLoading');
 
 /** 表頭至「────────」後換行為止；正文另傳，避免截斷時誤傷表頭 */
 function buildZiweiShareHead(birthData, score, decodedAt) {
@@ -130,12 +135,8 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
             let isDone = false;
             let timer1, timer3;
 
-            const showLoading = async () => {
-                await fetch('https://api.line.me/v2/bot/chat/loading/start', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}` },
-                    body: JSON.stringify({ chatId: userId, loadingSeconds: 35 })
-                }).catch(() => {});
-            };
+            const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
+                startLineChatLoading(userId, seconds);
 
             try {
                 await client.pushMessage(userId, { type: 'text', text: `🏮 已排定 ${userName} 的星盤，大師正在起盤推演...` });
@@ -151,7 +152,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 timer3 = setTimeout(async () => {
                     if (!isDone) {
                         await client.pushMessage(userId, { type: 'text', text: `⏳ 星象軌跡極為錯綜複雜，正在進行最後的命盤校準...` });
-                        await showLoading(); 
+                        await showLoading(LINE_LOADING_FINAL_SECONDS);
                     }
                 }, 15000);
 

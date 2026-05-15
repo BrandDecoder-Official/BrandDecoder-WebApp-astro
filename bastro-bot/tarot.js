@@ -22,6 +22,11 @@ const {
     clampTextChars,
 } = require('./aiReplyLimits');
 const { buildTarotZiweiOutputSuffix } = require('./aiPromptEnvelope');
+const {
+    startLineChatLoading,
+    LINE_LOADING_EARLY_SECONDS,
+    LINE_LOADING_FINAL_SECONDS,
+} = require('./lineLoading');
 
 function buildTarotShareHead(cards, topic, score, decodedAt) {
     const c0 = cards && cards[0] != null ? cards[0] : '—';
@@ -114,12 +119,8 @@ function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cos
 // 3. 匯出塔羅牌主邏輯處理函數
 exports.processTarotDraw = async function(event, userId, userData, userRef, db, client, genAI, FieldValue, recordDivinationLog) {
     
-    const showLoading = async () => {
-        await fetch('https://api.line.me/v2/bot/chat/loading/start', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}` },
-            body: JSON.stringify({ chatId: userId, loadingSeconds: 35 }) 
-        }).catch(() => {});
-    };
+    const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
+        startLineChatLoading(userId, seconds);
 
     // Webhook 模式：立刻用 replyToken 回應
     await client.replyMessage(event.replyToken, { 
@@ -150,7 +151,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             timer3 = setTimeout(async () => {
                 if (!isDone) {
                     await client.pushMessage(userId, { type: 'text', text: '🧘‍♂️ 宇宙訊息量龐大，大師正在為您進行最後的統整與收斂...' });
-                    await showLoading(); 
+                    await showLoading(LINE_LOADING_FINAL_SECONDS);
                 }
             }, 15000);
 

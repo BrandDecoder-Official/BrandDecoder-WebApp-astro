@@ -23,13 +23,13 @@ const {
     tarotStylePointsFooterRows,
 } = require('./lineFlexTypography');
 const { MAX_NUMEROLOGY_INTERPRETATION_CHARS, clampTextChars } = require('./aiReplyLimits');
+const { parseNumerologyFromAi } = require('./numerologyMatrix');
+const { buildNumerologyOutputSuffix } = require('./aiPromptEnvelope');
 const {
-    rollNumerologyMatrix,
-    buildNumerologyMatrixBlock,
-    buildNumerologyInterpretationSuffix,
-    parseInterpretationFromAi,
-    normalizeNumerologyPayload,
-} = require('./numerologyMatrix');
+    startLineChatLoading,
+    LINE_LOADING_EARLY_SECONDS,
+    LINE_LOADING_FINAL_SECONDS,
+} = require('./lineLoading');
 
 const db = getFirestore('astro-bot-db');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -65,12 +65,8 @@ router.post('/generate', async (req, res) => {
             let isDone = false;
             let timer1, timer3;
 
-            const showLoading = async () => {
-                await fetch('https://api.line.me/v2/bot/chat/loading/start', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.LINE_CHANNEL_ACCESS_TOKEN}` },
-                    body: JSON.stringify({ chatId: userId, loadingSeconds: 35 })
-                }).catch(() => {});
-            };
+            const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
+                startLineChatLoading(userId, seconds);
 
             try {
                 await lineClient.pushMessage(userId, { type: 'text', text: `✨ 收到 ${userName} 的請求，大師正在為您連結宇宙高維度頻率...` });
@@ -86,12 +82,11 @@ router.post('/generate', async (req, res) => {
                 timer3 = setTimeout(async () => {
                     if (!isDone) {
                         await lineClient.pushMessage(userId, { type: 'text', text: `💫 數字頻率正在共振，大師為您提取最終的高維度指引...` });
-                        await showLoading();
+                        await showLoading(LINE_LOADING_FINAL_SECONDS);
                     }
                 }, 15000);
 
                 const aiStartTime = Date.now();
-                const matrix = rollNumerologyMatrix();
                 const model = genAI.getGenerativeModel({
                     model: aiConfig.model,
                     generationConfig: {
@@ -101,16 +96,20 @@ router.post('/generate', async (req, res) => {
                     },
                 });
 
-                const finalPrompt = `${aiConfig.prompt}${buildNumerologyMatrixBlock(matrix)}${buildNumerologyInterpretationSuffix()}`;
+                const finalPromptBase = `${aiConfig.prompt}${buildNumerologyOutputSuffix()}`;
+                const retryPromptSuffix =
+                    '\n\n【重試】上次 JSON 無法解析。請輸出完整合法 JSON（含 coreNumber、luckySet、wealthSet、score、interpretation），interpretation 可適度精簡以確保 JSON 完整閉合。';
 
-                let interpretation = null;
+                let aiData = null;
                 let aiResponse;
                 let lastRaw = '';
                 for (let attempt = 1; attempt <= 2; attempt++) {
+                    const finalPrompt =
+                        attempt === 1 ? finalPromptBase : `${finalPromptBase}${retryPromptSuffix}`;
                     aiResponse = await model.generateContent(finalPrompt);
                     lastRaw = aiResponse.response.text();
-                    interpretation = parseInterpretationFromAi(lastRaw);
-                    if (interpretation) break;
+                    aiData = parseNumerologyFromAi(lastRaw);
+                    if (aiData) break;
 
                     const finishReason =
                         aiResponse.response.candidates &&
@@ -126,18 +125,13 @@ router.post('/generate', async (req, res) => {
                 clearTimeout(timer1);
                 clearTimeout(timer3);
 
-                if (!interpretation) {
+                if (!aiData) {
                     await lineClient.pushMessage(userId, {
                         type: 'text',
                         text: '⚠️ 律動能量解碼未能完成（AI 回覆格式異常）。本次不會扣除您的靈力，請稍後再試。',
                     });
                     return;
                 }
-
-                const aiData = normalizeNumerologyPayload(
-                    matrix,
-                    clampTextChars(interpretation, MAX_NUMEROLOGY_INTERPRETATION_CHARS)
-                );
 
                 const fortuneScore = aiData.score;
                 const aiLatency = Date.now() - aiStartTime;
