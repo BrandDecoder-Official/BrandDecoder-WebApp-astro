@@ -39,11 +39,14 @@ function buildZiweiShareHead(birthData, score, decodedAt) {
 }
 
 const LINE_SHARE_TRUNC_SUFFIX = '\n…(續見官方帳號對話)';
+/** 分享文末固定附上（納入 URI 長度計算）；接收方點擊可加官方帳號 */
+const LINE_OA_INVITE_FOOTER =
+    '\n\n加入「命運解碼室」LINE OA（點擊加好友）：\nhttps://lin.ee/yObB3Ga';
 
 function buildLineShareUriFromHeadAndBody(head, body) {
     const bodyTrim = String(body || '').trim();
-    const closing = '\n────────';
-    const plainFull = `${head}${bodyTrim}${closing}`;
+    const postBody = `\n────────${LINE_OA_INVITE_FOOTER}`;
+    const plainFull = `${head}${bodyTrim}${postBody}`;
     const fullUri = LINE_SHARE_TEXT_BASE + encodeURIComponent(plainFull);
     if (fullUri.length <= LINE_SHARE_URI_MAX_LENGTH) return fullUri;
 
@@ -54,7 +57,7 @@ function buildLineShareUriFromHeadAndBody(head, body) {
         const mid = Math.floor((lo + hi) / 2);
         const slice = bodyTrim.slice(0, mid);
         const truncated = mid < bodyTrim.length;
-        const candidate = `${head}${slice}${truncated ? LINE_SHARE_TRUNC_SUFFIX : ''}${closing}`;
+        const candidate = `${head}${slice}${truncated ? LINE_SHARE_TRUNC_SUFFIX : ''}${postBody}`;
         const uri = LINE_SHARE_TEXT_BASE + encodeURIComponent(candidate);
         if (uri.length <= LINE_SHARE_URI_MAX_LENGTH) {
             best = mid;
@@ -65,7 +68,7 @@ function buildLineShareUriFromHeadAndBody(head, body) {
     }
     const slice = bodyTrim.slice(0, best);
     const truncated = best < bodyTrim.length;
-    const candidate = `${head}${slice}${truncated ? LINE_SHARE_TRUNC_SUFFIX : ''}${closing}`;
+    const candidate = `${head}${slice}${truncated ? LINE_SHARE_TRUNC_SUFFIX : ''}${postBody}`;
     return LINE_SHARE_TEXT_BASE + encodeURIComponent(candidate);
 }
 
