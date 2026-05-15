@@ -22,7 +22,11 @@ const {
     tarotStyleHeaderBox,
     tarotStylePointsFooterRows,
 } = require('./lineFlexTypography');
-const { MAX_NUMEROLOGY_INTERPRETATION_CHARS, clampTextChars } = require('./aiReplyLimits');
+const {
+    MAX_NUMEROLOGY_INTERPRETATION_CHARS,
+    MAX_AI_OUTPUT_TOKENS,
+    clampTextChars,
+} = require('./aiReplyLimits');
 const { parseNumerologyFromAi } = require('./numerologyMatrix');
 const { buildNumerologyOutputSuffix } = require('./aiPromptEnvelope');
 const {
@@ -91,7 +95,7 @@ router.post('/generate', async (req, res) => {
                     model: aiConfig.model,
                     generationConfig: {
                         temperature: 0.75,
-                        maxOutputTokens: 2048,
+                        maxOutputTokens: MAX_AI_OUTPUT_TOKENS,
                         responseMimeType: 'application/json',
                     },
                 });

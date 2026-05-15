@@ -15,7 +15,12 @@ const {
     FLEX_PAD,
     tarotStylePointsFooterRows,
 } = require('./lineFlexTypography');
-const { MAX_TAROT_ZIWEI_BODY_CHARS, MAX_FLEX_SINGLE_TEXT_CHARS, clampTextChars } = require('./aiReplyLimits');
+const {
+    MAX_TAROT_ZIWEI_BODY_CHARS,
+    MAX_FLEX_SINGLE_TEXT_CHARS,
+    MAX_AI_OUTPUT_TOKENS,
+    clampTextChars,
+} = require('./aiReplyLimits');
 const { buildTarotZiweiOutputSuffix } = require('./aiPromptEnvelope');
 const {
     startLineChatLoading,
@@ -162,7 +167,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 
                 const dynamicModel = genAI.getGenerativeModel({
                     model: aiConfig.model,
-                    generationConfig: { temperature: 0.7, maxOutputTokens: 1400 },
+                    generationConfig: { temperature: 0.7, maxOutputTokens: MAX_AI_OUTPUT_TOKENS },
                 });
                 const result = await dynamicModel.generateContent(finalPrompt);
                 const rawAiText = result.response.text().trim();

@@ -19,6 +19,7 @@ const {
 const {
     MAX_TAROT_ZIWEI_BODY_CHARS,
     MAX_FLEX_SINGLE_TEXT_CHARS,
+    MAX_AI_OUTPUT_TOKENS,
     clampTextChars,
 } = require('./aiReplyLimits');
 const { buildTarotZiweiOutputSuffix } = require('./aiPromptEnvelope');
@@ -168,7 +169,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
 
             const dynamicModel = genAI.getGenerativeModel({
                 model: tarotConfig.model,
-                generationConfig: { temperature: 0.7, maxOutputTokens: 1400 },
+                generationConfig: { temperature: 0.7, maxOutputTokens: MAX_AI_OUTPUT_TOKENS },
             });
             const result = await dynamicModel.generateContent(prompt);
             const rawAiText = result.response.text().trim();

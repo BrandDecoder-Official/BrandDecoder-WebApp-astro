@@ -16,6 +16,12 @@ const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 800;
 const MAX_FLEX_SINGLE_TEXT_CHARS = MAX_TAROT_ZIWEI_BODY_CHARS;
 
 /**
+ * Gemini 單次「輸出」token 上限（硬切，與 Prompt 字數、clamp 不同道）。
+ * 扣點服務寧鬆勿緊，避免 MAX_TOKENS 半路截斷；實際篇幅仍由 Prompt／clamp 控制。
+ */
+const MAX_AI_OUTPUT_TOKENS = 4096;
+
+/**
  * @param {string} str
  * @param {number} max
  * @param {{ addEllipsis?: boolean }} [opts]
@@ -32,5 +38,6 @@ module.exports = {
     MAX_TAROT_ZIWEI_BODY_CHARS,
     MAX_NUMEROLOGY_INTERPRETATION_CHARS,
     MAX_FLEX_SINGLE_TEXT_CHARS,
+    MAX_AI_OUTPUT_TOKENS,
     clampTextChars,
 };
