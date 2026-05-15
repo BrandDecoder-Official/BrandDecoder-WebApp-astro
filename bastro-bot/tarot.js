@@ -12,7 +12,7 @@ majorArcanaMap.forEach(str => { const [n,e,k] = str.split('|'); tarotMap[n] = { 
 suitsMap.forEach(suit => { suit.k.forEach((kw, i) => { const ranks = ["一","二","三","四","五","六","七","八","九","十","侍者","騎士","王后","國王"]; tarotMap[`${suit.s}${ranks[i]}`] = { emoji: suit.e, keyword: kw }; }); });
 
 // 2. 塔羅牌尊爵版 Flex Message 產生器
-function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cost = 10) {
+function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cost = 15) {
     const cardBoxes = cards.map((cardName, index) => {
         const labels = ["過去", "現在", "未來"];
         const cardData = tarotMap[cardName] || { emoji: "🃏", keyword: "未知" }; 

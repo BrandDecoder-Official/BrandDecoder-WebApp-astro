@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch(apiErr) { 
             console.warn("無法取得動態定價", apiErr); 
             const costTextEl = document.querySelector('.cost-text');
-            if(costTextEl) costTextEl.innerText = `(消耗 10 靈力值)`;
+            if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 靈力值)`;
         }
 
         // 隱藏「同步中」畫面，顯示主按鈕畫面

@@ -237,7 +237,7 @@
                         </div>
                         <div style="flex: 1; min-width: 100px;">
                             <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">扣除靈力 (Cost)</label>
-                            <input type="number" id="tarot-cost" value="10" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                            <input type="number" id="tarot-cost" value="15" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
                         </div>
                     </div>
                     <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">系統指令 (System Prompt)</label>
@@ -255,7 +255,7 @@
                         </div>
                         <div style="flex: 1; min-width: 100px;">
                             <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">扣除靈力 (Cost)</label>
-                            <input type="number" id="ziwei-cost" value="39" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                            <input type="number" id="ziwei-cost" value="50" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
                         </div>
                     </div>
                     <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">系統指令 (System Prompt)</label>
@@ -671,12 +671,12 @@
                 const payload = {
                     tarot: {
                         model: document.getElementById('tarot-model').value,
-                        cost: parseInt(document.getElementById('tarot-cost').value) || 10,
+                        cost: parseInt(document.getElementById('tarot-cost').value) || 15,
                         prompt: document.getElementById('tarot-prompt').value
                     },
                     ziwei: {
                         model: document.getElementById('ziwei-model').value,
-                        cost: parseInt(document.getElementById('ziwei-cost').value) || 39,
+                        cost: parseInt(document.getElementById('ziwei-cost').value) || 50,
                         prompt: document.getElementById('ziwei-prompt').value
                     },
                     daily: {

@@ -556,8 +556,8 @@
         document.getElementById('submitBtn').addEventListener('click', async () => {
             if (isSubmitting) return;
 
-            // 嚴格判斷：只要不是 undefined 且是有效數字，就用後台的；否則才用 10
-            const currentCost = (window.tarotCost !== undefined && !isNaN(window.tarotCost)) ? window.tarotCost : 10;
+            // 嚴格判斷：只要不是 undefined 且是有效數字，就用後台的；否則才用 15（與 aiSettingsDefaults 塔羅預設扣點一致）
+            const currentCost = (window.tarotCost !== undefined && !isNaN(window.tarotCost)) ? window.tarotCost : 15;
             const desc = `解開三張命運之牌的深層啟示。<br>針對領域：【${currentTopic}】`;
 
             // 🌟 呼叫沉浸式確認彈窗
