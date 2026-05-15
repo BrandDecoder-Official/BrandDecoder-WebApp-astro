@@ -9,6 +9,11 @@ const { Client } = require('@line/bot-sdk');
 const { recordDivinationLog } = require('./logger');
 const fetch = require('node-fetch');
 const { mergeModuleKey } = require('./aiSettingsDefaults');
+const {
+    formatTaipeiDateTimeLine,
+    buildLineShareUriFromHeadAndBody,
+    lineFlexShareButton,
+} = require('./lineOaShare');
 
 const db = getFirestore('astro-bot-db');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -122,7 +127,8 @@ router.post('/generate', async (req, res) => {
                     points_change: -cost, cost: cost, fortune_score: fortuneScore, timestamp: FieldValue.serverTimestamp()
                 });
 
-                const flexMessage = generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, newBalance);
+                const decodedAt = formatTaipeiDateTimeLine(new Date());
+                const flexMessage = generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, newBalance, decodedAt);
                 await lineClient.pushMessage(userId, flexMessage);
 
             } catch (error) {
@@ -138,7 +144,28 @@ router.post('/generate', async (req, res) => {
     }
 });
 
-function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, newBalance) {
+function buildNumerologyShareHead(aiData, fortuneScore, decodedAt) {
+    const coreNum = aiData.coreNumber != null && aiData.coreNumber !== '' ? String(aiData.coreNumber) : '—';
+    const luckyStr = (aiData.luckySet || ['—', '—', '—']).join(' · ');
+    const wealthStr = (aiData.wealthSet || ['—', '—']).join(' · ');
+    const scoreLabel = fortuneScore != null && !Number.isNaN(Number(fortuneScore)) ? String(fortuneScore) : '--';
+    return [
+        '【命運解碼室｜律動能量】尊爵版（分享用）',
+        `解盤時間（台北）：${decodedAt}`,
+        `核心能量數字：${coreNum}`,
+        `幸運共振組：${luckyStr}`,
+        `財富金鑰組：${wealthStr}`,
+        `今日綜合能量指數：${scoreLabel} 分`,
+        '',
+        '────────',
+        '',
+    ].join('\n');
+}
+
+function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, newBalance, decodedAt) {
+    const shareHead = buildNumerologyShareHead(aiData, fortuneScore, decodedAt);
+    const shareBody = String(aiData.interpretation || '').trim();
+    const shareUri = buildLineShareUriFromHeadAndBody(shareHead, shareBody);
     const safeText = String(aiData.interpretation || "宇宙能量正在匯聚中...").substring(0, 1900);
     const luckyStr = (aiData.luckySet || ['--','--','--']).join(' · ');
     const wealthStr = (aiData.wealthSet || ['--','--']).join(' · ');
@@ -206,7 +233,9 @@ function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, new
                             { type: "text", text: "🔋 剩餘靈力", color: "#F9E498", size: "sm", flex: 1 },
                             { type: "text", text: `${newBalance} 點`, color: "#FFFFFF", size: "lg", weight: "bold", align: "end", flex: 1 }
                         ]
-                    }
+                    },
+                    { type: "separator", color: "#333333", margin: "md" },
+                    lineFlexShareButton(shareUri, { color: '#D4AF37' })
                 ]
             }
         }

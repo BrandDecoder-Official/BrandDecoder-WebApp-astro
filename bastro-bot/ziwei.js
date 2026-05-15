@@ -3,22 +3,11 @@
 // ==========================================
 const fetch = require('node-fetch');
 const { mergeModuleKey } = require('./aiSettingsDefaults');
-
-const LINE_SHARE_TEXT_BASE = 'https://line.me/R/share?text=';
-/** LINE `action.uri` 長度上限依官方文件（常見 2000）；超過則截斷正文並附提示 */
-const LINE_SHARE_URI_MAX_LENGTH = 2000;
-
-function formatTaipeiDateTimeLine(date) {
-    return date.toLocaleString('zh-TW', {
-        timeZone: 'Asia/Taipei',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-    });
-}
+const {
+    formatTaipeiDateTimeLine,
+    buildLineShareUriFromHeadAndBody,
+    lineFlexShareButton,
+} = require('./lineOaShare');
 
 /** 表頭至「────────」後換行為止；正文另傳，避免截斷時誤傷表頭 */
 function buildZiweiShareHead(birthData, score, decodedAt) {
@@ -36,40 +25,6 @@ function buildZiweiShareHead(birthData, score, decodedAt) {
         '────────',
         '',
     ].join('\n');
-}
-
-const LINE_SHARE_TRUNC_SUFFIX = '\n…(續見官方帳號對話)';
-/** 分享文末固定附上（納入 URI 長度計算）；接收方點擊可加官方帳號 */
-const LINE_OA_INVITE_FOOTER =
-    '\n\n加入「命運解碼室」LINE OA（點擊加好友）：\nhttps://lin.ee/yObB3Ga';
-
-function buildLineShareUriFromHeadAndBody(head, body) {
-    const bodyTrim = String(body || '').trim();
-    const postBody = `\n────────${LINE_OA_INVITE_FOOTER}`;
-    const plainFull = `${head}${bodyTrim}${postBody}`;
-    const fullUri = LINE_SHARE_TEXT_BASE + encodeURIComponent(plainFull);
-    if (fullUri.length <= LINE_SHARE_URI_MAX_LENGTH) return fullUri;
-
-    let lo = 0;
-    let hi = bodyTrim.length;
-    let best = 0;
-    while (lo <= hi) {
-        const mid = Math.floor((lo + hi) / 2);
-        const slice = bodyTrim.slice(0, mid);
-        const truncated = mid < bodyTrim.length;
-        const candidate = `${head}${slice}${truncated ? LINE_SHARE_TRUNC_SUFFIX : ''}${postBody}`;
-        const uri = LINE_SHARE_TEXT_BASE + encodeURIComponent(candidate);
-        if (uri.length <= LINE_SHARE_URI_MAX_LENGTH) {
-            best = mid;
-            lo = mid + 1;
-        } else {
-            hi = mid - 1;
-        }
-    }
-    const slice = bodyTrim.slice(0, best);
-    const truncated = best < bodyTrim.length;
-    const candidate = `${head}${slice}${truncated ? LINE_SHARE_TRUNC_SUFFIX : ''}${postBody}`;
-    return LINE_SHARE_TEXT_BASE + encodeURIComponent(candidate);
 }
 
 // 1. 紫微斗數尊爵版 Flex Message 產生器
@@ -135,13 +90,7 @@ function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, 
                             { type: "text", text: `${remainPoints} 點`, color: "#FFFFFF", size: "lg", weight: "bold", align: "end" }
                         ]
                     },
-                    {
-                        type: "button",
-                        style: "primary",
-                        color: "#7B1FA2",
-                        height: "sm",
-                        action: { type: "uri", label: "📤 分享至 LINE", uri: shareUri },
-                    }
+                    lineFlexShareButton(shareUri, { color: '#7B1FA2' })
                 ]
             }
         }

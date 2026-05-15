@@ -3,6 +3,28 @@
 // ==========================================
 const fetch = require('node-fetch');
 const { mergeModuleKey } = require('./aiSettingsDefaults');
+const {
+    formatTaipeiDateTimeLine,
+    buildLineShareUriFromHeadAndBody,
+    lineFlexShareButton,
+} = require('./lineOaShare');
+
+function buildTarotShareHead(cards, topic, score, decodedAt) {
+    const c0 = cards && cards[0] != null ? cards[0] : '—';
+    const c1 = cards && cards[1] != null ? cards[1] : '—';
+    const c2 = cards && cards[2] != null ? cards[2] : '—';
+    const scoreLabel = score != null && score !== '' && !Number.isNaN(Number(score)) ? String(score) : '--';
+    return [
+        '【命運解碼室｜塔羅密訊】尊爵版（分享用）',
+        `解盤時間（台北）：${decodedAt}`,
+        `探尋領域：【${topic}】`,
+        `牌陣：過去【${c0}】→ 現在【${c1}】→ 未來【${c2}】`,
+        `靈能指數：${scoreLabel} 分`,
+        '',
+        '────────',
+        '',
+    ].join('\n');
+}
 
 // 1. 塔羅牌圖鑑與字典
 const majorArcanaMap = [ "愚者|🌀|無限潛能", "魔術師|🪄|顯化奇蹟", "女祭司|🌙|直覺奧秘", "女皇|👑|豐盛孕育", "皇帝|🦅|秩序建立", "教皇|⛪|精神指引", "戀人|👩‍❤️‍👨|靈魂契合", "戰車|🐎|意志征服", "力量|🦁|柔性堅韌", "隱士|🏮|內在尋道", "命運之輪|🎡|業力輪轉", "正義|⚖️|平衡裁決", "倒吊人|🪢|換位思考", "死神|🦋|毀滅重生", "節制|🌈|和諧煉金", "惡魔|⛓️|物質枷鎖", "高塔|⚡|粉碎重建", "星星|✨|希望指引", "月亮|🐺|潛意識恐懼", "太陽|☀️|生命喜悅", "審判|🎺|靈魂覺醒", "世界|🌍|圓滿達成" ];
@@ -12,7 +34,7 @@ majorArcanaMap.forEach(str => { const [n,e,k] = str.split('|'); tarotMap[n] = { 
 suitsMap.forEach(suit => { suit.k.forEach((kw, i) => { const ranks = ["一","二","三","四","五","六","七","八","九","十","侍者","騎士","王后","國王"]; tarotMap[`${suit.s}${ranks[i]}`] = { emoji: suit.e, keyword: kw }; }); });
 
 // 2. 塔羅牌尊爵版 Flex Message 產生器
-function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cost = 15) {
+function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cost = 15, decodedAt) {
     const cardBoxes = cards.map((cardName, index) => {
         const labels = ["過去", "現在", "未來"];
         const cardData = tarotMap[cardName] || { emoji: "🃏", keyword: "未知" }; 
@@ -41,6 +63,9 @@ function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cos
         };
     });
 
+    const shareHead = buildTarotShareHead(cards, topic, score, decodedAt);
+    const shareUri = buildLineShareUriFromHeadAndBody(shareHead, aiText);
+
     return {
         type: "flex", altText: "您的靈能解碼報告已具現化",
         contents: {
@@ -67,7 +92,8 @@ function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cos
                 contents: [
                     { type: "separator", color: "#333333" },
                     { type: "box", layout: "horizontal", margin: "md", contents: [ { type: "text", text: "⚡ 本次消耗靈力", color: "#A0A0A0", size: "md", align: "start" }, { type: "text", text: `- ${cost} 點`, color: "#FF6B6B", size: "md", weight: "bold", align: "end" } ] },
-                    { type: "box", layout: "horizontal", contents: [ { type: "text", text: "🔋 剩餘靈力餘額", color: "#D4AF37", size: "md", align: "start" }, { type: "text", text: `${remainPoints} 點`, color: "#F9E498", size: "lg", weight: "bold", align: "end" } ] }
+                    { type: "box", layout: "horizontal", contents: [ { type: "text", text: "🔋 剩餘靈力餘額", color: "#D4AF37", size: "md", align: "start" }, { type: "text", text: `${remainPoints} 點`, color: "#F9E498", size: "lg", weight: "bold", align: "end" } ] },
+                    lineFlexShareButton(shareUri, { color: '#B8860B' })
                 ]
             }
         }
@@ -146,7 +172,16 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
                 points_change: -tarotConfig.cost, cost: tarotConfig.cost, aiText: aiData.text, fortune_score: aiData.score, timestamp: FieldValue.serverTimestamp()
             });
 
-            let flexMessage = generateTarotFlexMessage(cards, remainPoints, aiData.text, topic, aiData.score, tarotConfig.cost);
+            const decodedAt = formatTaipeiDateTimeLine(new Date());
+            let flexMessage = generateTarotFlexMessage(
+                cards,
+                remainPoints,
+                aiData.text,
+                topic,
+                aiData.score,
+                tarotConfig.cost,
+                decodedAt
+            );
             await client.pushMessage(userId, flexMessage);
 
         } catch (aiError) {
