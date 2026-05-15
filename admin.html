@@ -224,6 +224,7 @@
 
             <div id="tab-ai" class="tab-content">
                 <h3 style="margin-top: 0; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 10px;">🧠 服務模型與定價控制台</h3>
+                <p id="ai-brain-release" style="font-size: 12px; color: #666; margin: 0 0 14px 0; line-height: 1.55;"></p>
                 
                 <div style="background: #f4f0ff; padding: 20px; border-radius: 8px; border: 1px solid #d1c4e9; margin-bottom: 20px;">
                     <h4 style="margin-top: 0; color: #512da8; margin-bottom: 15px;">🔮 塔羅密訊 (Tarot)</h4>
@@ -552,19 +553,19 @@
             }
         };
 
-        let __aiModelOptionsCache = null;
+        let __aiModelCatalogResponse = null;
 
         async function ensureAiModelOptionsLoaded() {
-            if (__aiModelOptionsCache) return __aiModelOptionsCache;
-            if (!API_URL) return [];
+            if (__aiModelCatalogResponse) return __aiModelCatalogResponse;
+            if (!API_URL) return { options: [] };
             const r = await fetch(`${API_URL}/api/public/ai-model-options`);
             const j = await r.json();
             if (!j.success || !Array.isArray(j.options)) {
                 console.warn('ai-model-options 回應異常', j);
-                return [];
+                return { options: [] };
             }
-            __aiModelOptionsCache = j.options;
-            return __aiModelOptionsCache;
+            __aiModelCatalogResponse = j;
+            return __aiModelCatalogResponse;
         }
 
         function fillModelSelectFromCatalog(selectId, options) {
@@ -597,7 +598,14 @@
             if (!currentIdToken) return;
             if (!API_URL) return;
             try {
-                const options = await ensureAiModelOptionsLoaded();
+                const catalog = await ensureAiModelOptionsLoaded();
+                const options = catalog.options || [];
+                const relEl = document.getElementById('ai-brain-release');
+                if (relEl && (catalog.release || catalog.lastReviewed)) {
+                    const pol = catalog.reviewPolicy ? ` ${catalog.reviewPolicy}` : '';
+                    relEl.textContent = `大腦釘選版次 ${catalog.release || '—'} · 覆核日 ${catalog.lastReviewed || '—'} ·${pol}`;
+                }
+
                 if (options.length > 0) {
                     ['tarot-model', 'ziwei-model', 'daily-model', 'numerology-model'].forEach((id) => {
                         fillModelSelectFromCatalog(id, options);

@@ -7,10 +7,11 @@
  * - 文件不存在、或某子鍵（如 tarot）尚未寫入時，由此處補齊，避免 tarot / ziwei / numerology / admin 各寫一套。
  * - Firestore 連線失敗：各 API 應回 500，不得把此物件當成「已從 DB 讀到」回傳。
  * - 後台「模型下拉」顯示名稱／可選 ID 另見 aiModelCatalog.js（GET /api/public/ai-model-options）。
+ * - 變更預設 model 時：該 `value` 須列在 `AI_MODEL_OPTIONS`，否則後台不易選到一致 ID；並請递增 `aiModelCatalog.js` 的 AI_BRAIN_RELEASE。
  */
 const DEFAULT_AI_SETTINGS = Object.freeze({
     daily: { model: 'gemini-3.1-flash-lite', cost: 0 },
-    tarot: { model: 'gemini-3-flash-preview', cost: 10, prompt: '' },
+    tarot: { model: 'gemini-3.1-flash-preview', cost: 10, prompt: '' },
     ziwei: { model: 'gemini-3.1-pro-preview', cost: 39, prompt: '' },
     numerology: {
         model: 'gemini-3.1-flash-preview',

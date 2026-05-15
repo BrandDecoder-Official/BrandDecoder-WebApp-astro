@@ -20,7 +20,12 @@ const db = getFirestore('astro-bot-db');
 const adminRouter = require('./admin');
 const adminAiRouter = require('./admin_ai');
 const { mergeModuleKey, mergeAiSettingsFromDoc, DEFAULT_AI_SETTINGS } = require('./aiSettingsDefaults');
-const { AI_MODEL_OPTIONS } = require('./aiModelCatalog');
+const {
+    AI_MODEL_OPTIONS,
+    AI_BRAIN_RELEASE,
+    AI_BRAIN_LAST_REVIEWED,
+    AI_BRAIN_REVIEW_POLICY,
+} = require('./aiModelCatalog');
 const adminKpiRouter = require('./admin_kpi');
 const { recordDivinationLog } = require('./logger'); 
 const numerologyRouter = require('./numerology');
@@ -438,9 +443,15 @@ app.get('/api/public/config/ai', async (req, res) => {
     } catch (error) { res.status(500).json({ success: false, msg: "讀取公開定價資料失敗" }); }
 });
 
-/** 後台 admin.html 模型下拉選單：與 aiModelCatalog.js 單一來源 */
+/** 後台 admin.html 模型下拉選單：與 aiModelCatalog.js 單一來源（含釘選版次） */
 app.get('/api/public/ai-model-options', (req, res) => {
-    res.json({ success: true, options: AI_MODEL_OPTIONS });
+    res.json({
+        success: true,
+        release: AI_BRAIN_RELEASE,
+        lastReviewed: AI_BRAIN_LAST_REVIEWED,
+        reviewPolicy: AI_BRAIN_REVIEW_POLICY,
+        options: AI_MODEL_OPTIONS,
+    });
 });
 
 // ==========================================
