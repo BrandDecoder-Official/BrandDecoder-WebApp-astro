@@ -8,8 +8,8 @@
 /** 塔羅／紫微「【解析】」正文（字元數 ≒ JS .length，含標點換行） */
 const MAX_TAROT_ZIWEI_BODY_CHARS = 900;
 
-/** 律動能量 JSON 內 interpretation */
-const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 260;
+/** 律動能量 JSON 內 interpretation（與後台 Prompt「300 字以內」對齊） */
+const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 300;
 
 /** Flex 單一 type:text 保守上限（官方常見 2000；整包 bubble 仍不宜過大） */
 const MAX_FLEX_SINGLE_TEXT_CHARS = 1200;

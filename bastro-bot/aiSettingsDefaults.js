@@ -8,11 +8,12 @@
  * - Firestore 連線失敗：各 API 應回 500，不得把此物件當成「已從 DB 讀到」回傳。
  * - 後台「模型下拉」顯示名稱／可選 ID 另見 aiModelCatalog.js（GET /api/public/ai-model-options）。
  * - 變更預設 model 時：該 `value` 須列在 `AI_MODEL_OPTIONS`，否則後台不易選到一致 ID；並請递增 `aiModelCatalog.js` 的 AI_BRAIN_RELEASE。
+ * - 後台 `prompt`（星語塔羅／星軌紫微／律動能量）為人設與報告結構；執行時另見 aiPromptEnvelope.js 追加【分數】/【解析】或 JSON 技術外層。
  */
 const DEFAULT_AI_SETTINGS = Object.freeze({
     daily: { model: 'gemini-3.1-flash-lite', cost: 0 },
-    tarot: { model: 'gemini-3-flash-preview', cost: 10, prompt: '' },
-    ziwei: { model: 'gemini-3.1-pro-preview', cost: 39, prompt: '' },
+    tarot: { model: 'gemini-3-flash-preview', cost: 15, prompt: '' },
+    ziwei: { model: 'gemini-3.1-pro-preview', cost: 50, prompt: '' },
     numerology: {
         model: 'gemini-3-flash-preview',
         cost: 10,

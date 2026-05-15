@@ -16,6 +16,7 @@ const {
     sanitizeForFlexText,
 } = require('./lineOaShare');
 const { MAX_NUMEROLOGY_INTERPRETATION_CHARS, clampTextChars } = require('./aiReplyLimits');
+const { buildNumerologyOutputSuffix } = require('./aiPromptEnvelope');
 
 const db = getFirestore('astro-bot-db');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -82,18 +83,7 @@ router.post('/generate', async (req, res) => {
                     generationConfig: { temperature: 0.7, maxOutputTokens: 768 },
                 });
                 
-                const finalPrompt = `${aiConfig.prompt}
-                
-                🚨【系統輸出要求】(嚴格遵守)
-                請務必"只"回傳 JSON 格式，絕對不可包含任何 Markdown 標記 (如 \`\`\`json)，也不要多餘文字。
-                格式如下：
-                {
-                  "coreNumber": <1到9的隨機整數>,
-                  "luckySet": [<01到99的隨機整數>, <整數>, <整數>],
-                  "wealthSet": [<01到99的隨機整數>, <整數>],
-                  "score": <0到100的整數，代表今日綜合能量指數>,
-                  "interpretation": "一段 ${MAX_NUMEROLOGY_INTERPRETATION_CHARS} 字以內的深度解析（含標點與換行），絕對不得超過。請充分發揮你的大師人設，給予充滿療癒感與高維度智慧的詳細指引。"
-                }`;
+                const finalPrompt = `${aiConfig.prompt}${buildNumerologyOutputSuffix()}`;
 
                 const aiResponse = await model.generateContent(finalPrompt);
                 let aiText = aiResponse.response.text().trim().replace(/```json/gi, '').replace(/```/g, '');

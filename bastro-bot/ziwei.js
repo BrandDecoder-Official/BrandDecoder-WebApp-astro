@@ -10,6 +10,7 @@ const {
     sanitizeForFlexText,
 } = require('./lineOaShare');
 const { MAX_TAROT_ZIWEI_BODY_CHARS, MAX_FLEX_SINGLE_TEXT_CHARS, clampTextChars } = require('./aiReplyLimits');
+const { buildTarotZiweiOutputSuffix } = require('./aiPromptEnvelope');
 
 /** 表頭至「────────」後換行為止；正文另傳，避免截斷時誤傷表頭 */
 function buildZiweiShareHead(birthData, score, decodedAt) {
@@ -155,7 +156,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 }, 15000);
 
                 const systemPrompt = aiConfig.prompt || "你是一位精通紫微斗數的國學大師...";
-                const finalPrompt = `${systemPrompt}\n\n【命主生辰與探詢資訊】\n- 探詢領域：${topicStr}\n- 生理性別：${genderStr}\n- 曆法時間：${calStr} ${birthData.date} ${birthData.time}時\n\n🚨【系統輸出要求】(嚴格遵守)\n1. 字數上限：【解析】全文（不含「【分數】」那一行）總長度請嚴格控制在 ${MAX_TAROT_ZIWEI_BODY_CHARS} 個字（含標點與換行）以內，絕對不得超過；若腹稿超長請自行刪修至 ${MAX_TAROT_ZIWEI_BODY_CHARS} 字內再輸出，勿在文中註明刪修或字數計算過程。\n2. 將主要篇幅集中在「${topicStr}」相關論述（仍須遵守上述字數上限）。\n3. ⚠️ 絕對不可使用 JSON 格式！請嚴格依照以下格式輸出：\n\n【分數】：85\n【解析】：\n(這裡放你產出的解碼報告全文)`;
+                const finalPrompt = `${systemPrompt}\n\n【命主生辰與探詢資訊】\n- 探詢領域：${topicStr}\n- 生理性別：${genderStr}\n- 曆法時間：${calStr} ${birthData.date} ${birthData.time}時${buildTarotZiweiOutputSuffix(topicStr)}`;
                 
                 const dynamicModel = genAI.getGenerativeModel({
                     model: aiConfig.model,
