@@ -4,10 +4,77 @@
 const fetch = require('node-fetch');
 const { mergeModuleKey } = require('./aiSettingsDefaults');
 
-// 1. 紫微斗數尊爵版 Flex Message 產生器
-function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, remainPoints) {
+const LINE_SHARE_TEXT_BASE = 'https://line.me/R/share?text=';
+/** LINE `action.uri` 長度上限依官方文件（常見 2000）；超過則截斷正文並附提示 */
+const LINE_SHARE_URI_MAX_LENGTH = 2000;
+
+function formatTaipeiDateTimeLine(date) {
+    return date.toLocaleString('zh-TW', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    });
+}
+
+/** 表頭至「────────」後換行為止；正文另傳，避免截斷時誤傷表頭 */
+function buildZiweiShareHead(birthData, score, decodedAt) {
     const genderStr = birthData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
     const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
+    const topicStr = birthData.topic || '本命格局';
+    const scoreLabel = score != null && score !== '' && !Number.isNaN(Number(score)) ? String(score) : '--';
+    return [
+        '【命運解碼室｜紫微斗數】尊爵版（分享用）',
+        `解盤時間（台北）：${decodedAt}`,
+        `探詢領域：${topicStr}`,
+        `命造參數：【${genderStr}】${calStr} ${birthData.date} ${birthData.time}時`,
+        `綜合運勢指數：${scoreLabel} 分`,
+        '',
+        '────────',
+        '',
+    ].join('\n');
+}
+
+const LINE_SHARE_TRUNC_SUFFIX = '\n…(續見官方帳號對話)';
+
+function buildLineShareUriFromHeadAndBody(head, body) {
+    const bodyTrim = String(body || '').trim();
+    const closing = '\n────────';
+    const plainFull = `${head}${bodyTrim}${closing}`;
+    const fullUri = LINE_SHARE_TEXT_BASE + encodeURIComponent(plainFull);
+    if (fullUri.length <= LINE_SHARE_URI_MAX_LENGTH) return fullUri;
+
+    let lo = 0;
+    let hi = bodyTrim.length;
+    let best = 0;
+    while (lo <= hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        const slice = bodyTrim.slice(0, mid);
+        const truncated = mid < bodyTrim.length;
+        const candidate = `${head}${slice}${truncated ? LINE_SHARE_TRUNC_SUFFIX : ''}${closing}`;
+        const uri = LINE_SHARE_TEXT_BASE + encodeURIComponent(candidate);
+        if (uri.length <= LINE_SHARE_URI_MAX_LENGTH) {
+            best = mid;
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    const slice = bodyTrim.slice(0, best);
+    const truncated = best < bodyTrim.length;
+    const candidate = `${head}${slice}${truncated ? LINE_SHARE_TRUNC_SUFFIX : ''}${closing}`;
+    return LINE_SHARE_TEXT_BASE + encodeURIComponent(candidate);
+}
+
+// 1. 紫微斗數尊爵版 Flex Message 產生器
+function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, remainPoints, decodedAt) {
+    const genderStr = birthData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
+    const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
+    const shareHead = buildZiweiShareHead(birthData, score, decodedAt);
+    const shareUri = buildLineShareUriFromHeadAndBody(shareHead, resultText);
 
     return {
         type: "flex", altText: "✨ 您的專屬天命占星盤已解碼完成",
@@ -64,6 +131,13 @@ function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, 
                             { type: "text", text: "🔋 剩餘靈力", color: "#F9E498", size: "md" },
                             { type: "text", text: `${remainPoints} 點`, color: "#FFFFFF", size: "lg", weight: "bold", align: "end" }
                         ]
+                    },
+                    {
+                        type: "button",
+                        style: "primary",
+                        color: "#7B1FA2",
+                        height: "sm",
+                        action: { type: "uri", label: "📤 分享至 LINE", uri: shareUri },
                     }
                 ]
             }
@@ -154,7 +228,16 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                     aiText: aiData.text, fortune_score: aiData.score
                 });
 
-                const flexMessage = generateZiweiFlexMessage(userName, birthData, aiData.text, aiData.score, aiConfig.cost, remainPoints);
+                const decodedAt = formatTaipeiDateTimeLine(new Date());
+                const flexMessage = generateZiweiFlexMessage(
+                    userName,
+                    birthData,
+                    aiData.text,
+                    aiData.score,
+                    aiConfig.cost,
+                    remainPoints,
+                    decodedAt
+                );
                 try {
                     await client.pushMessage(userId, flexMessage);
                 } catch (pushErr) {
