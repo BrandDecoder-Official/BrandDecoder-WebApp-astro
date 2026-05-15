@@ -1,29 +1,30 @@
 // ==========================================
 // 🧠 模組：AI 大腦動態參數與定價管理 (admin_ai.js)
 // ==========================================
+//
+// --- Gemini 3 系模型生命週期備忘（依 Google 公告整理；上線前請再對一次官方文件）---
+// 正式版
+//   gemini-3.1-flash-lite：約 2026-05-07 起可用，預計 2027-05-07 停用（簽到／極輕量場景可優先鎖定此 ID）。
+// 預覽版（preview）與建議更換
+//   gemini-3.1-flash-lite-preview：約 2026-03-03～2026-05-25 → 建議改 gemini-3.1-flash-lite。
+//   gemini-3.1-flash-image-preview：約 2026-02-26 起，停用日期待公告。
+//   gemini-3.1-pro-preview：約 2026-02-19 起，停用日期待公告。
+//   gemini-3-pro-image-preview：約 2025-11-20 起，停用日期待公告。
+//   gemini-3-flash-preview：約 2025-12-17 起，停用日期待公告。
+//   gemini-3-pro-preview：約 2025-11-18 起，約 2026-03-09 停用 → 建議改 gemini-3.1-pro-preview。
+// 其它：扣點／模型預設集中於 aiSettingsDefaults.js；LINE「每日一抽」實際呼叫模型另見 index.js 的 DAILY_DRAW_AI_MODEL（可環境變數覆寫）。
+//
 const express = require('express');
 const router = express.Router();
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { DEFAULT_AI_SETTINGS, mergeAiSettingsFromDoc } = require('./aiSettingsDefaults');
 const db = getFirestore('astro-bot-db');
 
-// 讀取 AI 動態設定
+// 讀取 AI 動態設定（與 aiSettingsDefaults.js 合併：DB 優先，缺欄補預設；讀取失敗不回捏造資料）
 router.get('/config/ai', async (req, res) => {
     try {
         const doc = await db.collection('system_config').doc('ai_settings').get();
-        if (!doc.exists) {
-            // 預設的基礎大腦配置 (🌟 已加入 numerology 預設值)
-            return res.json({
-                success: true,
-                data: {
-                    daily: { model: "gemini-3.1-flash-lite-preview", cost: 0 },
-                    tarot: { model: "gemini-3-flash-preview", cost: 10, prompt: "" },
-                    ziwei: { model: "gemini-3.1-pro-preview", cost: 30, prompt: "" },
-                    numerology: { model: "gemini-3-flash-preview", cost: 10, prompt: "" },
-                    face:  { model: "gemini-3.1-flash-image-preview", cost: 20, prompt: "" } // 預留給面相
-                }
-            });
-        }
-        res.json({ success: true, data: doc.data() });
+        res.json({ success: true, data: mergeAiSettingsFromDoc(doc) });
     } catch (error) {
         res.status(500).json({ success: false, msg: error.message });
     }
@@ -47,7 +48,7 @@ router.post('/config/ai', async (req, res) => {
         if (ziwei) updateData.ziwei = ziwei;
         if (numerology) updateData.numerology = numerology; // 🌟 將律動能量寫入 Firebase
         
-        updateData.face = face || { model: "gemini-3.1-flash-image-preview", cost: 20, prompt: "" };
+        updateData.face = face ? { ...DEFAULT_AI_SETTINGS.face, ...face } : { ...DEFAULT_AI_SETTINGS.face };
 
         // 寫入 Firestore
         await db.collection('system_config').doc('ai_settings').set(updateData, { merge: true });

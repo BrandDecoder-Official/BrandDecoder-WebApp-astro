@@ -19,6 +19,8 @@ const db = getFirestore('astro-bot-db');
 // 2. 🌟 引入所有的子模組 (依賴注入)
 const adminRouter = require('./admin');
 const adminAiRouter = require('./admin_ai');
+const { mergeModuleKey, mergeAiSettingsFromDoc, DEFAULT_AI_SETTINGS } = require('./aiSettingsDefaults');
+const { AI_MODEL_OPTIONS } = require('./aiModelCatalog');
 const adminKpiRouter = require('./admin_kpi');
 const { recordDivinationLog } = require('./logger'); 
 const numerologyRouter = require('./numerology');
@@ -47,9 +49,13 @@ function resolvePublicBaseUrl(req) {
 }
 
 const PLATFORM_VERSION = "v5.0";
-const AI_MODEL = "gemini-3-flash-preview"; 
+/** 每日一抽專用：輕量模型（環境變數 > 程式庫預設 daily.model） */
+const DAILY_DRAW_AI_MODEL = process.env.DAILY_DRAW_AI_MODEL || DEFAULT_AI_SETTINGS.daily.model;
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: AI_MODEL });
+const dailyDrawModel = genAI.getGenerativeModel({
+    model: DAILY_DRAW_AI_MODEL,
+    generationConfig: { temperature: 0.75, maxOutputTokens: 400 },
+});
 
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
@@ -390,7 +396,7 @@ app.post('/api/tarot/ticket', express.json(), verifyLineToken, async (req, res) 
         if (!userDoc.exists) await userRef.set({ points: 100, createdAt: FieldValue.serverTimestamp(), lastDrawDate: null, displayName: req.user.displayName, pictureUrl: req.user.pictureUrl });
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
-        const tarotConfig = configDoc.exists && configDoc.data().tarot ? configDoc.data().tarot : { cost: 10 };
+        const tarotConfig = mergeModuleKey('tarot', configDoc);
 
         const currentPoints = userDoc.exists ? (userDoc.data().points || 0) : 100;
         if (currentPoints < tarotConfig.cost) return res.status(403).json({ success: false, message: `靈力不足 (需 ${tarotConfig.cost} 點)，請先儲值` });
@@ -420,7 +426,7 @@ app.get('/api/admin/config/ai', async (req, res) => {
     try {
         const docRef = db.collection('system_config').doc('ai_settings');
         const doc = await docRef.get();
-        res.json({ success: true, data: doc.exists ? doc.data() : {} });
+        res.json({ success: true, data: mergeAiSettingsFromDoc(doc) });
     } catch (error) { res.status(500).json({ success: false, msg: "讀取後台資料失敗" }); }
 });
 
@@ -428,8 +434,13 @@ app.get('/api/public/config/ai', async (req, res) => {
     try {
         const docRef = db.collection('system_config').doc('ai_settings');
         const doc = await docRef.get();
-        res.json({ success: true, data: doc.exists ? doc.data() : {} });
+        res.json({ success: true, data: mergeAiSettingsFromDoc(doc) });
     } catch (error) { res.status(500).json({ success: false, msg: "讀取公開定價資料失敗" }); }
+});
+
+/** 後台 admin.html 模型下拉選單：與 aiModelCatalog.js 單一來源 */
+app.get('/api/public/ai-model-options', (req, res) => {
+    res.json({ success: true, options: AI_MODEL_OPTIONS });
 });
 
 // ==========================================
@@ -498,7 +509,7 @@ async function handleEvent(event) {
         }
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
-        const tarotConfig = configDoc.exists && configDoc.data().tarot ? configDoc.data().tarot : { cost: 10 };
+        const tarotConfig = mergeModuleKey('tarot', configDoc);
 
         if (currentPoints < tarotConfig.cost) {
             return client.replyMessage(event.replyToken, { type: 'text', text: `🔋 靈力不足 (需 ${tarotConfig.cost} 點)，請前往會員中心補充靈力：\nhttps://astro.branddecoderai.com/member/profile.html` });
@@ -528,7 +539,7 @@ async function handleEvent(event) {
         try {
             const prompt = `使用者進行「每日一抽」，抽到【${randomCard}】。\n請根據此牌給出 0 到 100 的「今日能量分數」(整數)，以及 30-50 字的溫暖指引。\n🚨請嚴格以純 JSON 格式輸出，不要包含任何 Markdown 標記，格式如下 :\n{"score": 80, "text": "今日指引內容..."}`;
             
-            const result = await model.generateContent(prompt);
+            const result = await dailyDrawModel.generateContent(prompt);
             let rawAiText = result.response.text().replace(/```json/gi, '').replace(/```/g, '').trim();
             
             let aiData = { score: 50, text: rawAiText };
@@ -542,7 +553,7 @@ async function handleEvent(event) {
             const dailyLogData = {
                 userId, userName: userData.displayName, log_class: 'consumption', summary: `每日簽到：抽到【${randomCard}】`,
                 stage: "Finish", type: "daily_draw", result_card: randomCard, aiText: aiData.text, fortune_score: aiData.score, 
-                points_change: 1, metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: AI_MODEL },
+                points_change: 1, metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: DAILY_DRAW_AI_MODEL },
                 platform_version: PLATFORM_VERSION, timestamp: FieldValue.serverTimestamp()
             };
 
@@ -550,7 +561,9 @@ async function handleEvent(event) {
             await userRef.collection('history').add(dailyLogData); 
 
             const finalPoints = currentPoints + 1;
-            const displayMsg = `【今日指引：${randomCard}】\n\n${aiData.text}\n\n──────────────\n✨ 今日能量指數：${aiData.score} 分\n🔋 靈力注入：原本 ${currentPoints} / 每日簽到 +1 / 目前靈力：${finalPoints}`;
+            const liteOracleNote =
+                "\n\n──────────────\n✧ 此則為天幕隙縫泄下的一縷微光，由輕靈先知代筆速繪；若欲循星軌、披沙見金，細究因果之推演，請輕觸圖文選單，召喚命運解碼室之正式儀式。✧";
+            const displayMsg = `【今日指引：${randomCard}】\n\n${aiData.text}\n\n──────────────\n✨ 今日能量指數：${aiData.score} 分\n🔋 靈力注入：原本 ${currentPoints} / 每日簽到 +1 / 目前靈力：${finalPoints}${liteOracleNote}`;
 
             return client.replyMessage(event.replyToken, { type: 'text', text: displayMsg });
         } catch (aiError) {

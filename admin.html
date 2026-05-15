@@ -231,9 +231,7 @@
                         <div style="flex: 2; min-width: 200px;">
                             <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">運算模型 (Model)</label>
                             <select id="tarot-model" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                                <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (低成本)</option>
-                                <option value="gemini-3-flash-preview" selected>Gemini 3 Flash (標準)</option>
-                                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (深度邏輯)</option>
+                                <option value="">載入模型清單中…</option>
                             </select>
                         </div>
                         <div style="flex: 1; min-width: 100px;">
@@ -251,14 +249,12 @@
                         <div style="flex: 2; min-width: 200px;">
                             <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">運算模型 (Model)</label>
                             <select id="ziwei-model" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                                <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (低成本)</option>
-                                <option value="gemini-3-flash-preview">Gemini 3 Flash (標準)</option>
-                                <option value="gemini-3.1-pro-preview" selected>Gemini 3.1 Pro (深度邏輯)</option>
+                                <option value="">載入模型清單中…</option>
                             </select>
                         </div>
                         <div style="flex: 1; min-width: 100px;">
                             <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">扣除靈力 (Cost)</label>
-                            <input type="number" id="ziwei-cost" value="30" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                            <input type="number" id="ziwei-cost" value="39" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
                         </div>
                     </div>
                     <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">系統指令 (System Prompt)</label>
@@ -271,8 +267,7 @@
                         <div style="flex: 2; min-width: 200px;">
                             <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">運算模型 (Model)</label>
                             <select id="daily-model" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                                <option value="gemini-3.1-flash-lite-preview" selected>Gemini 3.1 Flash Lite (極速低成本)</option>
-                                <option value="gemini-3-flash-preview">Gemini 3 Flash (標準)</option>
+                                <option value="">載入模型清單中…</option>
                             </select>
                         </div>
                         <div style="flex: 1; min-width: 100px;">
@@ -288,9 +283,7 @@
                         <div style="flex: 2; min-width: 200px;">
                             <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">運算模型 (Model)</label>
                             <select id="numerology-model" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
-                                <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (極速低成本)</option>
-                                <option value="gemini-3-flash-preview" selected>Gemini 3 Flash (標準)</option>
-                                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (深度邏輯)</option>
+                                <option value="">載入模型清單中…</option>
                             </select>
                         </div>
                         <div style="flex: 1; min-width: 100px;">
@@ -559,10 +552,58 @@
             }
         };
 
+        let __aiModelOptionsCache = null;
+
+        async function ensureAiModelOptionsLoaded() {
+            if (__aiModelOptionsCache) return __aiModelOptionsCache;
+            if (!API_URL) return [];
+            const r = await fetch(`${API_URL}/api/public/ai-model-options`);
+            const j = await r.json();
+            if (!j.success || !Array.isArray(j.options)) {
+                console.warn('ai-model-options 回應異常', j);
+                return [];
+            }
+            __aiModelOptionsCache = j.options;
+            return __aiModelOptionsCache;
+        }
+
+        function fillModelSelectFromCatalog(selectId, options) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            sel.innerHTML = '';
+            (options || []).forEach((row) => {
+                const o = document.createElement('option');
+                o.value = row.value;
+                o.textContent = row.label;
+                sel.appendChild(o);
+            });
+        }
+
+        function applyModelValueToSelect(selectId, modelId) {
+            const sel = document.getElementById(selectId);
+            if (!sel || modelId == null || modelId === '') return;
+            const s = String(modelId);
+            const exists = [...sel.options].some((o) => o.value === s);
+            if (!exists) {
+                const o = document.createElement('option');
+                o.value = s;
+                o.textContent = s + '（資料庫既有）';
+                sel.appendChild(o);
+            }
+            sel.value = s;
+        }
+
         window.loadAISettings = async function() {
             if (!currentIdToken) return;
             if (!API_URL) return;
             try {
+                const options = await ensureAiModelOptionsLoaded();
+                if (options.length > 0) {
+                    ['tarot-model', 'ziwei-model', 'daily-model', 'numerology-model'].forEach((id) => {
+                        fillModelSelectFromCatalog(id, options);
+                    });
+                }
+
                 const response = await fetch(`${API_URL}/api/admin/config/ai`, {
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
@@ -575,7 +616,7 @@
                         const tarotModel = document.getElementById('tarot-model');
                         const tarotCost = document.getElementById('tarot-cost');
                         const tarotPrompt = document.getElementById('tarot-prompt');
-                        if(tarotModel) tarotModel.value = data.tarot.model;
+                        if(tarotModel) applyModelValueToSelect('tarot-model', data.tarot.model);
                         if(tarotCost) tarotCost.value = data.tarot.cost;
                         if(tarotPrompt) tarotPrompt.value = data.tarot.prompt || '';
                     }
@@ -584,22 +625,21 @@
                         const ziweiModel = document.getElementById('ziwei-model');
                         const ziweiCost = document.getElementById('ziwei-cost');
                         const ziweiPrompt = document.getElementById('ziwei-prompt');
-                        if(ziweiModel) ziweiModel.value = data.ziwei.model;
+                        if(ziweiModel) applyModelValueToSelect('ziwei-model', data.ziwei.model);
                         if(ziweiCost) ziweiCost.value = data.ziwei.cost;
                         if(ziweiPrompt) ziweiPrompt.value = data.ziwei.prompt || '';
                     }
                     
                     if(data.daily) {
                         const dailyModel = document.getElementById('daily-model');
-                        if(dailyModel) dailyModel.value = data.daily.model;
+                        if(dailyModel) applyModelValueToSelect('daily-model', data.daily.model);
                     }
-                    // 👇 讀取律動能量設定
                     if(data.numerology) {
                         const numModel = document.getElementById('numerology-model');
                         const numCost = document.getElementById('numerology-cost');
                         const numPrompt = document.getElementById('numerology-prompt');
-                        if(numModel) numModel.value = data.numerology.model || 'gemini-3-flash-preview';
-                        if(numCost) numCost.value = data.numerology.cost || 10;
+                        if(numModel) applyModelValueToSelect('numerology-model', data.numerology.model);
+                        if(numCost) numCost.value = data.numerology.cost ?? 10;
                         if(numPrompt) numPrompt.value = data.numerology.prompt || '';
                     }
                     
@@ -628,7 +668,7 @@
                     },
                     ziwei: {
                         model: document.getElementById('ziwei-model').value,
-                        cost: parseInt(document.getElementById('ziwei-cost').value) || 50,
+                        cost: parseInt(document.getElementById('ziwei-cost').value) || 39,
                         prompt: document.getElementById('ziwei-prompt').value
                     },
                     daily: {

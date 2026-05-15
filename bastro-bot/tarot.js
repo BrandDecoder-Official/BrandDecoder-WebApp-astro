@@ -2,6 +2,7 @@
 // BrandDecoder - 塔羅牌核心模組 (tarot.js)
 // ==========================================
 const fetch = require('node-fetch');
+const { mergeModuleKey } = require('./aiSettingsDefaults');
 
 // 1. 塔羅牌圖鑑與字典
 const majorArcanaMap = [ "愚者|🌀|無限潛能", "魔術師|🪄|顯化奇蹟", "女祭司|🌙|直覺奧秘", "女皇|👑|豐盛孕育", "皇帝|🦅|秩序建立", "教皇|⛪|精神指引", "戀人|👩‍❤️‍👨|靈魂契合", "戰車|🐎|意志征服", "力量|🦁|柔性堅韌", "隱士|🏮|內在尋道", "命運之輪|🎡|業力輪轉", "正義|⚖️|平衡裁決", "倒吊人|🪢|換位思考", "死神|🦋|毀滅重生", "節制|🌈|和諧煉金", "惡魔|⛓️|物質枷鎖", "高塔|⚡|粉碎重建", "星星|✨|希望指引", "月亮|🐺|潛意識恐懼", "太陽|☀️|生命喜悅", "審判|🎺|靈魂覺醒", "世界|🌍|圓滿達成" ];
@@ -116,14 +117,14 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             }, 15000);
 
             const configDoc = await db.collection('system_config').doc('ai_settings').get();
-            const tarotConfig = configDoc.exists && configDoc.data().tarot ? configDoc.data().tarot : { model: "gemini-3.1-pro-preview", cost: 10 };
+            const tarotConfig = mergeModuleKey('tarot', configDoc);
 
             const { topic, cards } = userData.pendingDraw;
             const currentPoints = userData.points || 0;
             const remainPoints = currentPoints - tarotConfig.cost;
 
             const systemPrompt = tarotConfig.prompt || "你是一位充滿溫度的神祕塔羅解碼師。";
-            const prompt = `${systemPrompt}\n\n【本次使用者占卜資訊】\n- 探詢領域：【${topic}】\n- 抽出的牌陣：1.過去【${cards[0]}】 2.現在【${cards[1]}】 3.未來【${cards[2]}】\n\n🚨【系統輸出要求】(嚴格遵守)\n1. 報告深度：請盡情發揮你身為神祕導師的專業，給予詳盡、深度的解析，字數不限。\n2. 報告結構要求：請依序包含以下三個層次：\n   - 【牌陣解構】：詳細解析這三張牌的能量流轉。\n   - 【破局指引】：針對探詢領域給予具體的行動建議。\n   - 【靈魂迴響】：用一句溫暖的短語作為結尾。\n3. ⚠️ 絕對不可使用 JSON 格式！請嚴格依照以下格式輸出：\n\n【分數】：85\n【解析】：\n(這裡放你產出的解碼報告全文)`;
+            const prompt = `${systemPrompt}\n\n【本次使用者占卜資訊】\n- 探詢領域：【${topic}】\n- 抽出的牌陣：1.過去【${cards[0]}】 2.現在【${cards[1]}】 3.未來【${cards[2]}】\n\n🚨【系統輸出要求】(嚴格遵守)\n1. 字數上限：【解析】全文（不含「【分數】」那一行）總長度請嚴格控制在 1000 個字（含標點與換行）以內，絕對不得超過；若腹稿超長請自行刪修至 1000 字內再輸出，勿在文中註明刪修或字數計算過程。\n2. 報告結構：請依序包含以下三個層次（可精簡敘述以符合字數）：\n   - 【牌陣解構】：三張牌的能量流轉。\n   - 【破局指引】：針對探詢領域的具體行動建議。\n   - 【靈魂迴響】：一句溫暖短語作結。\n3. ⚠️ 絕對不可使用 JSON 格式！請嚴格依照以下格式輸出：\n\n【分數】：85\n【解析】：\n(這裡放你產出的解碼報告全文)`;
 
             const dynamicModel = genAI.getGenerativeModel({ model: tarotConfig.model, generationConfig: { temperature: 0.7 } });
             const result = await dynamicModel.generateContent(prompt);

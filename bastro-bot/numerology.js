@@ -8,6 +8,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { Client } = require('@line/bot-sdk'); 
 const { recordDivinationLog } = require('./logger');
 const fetch = require('node-fetch');
+const { mergeModuleKey } = require('./aiSettingsDefaults');
 
 const db = getFirestore('astro-bot-db');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -28,12 +29,7 @@ router.post('/generate', async (req, res) => {
         const userName = userDoc.data().displayName || userDoc.data().name || '神祕旅人';
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
-        const settingsData = configDoc.exists ? configDoc.data() : {};
-        const aiConfig = settingsData.numerology || {
-            model: "gemini-3.1-pro-preview", 
-            cost: 10,
-            prompt: "# Role: 律動能量大師\n你是一位精通生命靈數與宇宙頻率的導師。"
-        };
+        const aiConfig = mergeModuleKey('numerology', configDoc);
         const cost = aiConfig.cost;
 
         const currentPoints = userDoc.data().points || 0;
