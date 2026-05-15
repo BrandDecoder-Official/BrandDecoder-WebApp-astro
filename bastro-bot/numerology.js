@@ -89,7 +89,7 @@ router.post('/generate', async (req, res) => {
                     model: aiConfig.model,
                     generationConfig: {
                         temperature: 0.75,
-                        maxOutputTokens: 1536,
+                        maxOutputTokens: 2048,
                         responseMimeType: 'application/json',
                     },
                 });
@@ -104,8 +104,13 @@ router.post('/generate', async (req, res) => {
                     lastRaw = aiResponse.response.text();
                     interpretation = parseInterpretationFromAi(lastRaw);
                     if (interpretation) break;
+
+                    const finishReason =
+                        aiResponse.response.candidates &&
+                        aiResponse.response.candidates[0] &&
+                        aiResponse.response.candidates[0].finishReason;
                     console.error(
-                        `數字學 JSON 解析失敗 (第 ${attempt} 次):`,
+                        `數字學 JSON 解析失敗 (第 ${attempt} 次, finishReason=${finishReason || 'unknown'}):`,
                         String(lastRaw).slice(0, 800)
                     );
                 }

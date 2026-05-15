@@ -37,7 +37,7 @@ function buildNumerologyInterpretationSuffix() {
 - 僅輸出一個 JSON 物件，鍵名僅能是 interpretation，例如：{"interpretation":"..."}
 - 勿輸出 coreNumber、luckySet、wealthSet、score（已由系統提供）
 - 勿使用 json 代碼塊或 Markdown、勿前後贅語
-- interpretation 不得超過 ${MAX_NUMEROLOGY_INTERPRETATION_CHARS} 字（含標點與換行）；此為上限，依分析需要撰寫，不必寫滿
+- interpretation 不得超過 ${MAX_NUMEROLOGY_INTERPRETATION_CHARS} 字（含標點與換行）；此為上限，依分析需要撰寫，不必寫滿；請控制篇幅避免輸出被系統截斷
 - 須將上方矩陣的核心／幸運／財富數字有機融入敘事（含二位數靈數相加解讀）`;
 }
 
@@ -75,13 +75,58 @@ function extractJsonObjectString(text) {
     return null;
 }
 
+/** 模型輸出被 maxOutputTokens 截斷時，從未閉合的 JSON 擷取 interpretation */
+function salvageInterpretationFromTruncated(rawText) {
+    const s = String(rawText || '').trim();
+    const markerMatch = s.match(/"interpretation"\s*:\s*"/i);
+    if (!markerMatch) return null;
+
+    const startIdx = s.indexOf(markerMatch[0]) + markerMatch[0].length;
+    let out = '';
+    for (let i = startIdx; i < s.length; i++) {
+        const ch = s[i];
+        if (ch === '\\' && i + 1 < s.length) {
+            out += s[i + 1];
+            i++;
+            continue;
+        }
+        if (ch === '"') break;
+        out += ch;
+    }
+    out = out.trim();
+    return out.length >= 60 ? out : null;
+}
+
+function tryParseWithJsonRepairs(chunk) {
+    if (!chunk || !chunk.startsWith('{')) return null;
+    const t = chunk.trimEnd();
+    const attempts = [
+        t + '}',
+        t.replace(/,\s*$/, '') + '}',
+        t + '"}',
+        t.replace(/,\s*$/, '') + '"}',
+    ];
+    for (const candidate of attempts) {
+        try {
+            const obj = JSON.parse(candidate);
+            if (obj && typeof obj.interpretation === 'string' && obj.interpretation.trim()) {
+                return obj.interpretation.trim();
+            }
+        } catch (_) {
+            /* next */
+        }
+    }
+    return null;
+}
+
 /**
  * @param {string} rawText
  * @returns {string|null} interpretation
  */
 function parseInterpretationFromAi(rawText) {
     const trimmed = String(rawText || '').trim().replace(/```json/gi, '').replace(/```/g, '').trim();
-    const candidates = [trimmed, extractJsonObjectString(trimmed)].filter(Boolean);
+    const extracted = extractJsonObjectString(trimmed);
+    const candidates = [trimmed, extracted].filter(Boolean);
 
     for (const chunk of candidates) {
         try {
@@ -96,9 +141,14 @@ function parseInterpretationFromAi(rawText) {
                 }
             }
         } catch (_) {
-            /* try next */
+            const repaired = tryParseWithJsonRepairs(chunk);
+            if (repaired) return repaired;
         }
     }
+
+    const salvaged = salvageInterpretationFromTruncated(trimmed);
+    if (salvaged) return salvaged;
+
     return null;
 }
 
