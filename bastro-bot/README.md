@@ -27,6 +27,12 @@
 - **ClientBackURL**（`MEMBER_PROFILE_URL`）：預設為會員 **LIFF 入口**（`liff.line.me/…`），讓使用者在 LINE 內按「返回商店」回到同一 LIFF。
 - 請勿將 **HashKey / HashIV** 提交至 Git；測試／正式網址與商店代號需一致（見 `.env.example`）。
 
+## 法務／條款字典檔（與前端、說明頁共用）
+
+- **單一來源**：`bastro-bot/legal-service-manifest.json`（儲值檔位、扣點表、聯絡資訊、`termsGate` 儲值前摘要、`templates` 綠界品名模板等）。
+- **後端**：`legalManifest.js` 於建單時 `require` 讀取；`POST /api/pay/request` 使用 `buildPayStrings()` 產生 **TradeDesc / ItemName**。
+- **前端／說明頁**：請以 **`/bastro-bot/legal-service-manifest.json`** 同網域 fetch（GitHub Pages 部署整個 repo 時路徑即存在）。會員 LIFF 與 `service-points-notice.html` 已改為讀此檔；fetch 失敗時會員頁有內嵌後備檔位與條款摘要。
+
 ## 與 Cloud Run 原始碼同步
 
 `bastro-bot/` 內的 `.js` 已從專案 **lllcnd** 的 Cloud Run 建置暫存（`run-sources-…/bastro-bot/*.zip`）還原，並在 `index.js` 末尾加上 **`require.main` 時 `app.listen`**，以便本機與 Docker 執行 `node index.js`（雲端從原始碼建置時仍使用 `exports.webhook`）。

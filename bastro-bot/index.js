@@ -4,6 +4,7 @@
 // ==========================================
 
 const ecpay = require('./ecpay');
+const { buildPayStrings } = require('./legalManifest');
 const express = require('express');
 const { middleware, Client } = require('@line/bot-sdk');
 const { initializeApp } = require('firebase-admin/app');
@@ -295,11 +296,14 @@ app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) =
             return res.status(500).json({ success: false, msg: 'ReturnURL 超過 200 字元，請縮短網域（PUBLIC_BASE_URL 或自訂網域）' });
         }
 
+        const pts = Math.floor(Number(pointsGiven != null ? pointsGiven : amount));
+        const payStrings = buildPayStrings(pts, productName);
+
         const fields = ecpay.buildAioCheckoutFields({
             merchantTradeNo,
             totalAmount: amount,
-            tradeDesc: `靈力儲值${pointsGiven || amount}點`,
-            itemName: productName || `${pointsGiven || amount}點靈力`,
+            tradeDesc: payStrings.tradeDesc,
+            itemName: payStrings.itemName,
             returnUrl,
             clientBackUrl: memberProfileUrl,
         });
