@@ -14,6 +14,7 @@ const {
     buildLineShareUriFromHeadAndBody,
     lineFlexShareButton,
 } = require('./lineOaShare');
+const { MAX_NUMEROLOGY_INTERPRETATION_CHARS, clampTextChars } = require('./aiReplyLimits');
 
 const db = getFirestore('astro-bot-db');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -75,7 +76,10 @@ router.post('/generate', async (req, res) => {
                 }, 15000);
 
                 const aiStartTime = Date.now();
-                const model = genAI.getGenerativeModel({ model: aiConfig.model, generationConfig: { temperature: 0.7 } });
+                const model = genAI.getGenerativeModel({
+                    model: aiConfig.model,
+                    generationConfig: { temperature: 0.7, maxOutputTokens: 768 },
+                });
                 
                 const finalPrompt = `${aiConfig.prompt}
                 
@@ -87,7 +91,7 @@ router.post('/generate', async (req, res) => {
                   "luckySet": [<01到99的隨機整數>, <整數>, <整數>],
                   "wealthSet": [<01到99的隨機整數>, <整數>],
                   "score": <0到100的整數，代表今日綜合能量指數>,
-                  "interpretation": "一段 300 字以內的深度解析。請充分發揮你的大師人設，給予充滿療癒感與高維度智慧的詳細指引。"
+                  "interpretation": "一段 ${MAX_NUMEROLOGY_INTERPRETATION_CHARS} 字以內的深度解析（含標點與換行），絕對不得超過。請充分發揮你的大師人設，給予充滿療癒感與高維度智慧的詳細指引。"
                 }`;
 
                 const aiResponse = await model.generateContent(finalPrompt);
@@ -104,6 +108,7 @@ router.post('/generate', async (req, res) => {
                     console.error("數字學 JSON 破裂:", aiText);
                     aiData = { coreNumber: 7, luckySet: [11,22,33], wealthSet: [66,88], score: 80, interpretation: "宇宙頻率過強，文字無法完全解析，請靜心感受當下的直覺。" };
                 }
+                aiData.interpretation = clampTextChars(aiData.interpretation, MAX_NUMEROLOGY_INTERPRETATION_CHARS);
                 
                 const fortuneScore = aiData.score || 80;
                 const aiLatency = Date.now() - aiStartTime;
@@ -176,7 +181,7 @@ function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, new
     const shareHead = buildNumerologyShareHead(aiData, fortuneScore, decodedAt);
     const shareBody = String(aiData.interpretation || '').trim();
     const shareUri = buildLineShareUriFromHeadAndBody(shareHead, shareBody);
-    const safeText = String(aiData.interpretation || "宇宙能量正在匯聚中...").substring(0, 1900);
+    const safeText = String(aiData.interpretation || '宇宙能量正在匯聚中...');
     const luckyStr = (aiData.luckySet || ['--','--','--']).join(' · ');
     const wealthStr = (aiData.wealthSet || ['--','--']).join(' · ');
     const coreNum = aiData.coreNumber || '--';

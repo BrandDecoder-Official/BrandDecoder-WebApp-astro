@@ -8,6 +8,7 @@ const {
     buildLineShareUriFromHeadAndBody,
     lineFlexShareButton,
 } = require('./lineOaShare');
+const { MAX_TAROT_ZIWEI_BODY_CHARS, MAX_FLEX_SINGLE_TEXT_CHARS, clampTextChars } = require('./aiReplyLimits');
 
 /** 表頭至「────────」後換行為止；正文另傳，避免截斷時誤傷表頭 */
 function buildZiweiShareHead(birthData, score, decodedAt) {
@@ -69,7 +70,7 @@ function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, 
                     },
                     { type: "separator", color: "#4A148C", margin: "md" },
                     { type: "text", text: "✨ 天命解碼精華：", color: "#F9E498", size: "md", weight: "bold", margin: "md" },
-                    { type: "text", text: String(resultText || "").substring(0, 1900), color: "#E0E0E0", size: "md", wrap: true, margin: "md" }
+                    { type: "text", text: clampTextChars(String(resultText || ''), MAX_FLEX_SINGLE_TEXT_CHARS), color: "#E0E0E0", size: "md", wrap: true, margin: "md" }
                 ]
             },
             footer: {
@@ -156,9 +157,12 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 }, 15000);
 
                 const systemPrompt = aiConfig.prompt || "你是一位精通紫微斗數的國學大師...";
-                const finalPrompt = `${systemPrompt}\n\n【命主生辰與探詢資訊】\n- 探詢領域：${topicStr}\n- 生理性別：${genderStr}\n- 曆法時間：${calStr} ${birthData.date} ${birthData.time}時\n\n🚨【系統輸出要求】(嚴格遵守)\n1. 字數上限：【解析】全文（不含「【分數】」那一行）總長度請嚴格控制在 1000 個字（含標點與換行）以內，絕對不得超過；若腹稿超長請自行刪修至 1000 字內再輸出，勿在文中註明刪修或字數計算過程。\n2. 將主要篇幅集中在「${topicStr}」相關論述（仍須遵守上述字數上限）。\n3. ⚠️ 絕對不可使用 JSON 格式！請嚴格依照以下格式輸出：\n\n【分數】：85\n【解析】：\n(這裡放你產出的解碼報告全文)`;
+                const finalPrompt = `${systemPrompt}\n\n【命主生辰與探詢資訊】\n- 探詢領域：${topicStr}\n- 生理性別：${genderStr}\n- 曆法時間：${calStr} ${birthData.date} ${birthData.time}時\n\n🚨【系統輸出要求】(嚴格遵守)\n1. 字數上限：【解析】全文（不含「【分數】」那一行）總長度請嚴格控制在 ${MAX_TAROT_ZIWEI_BODY_CHARS} 個字（含標點與換行）以內，絕對不得超過；若腹稿超長請自行刪修至 ${MAX_TAROT_ZIWEI_BODY_CHARS} 字內再輸出，勿在文中註明刪修或字數計算過程。\n2. 將主要篇幅集中在「${topicStr}」相關論述（仍須遵守上述字數上限）。\n3. ⚠️ 絕對不可使用 JSON 格式！請嚴格依照以下格式輸出：\n\n【分數】：85\n【解析】：\n(這裡放你產出的解碼報告全文)`;
                 
-                const dynamicModel = genAI.getGenerativeModel({ model: aiConfig.model, generationConfig: { temperature: 0.7 } });
+                const dynamicModel = genAI.getGenerativeModel({
+                    model: aiConfig.model,
+                    generationConfig: { temperature: 0.7, maxOutputTokens: 1400 },
+                });
                 const result = await dynamicModel.generateContent(finalPrompt);
                 const rawAiText = result.response.text().trim();
 
@@ -171,6 +175,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 const textMatch = rawAiText.match(/【解析】[：:]\s*([\s\S]*)/);
                 if (scoreMatch) aiData.score = parseInt(scoreMatch[1], 10);
                 if (textMatch) aiData.text = textMatch[1].trim(); else aiData.text = rawAiText.replace(/【分數】[：:]\s*\d+/g, '').trim();
+                aiData.text = clampTextChars(aiData.text, MAX_TAROT_ZIWEI_BODY_CHARS);
 
                 await userRef.set({ points: FieldValue.increment(-aiConfig.cost), lastDivination: FieldValue.serverTimestamp() }, { merge: true });
                 const remainPoints = currentPoints - aiConfig.cost;
