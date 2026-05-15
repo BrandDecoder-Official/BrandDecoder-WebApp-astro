@@ -307,7 +307,7 @@
         /** LIFF OAuth access token：呼叫後端 verifyLineToken API 一律用此（勿用 ID Token） */
         let currentAccessToken = "";
 
-        /** 與 bastro-bot/legal-service-manifest.json 同步；fetch 失敗時用 DEFAULT_PRICING_TIERS + 內嵌條款摘要 */
+        /** 計費檔位後備：與 legal-service-manifest.json 一致；fetch 失敗時沿用。條款內文以 manifest 為單一來源，見 embeddedTermsGateFallback 註解。 */
         const DEFAULT_PRICING_TIERS = [
             { price: 5, points: 50, isPopular: false, testPack: true },
             { price: 99, points: 990, isPopular: false },
@@ -337,19 +337,18 @@
             return t ? tpl(t, { points: pointsToGive }) : `線上占卜服務點數（靈力 ${pointsToGive} 點） 命運解碼室`;
         }
 
+        /** 條款內文以 bastro-bot/legal-service-manifest.json 為單一來源；此函式僅在 fetch 失敗時提供簡短降級文案（避免與 manifest 雙軌維護） */
         function embeddedTermsGateFallback() {
             return {
                 termsGate: {
                     title: '儲值前請閱讀',
                     subtitle: '服務條款、點數性質與扣點說明',
                     paragraphs: [
-                        '購買之「靈力」為命運解碼室所提供之線上占卜／解碼服務預付點數，用於折抵站內付費功能；非現金、非具流通性之虛擬貨幣。',
-                        '扣點（參考預設，實際以站內與後台為準）：塔羅約 10 點／次、紫微約 39 點／次、律動能量約 10 點／次；每日一抽現行為贈點不扣點。',
-                        '完整條款、儲值對照、退費與客服請見完整說明頁（連結於下方）。',
+                        '目前無法載入條款字典檔（網路或設定問題）。請稍後重新整理、檢查連線，或先開啟下方「完整說明頁」閱讀《服務條款》與扣點說明；載入成功後將自動顯示完整摘要。',
                     ],
                     fullPageLinkLabel: '開啟完整說明頁',
                     fullPagePath: '/service-points-notice.html',
-                    checkboxLabel: '本人已閱讀並同意《服務條款》及《扣點機制與點數說明》（含完整頁連結所示內容），並了解點數於成功使用服務後可能無法退還之情形。',
+                    checkboxLabel: '本人已自行開啟並閱讀下方「完整說明頁」所示之《服務條款》及《扣點機制與點數說明》，並了解點數於成功使用服務後可能無法退還之情形。',
                     linkHint: '若無法開啟新分頁，請長按連結複製網址於瀏覽器開啟。',
                 },
             };
