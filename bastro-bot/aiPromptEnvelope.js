@@ -1,9 +1,10 @@
 'use strict';
 
 /**
- * 後端追加的「技術外層」提示：不取代 Firestore 後台 Role／報告結構。
- * 塔羅／紫微：外層 【分數】+【解析】；解析內文依後台 Prompt 四段結構與排版。
- * 律動能量：外層 JSON；interpretation 依後台三位一體解碼。
+ * 後端追加的「技術外層」提示（第 2 層，見 aiSettingsDefaults.js 說明）。
+ * 人設與報告結構在第 1 層：aiPromptDefaults.js 預設 + Firestore 後台 prompt。
+ * 塔羅／紫微：外層 【分數】+【解析】；解析內文依第 1 層四段結構。
+ * 律動能量：外層 JSON；interpretation 依第 1 層三位一體解碼。
  */
 
 const { MAX_TAROT_ZIWEI_BODY_CHARS, MAX_NUMEROLOGY_INTERPRETATION_CHARS } = require('./aiReplyLimits');
