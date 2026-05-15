@@ -10,7 +10,7 @@
 const MAX_TAROT_ZIWEI_BODY_CHARS = 1200;
 
 /** 律動能量 JSON 內 interpretation 上限 */
-const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 500;
+const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 800;
 
 /** Flex 主文 type:text 上限（與塔羅／紫微正文對齊） */
 const MAX_FLEX_SINGLE_TEXT_CHARS = MAX_TAROT_ZIWEI_BODY_CHARS;

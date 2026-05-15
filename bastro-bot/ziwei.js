@@ -9,6 +9,12 @@ const {
     appendShareButtonToFooterContents,
     sanitizeForFlexText,
 } = require('./lineOaShare');
+const {
+    FLEX_SIZE,
+    FLEX_COLOR,
+    FLEX_PAD,
+    tarotStylePointsFooterRows,
+} = require('./lineFlexTypography');
 const { MAX_TAROT_ZIWEI_BODY_CHARS, MAX_FLEX_SINGLE_TEXT_CHARS, clampTextChars } = require('./aiReplyLimits');
 const { buildTarotZiweiOutputSuffix } = require('./aiPromptEnvelope');
 
@@ -47,51 +53,45 @@ function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, 
             header: {
                 type: "box", layout: "vertical", paddingAll: "md",
                 contents: [
-                    { type: "text", text: "命運解碼室 | 紫微斗數", color: "#F9E498", weight: "bold", size: "md", align: "center" },
-                    { type: "text", text: "尊爵版 ‧ 命盤報告", color: "#FFFFFF", weight: "bold", size: "lg", align: "center", margin: "md" }
+                    { type: "text", text: "命運解碼室 | 紫微斗數", color: FLEX_COLOR.goldLight, weight: "bold", size: FLEX_SIZE.subheading, align: "center" },
+                    { type: "text", text: "尊爵版 ‧ 命盤報告", color: FLEX_COLOR.white, weight: "bold", size: FLEX_SIZE.headerTitle, align: "center", margin: "md" }
                 ]
             },
             body: {
-                type: "box", layout: "vertical", spacing: "md", paddingAll: "lg",
+                type: "box", layout: "vertical", spacing: "md", paddingAll: FLEX_PAD.bubble,
                 contents: [
                     {
                         type: "box", layout: "vertical", backgroundColor: "#FFFFFF1A", cornerRadius: "md", paddingAll: "md",
                         contents: [
-                            { type: "text", text: `親愛的 ${userName}，`, color: "#F9E498", weight: "bold", size: "md" },
-                            { type: "text", text: `宇宙已具現化您降臨凡間的初始代碼：\n【${genderStr}】 ${calStr} ${birthData.date} ${birthData.time}時`, color: "#FFFFFF", size: "xs", wrap: true, margin: "md", style: "italic" }
+                            { type: "text", text: `親愛的 ${userName}，`, color: FLEX_COLOR.goldLight, weight: "bold", size: FLEX_SIZE.subheading },
+                            { type: "text", text: `宇宙已具現化您降臨凡間的初始代碼：\n【${genderStr}】 ${calStr} ${birthData.date} ${birthData.time}時`, color: FLEX_COLOR.white, size: FLEX_SIZE.caption, wrap: true, margin: "md", style: "italic" }
                         ]
                     },
                     {
                         type: "box", layout: "horizontal", alignItems: "center", margin: "lg",
                         contents: [
-                            { type: "text", text: "🏮 綜合運勢指數", color: "#FFFFFF", size: "md", flex: 3 },
-                            { type: "text", text: `${score || '--'} 分`, color: "#F9E498", size: "xxl", weight: "bold", flex: 2, align: "end" }
+                            { type: "text", text: "🏮 綜合運勢指數", color: FLEX_COLOR.white, size: FLEX_SIZE.subheading, flex: 3 },
+                            { type: "text", text: `${score || '--'} 分`, color: FLEX_COLOR.goldLight, size: FLEX_SIZE.score, weight: "bold", flex: 2, align: "end" }
                         ]
                     },
                     { type: "separator", color: "#4A148C", margin: "md" },
-                    { type: "text", text: "✨ 天命解碼精華：", color: "#F9E498", size: "md", weight: "bold", margin: "md" },
-                    { type: "text", text: sanitizeForFlexText(clampTextChars(String(resultText || ''), MAX_FLEX_SINGLE_TEXT_CHARS)), color: "#E0E0E0", size: "md", wrap: true, margin: "md" }
+                    { type: "text", text: "✨ 天命解碼精華：", color: FLEX_COLOR.goldLight, size: FLEX_SIZE.sectionLabel, weight: "bold", margin: "md" },
+                    { type: "text", text: sanitizeForFlexText(clampTextChars(String(resultText || ''), MAX_FLEX_SINGLE_TEXT_CHARS)), color: FLEX_COLOR.body, size: FLEX_SIZE.body, wrap: true, margin: "md" }
                 ]
             },
             footer: {
-                type: "box", layout: "vertical", spacing: "md", paddingAll: "lg",
-                contents: appendShareButtonToFooterContents([
-                    { type: "separator", color: "#4A148C" },
-                    {
-                        type: "box", layout: "horizontal", margin: "md",
-                        contents: [
-                            { type: "text", text: "⚡ 本次解碼消耗", color: "#AAAAAA", size: "md" },
-                            { type: "text", text: `- ${cost} 點`, color: "#FF8A80", size: "md", weight: "bold", align: "end" }
-                        ]
-                    },
-                    {
-                        type: "box", layout: "horizontal",
-                        contents: [
-                            { type: "text", text: "🔋 剩餘靈力", color: "#F9E498", size: "md" },
-                            { type: "text", text: `${remainPoints} 點`, color: "#FFFFFF", size: "lg", weight: "bold", align: "end" }
-                        ]
-                    },
-                ], shareUri, { color: '#7B1FA2' }),
+                type: "box", layout: "vertical", spacing: "md", paddingAll: FLEX_PAD.footer,
+                contents: appendShareButtonToFooterContents(
+                    tarotStylePointsFooterRows(cost, remainPoints, {
+                        costLabel: '⚡ 本次解碼消耗',
+                        remainLabel: '🔋 剩餘靈力',
+                        costColor: FLEX_COLOR.mutedAlt,
+                        remainLabelColor: FLEX_COLOR.goldLight,
+                        separatorColor: '#4A148C',
+                    }),
+                    shareUri,
+                    { color: '#7B1FA2' }
+                ),
             }
         }
     };

@@ -15,6 +15,13 @@ const {
     appendShareButtonToFooterContents,
     sanitizeForFlexText,
 } = require('./lineOaShare');
+const {
+    FLEX_SIZE,
+    FLEX_COLOR,
+    FLEX_PAD,
+    tarotStyleHeaderBox,
+    tarotStylePointsFooterRows,
+} = require('./lineFlexTypography');
 const { MAX_NUMEROLOGY_INTERPRETATION_CHARS, clampTextChars } = require('./aiReplyLimits');
 const {
     rollNumerologyMatrix,
@@ -215,77 +222,66 @@ function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, new
             type: "bubble",
             size: "mega",
             styles: {
-                footer: { backgroundColor: '#05050A' },
+                header: { backgroundColor: FLEX_COLOR.gold },
+                body: { backgroundColor: "#05050A" },
+                footer: { backgroundColor: "#05050A" },
             },
+            header: tarotStyleHeaderBox('命運解碼室 | 律動能量'),
             body: {
-                type: "box", layout: "vertical", backgroundColor: "#05050A", paddingAll: "20px",
+                type: "box", layout: "vertical", spacing: "md", paddingAll: FLEX_PAD.bubble,
                 contents: [
                     {
-                        type: "box", layout: "horizontal", alignItems: "center",
+                        type: "box", layout: "horizontal", justifyContent: "space-between", alignItems: "center",
                         contents: [
-                            { type: "text", text: "🌌 律動能量解碼", color: "#D4AF37", size: "sm", weight: "bold", flex: 1 },
-                            { type: "text", text: `能量 ${fortuneScore} 分`, color: "#F9E498", size: "xs", align: "end", flex: 1 }
-                        ]
+                            { type: "text", text: "🌌 今日能量矩陣", color: FLEX_COLOR.gold, size: FLEX_SIZE.subheading, weight: "bold", flex: 2 },
+                            { type: "text", text: `✨ ${fortuneScore} 分`, color: FLEX_COLOR.goldLight, size: FLEX_SIZE.score, weight: "bold", align: "end", flex: 1 },
+                        ],
                     },
-                    { type: "separator", color: "#333333", margin: "md" },
+                    { type: "separator", margin: "md", color: FLEX_COLOR.separator },
                     {
-                        type: "box", layout: "vertical", margin: "xl", alignItems: "center",
+                        type: "box", layout: "vertical", margin: "lg", alignItems: "center",
                         contents: [
-                            { type: "text", text: "核心能量", color: "#888888", size: "xs", align: "center", margin: "sm" },
-                            { type: "text", text: String(coreNum), color: "#E5C07B", size: "4xl", weight: "bold", align: "center", margin: "sm" }
-                        ]
+                            { type: "text", text: "核心能量", color: FLEX_COLOR.muted, size: FLEX_SIZE.caption, align: "center", margin: "sm" },
+                            { type: "text", text: String(coreNum), color: FLEX_COLOR.goldLight, size: FLEX_SIZE.heroNumber, weight: "bold", align: "center", margin: "sm" },
+                        ],
                     },
                     {
-                        type: "box", layout: "horizontal", margin: "xl", spacing: "md",
+                        type: "box", layout: "horizontal", margin: "lg", spacing: "md",
                         contents: [
                             {
                                 type: "box", layout: "vertical", flex: 1, backgroundColor: "#111115", cornerRadius: "md", paddingAll: "10px",
                                 contents: [
-                                    { type: "text", text: "幸運共振", color: "#888888", size: "xxs", align: "center" },
-                                    { type: "text", text: luckyStr, color: "#FFFFFF", size: "sm", weight: "bold", align: "center", margin: "sm" }
-                                ]
+                                    { type: "text", text: "幸運共振", color: FLEX_COLOR.muted, size: FLEX_SIZE.micro, align: "center" },
+                                    { type: "text", text: luckyStr, color: FLEX_COLOR.white, size: FLEX_SIZE.subheading, weight: "bold", align: "center", margin: "sm" },
+                                ],
                             },
                             {
                                 type: "box", layout: "vertical", flex: 1, backgroundColor: "#15130A", cornerRadius: "md", paddingAll: "10px",
                                 contents: [
-                                    { type: "text", text: "財富金鑰", color: "#D4AF37", size: "xxs", align: "center" },
-                                    { type: "text", text: wealthStr, color: "#F2D3A1", size: "sm", weight: "bold", align: "center", margin: "sm" }
-                                ]
-                            }
-                        ]
+                                    { type: "text", text: "財富金鑰", color: FLEX_COLOR.gold, size: FLEX_SIZE.micro, align: "center" },
+                                    { type: "text", text: wealthStr, color: "#F2D3A1", size: FLEX_SIZE.subheading, weight: "bold", align: "center", margin: "sm" },
+                                ],
+                            },
+                        ],
                     },
-                    {
-                        type: "box", layout: "vertical", margin: "xl", backgroundColor: "#1C1C22", cornerRadius: "md", paddingAll: "15px",
-                        contents: [
-                            { type: "text", text: "✨ 大師指引", color: "#D4AF37", size: "xs", weight: "bold" },
-                            { type: "text", text: sanitizeForFlexText(safeText), color: "#E0E0E0", size: "sm", wrap: true, lineSpacing: "6px", margin: "md" }
-                        ]
-                    },
-                    { type: "separator", color: "#333333", margin: "xl" },
-                    {
-                        type: "box", layout: "horizontal", margin: "md",
-                        contents: [
-                            { type: "text", text: "⚡ 本次消耗", color: "#A0A0B0", size: "sm", flex: 1 },
-                            { type: "text", text: `-${cost} 點`, color: "#FF8A80", size: "sm", weight: "bold", align: "end", flex: 1 }
-                        ]
-                    },
-                    {
-                        type: "box", layout: "horizontal", margin: "sm",
-                        contents: [
-                            { type: "text", text: "🔋 剩餘靈力", color: "#F9E498", size: "sm", flex: 1 },
-                            { type: "text", text: `${newBalance} 點`, color: "#FFFFFF", size: "lg", weight: "bold", align: "end", flex: 1 }
-                        ]
-                    },
-                ]
+                    { type: "separator", margin: "lg", color: FLEX_COLOR.separator },
+                    { type: "text", text: "✨ 大師指引", color: FLEX_COLOR.gold, size: FLEX_SIZE.sectionLabel, weight: "bold", margin: "md" },
+                    { type: "text", text: sanitizeForFlexText(safeText), color: FLEX_COLOR.body, size: FLEX_SIZE.body, wrap: true, margin: "md" },
+                ],
             },
             footer: {
-                type: 'box',
-                layout: 'vertical',
-                spacing: 'md',
-                paddingAll: '12px',
-                contents: appendShareButtonToFooterContents([
-                    { type: 'separator', color: '#333333' },
-                ], shareUri, { color: '#D4AF37' }),
+                type: "box",
+                layout: "vertical",
+                spacing: "md",
+                paddingAll: FLEX_PAD.footer,
+                contents: appendShareButtonToFooterContents(
+                    tarotStylePointsFooterRows(cost, newBalance, {
+                        costLabel: '⚡ 本次消耗靈力',
+                        remainLabel: '🔋 剩餘靈力餘額',
+                    }),
+                    shareUri,
+                    { color: '#D4AF37' }
+                ),
             },
         },
     };

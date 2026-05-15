@@ -10,6 +10,13 @@ const {
     sanitizeForFlexText,
 } = require('./lineOaShare');
 const {
+    FLEX_SIZE,
+    FLEX_COLOR,
+    FLEX_PAD,
+    tarotStyleHeaderBox,
+    tarotStylePointsFooterRows,
+} = require('./lineFlexTypography');
+const {
     MAX_TAROT_ZIWEI_BODY_CHARS,
     MAX_FLEX_SINGLE_TEXT_CHARS,
     clampTextChars,
@@ -74,31 +81,31 @@ function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cos
     return {
         type: "flex", altText: "您的靈能解碼報告已具現化",
         contents: {
-            type: "bubble", styles: { header: { backgroundColor: "#D4AF37" }, body: { backgroundColor: "#0A0B10" }, footer: { backgroundColor: "#0A0B10" } },
-            header: { type: "box", layout: "vertical", paddingAll: "md", contents: [{ type: "text", text: "命運解碼室 | 靈能解碼報告", color: "#000000", weight: "bold", size: "lg", align: "center" }] },
+            type: "bubble", styles: { header: { backgroundColor: FLEX_COLOR.gold }, body: { backgroundColor: "#0A0B10" }, footer: { backgroundColor: "#0A0B10" } },
+            header: tarotStyleHeaderBox('命運解碼室 | 靈能解碼報告'),
             body: {
-                type: "box", layout: "vertical", spacing: "md", paddingAll: "lg",
+                type: "box", layout: "vertical", spacing: "md", paddingAll: FLEX_PAD.bubble,
                 contents: [
                     {
                         type: "box", layout: "horizontal", justifyContent: "space-between", alignItems: "center",
                         contents: [
-                            { type: "text", text: `🔮 探尋領域：【${topic}】`, color: "#D4AF37", size: "md", weight: "bold", flex: 2 },
-                            { type: "text", text: `✨ ${score || '--'} 分`, color: "#F9E498", size: "md", weight: "bold", align: "end", flex: 1 }
+                            { type: "text", text: `🔮 探尋領域：【${topic}】`, color: FLEX_COLOR.gold, size: FLEX_SIZE.subheading, weight: "bold", flex: 2 },
+                            { type: "text", text: `✨ ${score || '--'} 分`, color: FLEX_COLOR.goldLight, size: FLEX_SIZE.score, weight: "bold", align: "end", flex: 1 }
                         ]
                     },
-                    { type: "separator", margin: "md", color: "#333333" },
+                    { type: "separator", margin: "md", color: FLEX_COLOR.separator },
                     { type: "box", layout: "horizontal", spacing: "md", contents: cardBoxes },
-                    { type: "separator", margin: "lg", color: "#333333" },
-                    { type: "text", text: sanitizeForFlexText(clampTextChars(String(aiText || ''), MAX_FLEX_SINGLE_TEXT_CHARS)), color: "#E0E0E0", size: "md", wrap: true, margin: "md" }
+                    { type: "separator", margin: "lg", color: FLEX_COLOR.separator },
+                    { type: "text", text: sanitizeForFlexText(clampTextChars(String(aiText || ''), MAX_FLEX_SINGLE_TEXT_CHARS)), color: FLEX_COLOR.body, size: FLEX_SIZE.body, wrap: true, margin: "md" }
                 ]
             },
             footer: {
-                type: "box", layout: "vertical", spacing: "md", paddingAll: "lg",
-                contents: appendShareButtonToFooterContents([
-                    { type: "separator", color: "#333333" },
-                    { type: "box", layout: "horizontal", margin: "md", contents: [ { type: "text", text: "⚡ 本次消耗靈力", color: "#A0A0A0", size: "md", align: "start" }, { type: "text", text: `- ${cost} 點`, color: "#FF6B6B", size: "md", weight: "bold", align: "end" } ] },
-                    { type: "box", layout: "horizontal", contents: [ { type: "text", text: "🔋 剩餘靈力餘額", color: "#D4AF37", size: "md", align: "start" }, { type: "text", text: `${remainPoints} 點`, color: "#F9E498", size: "lg", weight: "bold", align: "end" } ] },
-                ], shareUri, { color: '#B8860B' }),
+                type: "box", layout: "vertical", spacing: "md", paddingAll: FLEX_PAD.footer,
+                contents: appendShareButtonToFooterContents(
+                    tarotStylePointsFooterRows(cost, remainPoints),
+                    shareUri,
+                    { color: '#B8860B' }
+                ),
             }
         }
     };
