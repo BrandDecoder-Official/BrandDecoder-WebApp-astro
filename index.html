@@ -126,7 +126,7 @@
         }
         tr:last-child td { border-bottom: none; }
         .note { font-size: 0.85rem; color: var(--muted); margin-top: 12px; }
-        .callout-mobile {
+        .callout-tip {
             background: rgba(74, 144, 226, 0.12);
             border: 1px solid rgba(74, 144, 226, 0.35);
             border-radius: 10px;
@@ -134,7 +134,7 @@
             margin-bottom: 14px;
             font-size: 0.92rem;
         }
-        .callout-mobile strong { color: #8ec5ff; }
+        .callout-tip strong { color: #8ec5ff; }
         .legal-box {
             background: rgba(255, 193, 7, 0.06);
             border-left: 3px solid var(--gold-dim);
@@ -238,19 +238,84 @@
             background: #000;
             border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .video-wrap video {
-            display: block;
+        .video-stage {
+            position: relative;
             width: 100%;
             max-width: 340px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #0d0e14;
+        }
+        .video-stage video {
+            display: block;
+            width: 100%;
             max-height: min(72vh, 620px);
             aspect-ratio: 9 / 16;
             object-fit: contain;
-            background: #000;
-            border-radius: 8px;
+            background: #0d0e14;
+            vertical-align: top;
         }
-        .video-card-note {
-            margin: 0 16px 14px !important;
-            padding-top: 2px;
+        .video-play-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+            border: none;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.28);
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .video-play-overlay:hover,
+        .video-play-overlay:focus-visible {
+            background: rgba(0, 0, 0, 0.38);
+        }
+        .video-play-overlay:focus-visible {
+            outline: 2px solid var(--gold);
+            outline-offset: 2px;
+        }
+        .video-play-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #f0d878 0%, #d4af37 55%, #9a7b2c 100%);
+            box-shadow:
+                0 0 0 3px rgba(255, 255, 255, 0.15),
+                0 8px 28px rgba(0, 0, 0, 0.55);
+            pointer-events: none;
+        }
+        .video-play-btn::after {
+            content: '';
+            display: block;
+            width: 0;
+            height: 0;
+            margin-left: 8px;
+            border-style: solid;
+            border-width: 15px 0 15px 26px;
+            border-color: transparent transparent transparent #1a1030;
+        }
+        .video-play-label {
+            position: absolute;
+            bottom: 14px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 0.82rem;
+            color: rgba(255, 255, 255, 0.88);
+            letter-spacing: 0.06em;
+            pointer-events: none;
+            text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+        }
+        .video-stage.is-playing .video-play-overlay {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
         }
         .section-divider {
             margin: 28px 0 14px;
@@ -288,15 +353,6 @@
             font-size: 1.2rem;
             color: #fff;
             font-weight: 600;
-        }
-        .tier-card-show .tier-tag {
-            display: inline-block;
-            margin-top: 8px;
-            font-size: 0.72rem;
-            color: var(--muted);
-            padding: 2px 8px;
-            border: 1px dashed var(--border);
-            border-radius: 20px;
         }
         .live-badge {
             display: inline-block;
@@ -349,7 +405,7 @@
             </div>
             <h1 id="top">命運解碼室</h1>
             <p class="tagline"><span data-mj-bind="meta.brandLine">BrandDecoder｜命運解碼室</span></p>
-            <p class="hero-lead">塔羅 · 紫微斗數 · 律動能量 · 每日一抽｜服務條款、功能展示、扣點與儲值方案說明（官網首頁）</p>
+            <p class="hero-lead">塔羅 · 紫微斗數 · 律動能量 · 每日一抽｜服務條款、功能展示、扣點與儲值方案說明</p>
         </header>
 
         <nav class="toc" aria-label="本頁目錄">
@@ -369,34 +425,34 @@
 
         <section id="purpose">
             <h2>一、頁面用途與版本</h2>
-            <p>本頁為<strong>官網首頁</strong>，彙整服務條款要點、功能截圖、<strong>預付靈力點數</strong>儲值對照，以及各項<strong>扣點機制</strong>，供使用者、金流機構或主管機關查驗。</p>
-            <p>扣點參考值優先自後台資料庫（<code>system_config/ai_settings</code>）即時讀取；儲值檔位自 <code>legal-service-manifest.json</code> 讀取。實際結帳與扣點以<strong>您於 LINE／LIFF 操作當下畫面</strong>為準。</p>
+            <p>本頁彙整服務條款要點、功能操作說明、<strong>預付靈力點數</strong>儲值對照，以及各項<strong>扣點機制</strong>，供您查閱與儲值前確認。</p>
+            <p>頁面所列扣點與儲值方案為<strong>目前公告參考</strong>；實際結帳金額、入帳點數與扣點，均以您於 <strong>LINE 官方帳號或會員中心</strong>操作當下畫面為準。</p>
             <p class="note">頁面更新日期：<span id="mj-page-updated-date">2026年05月17日</span></p>
         </section>
 
         <section id="features">
             <h2>二、功能展示</h2>
-            <div class="callout-mobile">
-                <strong>📱 手機儲值前請先閱讀：</strong>請於下方確認各服務<strong>扣點靈力</strong>（由後台資料讀取），並於會員中心點選「補充靈力」時勾選同意條款後再付款。本頁儲值區僅<strong>展示金額與點數</strong>，不提供付款功能。
+            <div class="callout-tip">
+                <strong>儲值前請先閱讀：</strong>請於下方確認各服務<strong>扣點靈力</strong>，並於會員中心點選「補充靈力」時勾選同意條款後再付款。本頁儲值區僅<strong>展示金額與點數</strong>，不提供付款功能。
             </div>
-            <p>以下提供<strong>三支實機操作錄影</strong>（<code>medias/</code>）與<strong>畫面截圖</strong>（001～007），方便了解 LINE／LIFF 完整使用流程。</p>
+            <p>以下提供<strong>三支實際操作錄影</strong>與<strong>畫面截圖</strong>，方便了解在 LINE 中的完整使用流程。</p>
 
             <h3 id="feature-demos">2.1 操作流程錄影</h3>
-            <p class="note">影片為手機實際操作錄影；建議使用 Wi‑Fi 觀看。點選播放後才會載入檔案（塔羅影片檔較大，請稍候）。</p>
+            <p class="note">錄影為實際操作畫面，預覽為第一格；點中央播放鈕開始觀看（建議使用 Wi‑Fi，載入可能需要一些時間）。</p>
             <div class="video-grid" id="mj-feature-demos"></div>
 
             <div class="section-divider" id="feature-shots">
                 <h3>2.2 畫面截圖示意</h3>
             </div>
-            <p class="note">截圖依使用流程排列（001～007）：</p>
+            <p class="note">截圖依使用流程排列：</p>
             <ul class="note" style="margin-top:8px;">
-                <li><strong>001</strong> 律動能量｜LINE 官方帳號解碼結果</li>
-                <li><strong>002</strong> 紫微斗數｜LINE 官方帳號解碼結果</li>
-                <li><strong>003</strong> LINE 圖文選單（功能入口）</li>
-                <li><strong>004</strong> 塔羅星陣｜LIFF 選擇探詢領域</li>
-                <li><strong>005</strong> 律動能量｜LIFF 啟動解碼</li>
-                <li><strong>006</strong> 紫微斗數｜LIFF 選擇探詢領域</li>
-                <li><strong>007</strong> 紫微斗數｜LIFF 網頁流程展示</li>
+                <li>律動能量｜LINE 官方帳號解碼結果</li>
+                <li>紫微斗數｜LINE 官方帳號解碼結果</li>
+                <li>LINE 圖文選單（功能入口）</li>
+                <li>塔羅星陣｜選擇探詢領域</li>
+                <li>律動能量｜啟動解碼</li>
+                <li>紫微斗數｜選擇探詢領域</li>
+                <li>紫微斗數｜網頁流程展示</li>
             </ul>
             <p class="note">參考扣點：塔羅 <strong>15</strong> 點／次、紫微斗數 <strong>50</strong> 點／次、律動能量 <strong>10</strong> 點／次、每日一抽 <strong>0</strong> 點（簽到贈 +1 靈力）。</p>
             <div class="gallery" id="mj-feature-gallery"></div>
@@ -404,7 +460,7 @@
 
         <section id="deduction">
             <h2>三、扣點機制（各服務詳述）</h2>
-            <p>「參考點數」欄若顯示<span class="live-badge">● 即時</span>，表示已自後台 <code>/api/public/config/ai</code> 讀取；後台調整後無需改版即可反映（重新整理本頁即可）。</p>
+            <p>下列為各服務扣點說明與參考點數；標示<span class="live-badge">最新</span>者為目前公告數值。實際扣點仍以您於 LINE 使用當下畫面為準。</p>
             <table>
                 <thead>
                     <tr>
@@ -420,8 +476,8 @@
         </section>
 
         <section id="recharge">
-            <h2>四、儲值金額與靈力對照（展示用）</h2>
-            <p>與會員中心儲值祭壇相同之方案列表，<strong>僅供查閱</strong>；實際付款請於 LINE 開啟會員中心 LIFF。</p>
+            <h2>四、儲值金額與靈力對照（說明）</h2>
+            <p>與會員中心儲值頁相同之方案列表，<strong>僅供查閱</strong>；實際付款請於 LINE 開啟會員中心操作。</p>
             <div class="tier-showcase" id="mj-tier-showcase"></div>
             <table>
                 <thead>
@@ -432,21 +488,21 @@
                 </thead>
                 <tbody id="mj-pricing-tbody"></tbody>
             </table>
-            <p class="note">※ 測試檔（若顯示）僅供金流測試；正式儲值以會員中心可選方案為準。含首儲加碼時，入帳點數以結帳前確認畫面為準。</p>
+            <p class="note">※ 正式儲值以會員中心可選方案為準。含首儲加碼時，入帳點數以結帳前確認畫面為準。</p>
         </section>
 
         <section id="profiles-flow">
             <h2>五、會員中心與儲值流程示意</h2>
-            <p>以下為會員 profile、儲值與相關操作畫面（1001 系列）。</p>
+            <p>以下為會員中心、儲值與相關操作畫面示意。</p>
             <div class="gallery" id="mj-profile-gallery"></div>
         </section>
 
         <section id="line-access">
             <h2>六、在 LINE 官方帳號中如何閱讀（含儲值前同意）</h2>
             <ul>
-                <li><strong>圖文選單／Rich Menu</strong>：可連結至本頁（<code>/index.html</code>）。</li>
-                <li><strong>儲值前（LIFF 會員中心）</strong>：選擇方案前須勾選同意條款；完整說明可開啟本頁。</li>
-                <li><strong>歡迎訊息／FAQ</strong>：建議附上本頁網址。</li>
+                <li><strong>圖文選單</strong>：可從選單開啟本服務說明頁。</li>
+                <li><strong>儲值前</strong>：於會員中心選擇方案前，須勾選同意條款；完整說明可開啟本頁查閱。</li>
+                <li><strong>歡迎訊息／常見問題</strong>：亦可附上本頁連結，方便隨時查閱扣點與儲值說明。</li>
             </ul>
         </section>
 
@@ -468,7 +524,7 @@
             <ul>
                 <li><strong>未使用點數</strong>：依消費者保護法及公告政策辦理：<span data-mj-bind="draftPlaceholders.refundPolicy" class="placeholder">請見正式公告</span>。</li>
                 <li><strong>已使用點數</strong>：原則不予退還。</li>
-                <li><strong>客服</strong>：<span data-mj-bind="contact.email" class="placeholder">信箱</span>、電話 <span data-mj-bind="contact.phone">0908859917</span>。</li>
+                <li><strong>客服信箱</strong>：<a href="mailto:brand.decoderai@gmail.com" data-mj-contact-email>brand.decoderai@gmail.com</a></li>
             </ul>
         </section>
 
@@ -491,7 +547,7 @@
                 <img src="images/640x640_icon.jpg" alt="" width="36" height="36" loading="lazy" decoding="async">
                 <span data-mj-bind="meta.brandLine">BrandDecoder｜命運解碼室</span>
             </div>
-            <p>官網首頁 · 扣點／儲值資料來自後台 API 與 manifest</p>
+            <p>命運解碼室 · 服務說明與條款</p>
         </footer>
     </div>
 
@@ -503,7 +559,7 @@
                 src: 'medias/tarot.mp4',
                 icon: '🔮',
                 title: '塔羅星陣｜完整操作流程',
-                desc: '從 LINE 圖文選單進入 → LIFF 選擇探詢領域 → 抽牌 → 官方帳號回覆 Flex 解碼結果。',
+                desc: '從 LINE 圖文選單進入 → 選擇探詢領域 → 抽牌 → 官方帳號回覆解碼結果。',
                 costKey: 'tarot',
                 defaultCost: 15,
             },
@@ -512,7 +568,7 @@
                 src: 'medias/ziwei.mp4',
                 icon: '🏮',
                 title: '紫微斗數｜完整操作流程',
-                desc: '選擇探詢領域 → 填寫／確認命盤 → 起盤等候 → LINE 聊天室收到尊爵版命盤 Flex。',
+                desc: '選擇探詢領域 → 填寫／確認命盤 → 起盤等候 → LINE 聊天室收到命盤解碼結果。',
                 costKey: 'ziwei',
                 defaultCost: 50,
             },
@@ -521,7 +577,7 @@
                 src: 'medias/numerology.mp4',
                 icon: '🔢',
                 title: '律動能量｜完整操作流程',
-                desc: '於 LIFF 啟動當日數字矩陣 → 等候 AI 解讀 → LINE 聊天室收到能量矩陣 Flex 結果。',
+                desc: '啟動當日數字矩陣 → 等候解碼完成 → LINE 聊天室收到能量矩陣結果。',
                 costKey: 'numerology',
                 defaultCost: 10,
             },
@@ -530,12 +586,12 @@
             {
                 src: 'images/001.jpg',
                 cap: '律動能量｜LINE 官方帳號解碼結果',
-                sub: '於聊天室收到 Flex 字卡：今日能量矩陣、核心／幸運／財富數字、大師指引，以及本次消耗與剩餘靈力（10 點／次）。',
+                sub: '於聊天室收到解碼結果：今日能量矩陣、核心／幸運／財富數字、大師指引，以及本次消耗與剩餘靈力（10 點／次）。',
             },
             {
                 src: 'images/002.jpg',
                 cap: '紫微斗數｜LINE 官方帳號解碼結果',
-                sub: '於聊天室收到尊爵版命盤 Flex：綜合運勢指數、天命解碼精華、靈力消耗與餘額（50 點／次）。',
+                sub: '於聊天室收到命盤解碼：綜合運勢指數、天命解碼精華、靈力消耗與餘額（50 點／次）。',
             },
             {
                 src: 'images/003.jpg',
@@ -544,32 +600,32 @@
             },
             {
                 src: 'images/004.jpg',
-                cap: '塔羅星陣｜選擇探詢領域（LIFF）',
+                cap: '塔羅星陣｜選擇探詢領域',
                 sub: '於網頁選擇感情與糾葛、事業與財富或綜合與指引，完成抽牌後由官方帳號回覆解碼（15 點／次）。',
             },
             {
                 src: 'images/005.jpg',
-                cap: '律動能量｜啟動解碼（LIFF）',
-                sub: '於網頁確認啟動當日數字矩陣；解碼完成後，完整結果於 LINE 聊天室呈現（見 001，10 點／次）。',
+                cap: '律動能量｜啟動解碼',
+                sub: '於網頁確認啟動當日數字矩陣；解碼完成後，完整結果於 LINE 聊天室呈現（10 點／次）。',
             },
             {
                 src: 'images/006.jpg',
-                cap: '紫微斗數｜選擇探詢領域（LIFF）',
+                cap: '紫微斗數｜選擇探詢領域',
                 sub: '於網頁選擇本命格局、事業財富、感情姻緣或流年運勢等方向，並送出命盤資料（50 點／次）。',
             },
             {
                 src: 'images/007.jpg',
-                cap: '紫微斗數｜LIFF 網頁流程展示',
-                sub: '送出命盤後的起盤等候或命盤相關網頁畫面；完整文字報告請見 LINE 聊天室 Flex（見 002）。',
+                cap: '紫微斗數｜網頁流程展示',
+                sub: '送出命盤後的起盤等候或命盤相關網頁畫面；完整文字報告請見 LINE 聊天室解碼結果。',
             },
         ];
         const PROFILE_SHOTS = [
-            { src: 'images/1001.jpg', cap: '會員／儲值 1' },
-            { src: 'images/1001-1.jpg', cap: '會員／儲值 1-1' },
-            { src: 'images/1002.jpg', cap: '會員／儲值 2' },
-            { src: 'images/1003.jpg', cap: '會員／儲值 3' },
-            { src: 'images/1004.jpg', cap: '會員／儲值 4' },
-            { src: 'images/1005.jpg', cap: '會員／儲值 5' },
+            { src: 'images/1001.jpg', cap: '會員中心總覽' },
+            { src: 'images/1001-1.jpg', cap: '靈力與個人資訊' },
+            { src: 'images/1002.jpg', cap: '儲值方案選擇' },
+            { src: 'images/1003.jpg', cap: '儲值確認與條款' },
+            { src: 'images/1004.jpg', cap: '付款流程示意' },
+            { src: 'images/1005.jpg', cap: '儲值完成提示' },
         ];
 
         function apiBase() {
@@ -647,20 +703,72 @@
                         '</header>' +
                         '<p class="video-card-desc">' + esc(item.desc) + '</p>' +
                         '<figure class="video-wrap">' +
-                            '<video controls playsinline preload="none" src="' + esc(item.src) + '" title="' + esc(item.title) + '">' +
-                                '您的瀏覽器不支援影片播放，請改用 Chrome 或 Safari 開啟。' +
-                            '</video>' +
+                            '<div class="video-stage">' +
+                                '<video playsinline preload="metadata" src="' + esc(item.src) + '#t=0.001" title="' + esc(item.title) + '">' +
+                                    '您的瀏覽器不支援影片播放，請改用 Chrome 或 Safari 開啟。' +
+                                '</video>' +
+                                '<button type="button" class="video-play-overlay" aria-label="播放：' + esc(item.title) + '">' +
+                                    '<span class="video-play-btn" aria-hidden="true"></span>' +
+                                    '<span class="video-play-label">點擊播放操作錄影</span>' +
+                                '</button>' +
+                            '</div>' +
                         '</figure>' +
-                        '<p class="note video-card-note">檔案：<code>' + esc(item.src) + '</code></p>' +
                     '</article>'
                 );
             }).join('');
 
-            container.querySelectorAll('video').forEach(function (video) {
+            initVideoStages(container);
+        }
+
+        function initVideoStages(container) {
+            if (!container) return;
+            container.querySelectorAll('.video-stage').forEach(function (stage) {
+                var video = stage.querySelector('video');
+                var overlay = stage.querySelector('.video-play-overlay');
+                if (!video || !overlay) return;
+
+                function primeFirstFrame() {
+                    if (video.readyState < 1) return;
+                    try {
+                        if (video.currentTime < 0.001) video.currentTime = 0.001;
+                    } catch (e) { /* ignore */ }
+                }
+
+                video.addEventListener('loadedmetadata', primeFirstFrame);
+                video.addEventListener('loadeddata', primeFirstFrame);
+
+                overlay.addEventListener('click', function () {
+                    if (!video.hasAttribute('controls')) video.setAttribute('controls', '');
+                    stage.classList.add('is-playing');
+                    var playPromise = video.play();
+                    if (playPromise && typeof playPromise.catch === 'function') {
+                        playPromise.catch(function () {
+                            stage.classList.remove('is-playing');
+                        });
+                    }
+                });
+
                 video.addEventListener('play', function () {
-                    container.querySelectorAll('video').forEach(function (other) {
-                        if (other !== video && !other.paused) other.pause();
+                    stage.classList.add('is-playing');
+                    container.querySelectorAll('.video-stage').forEach(function (otherStage) {
+                        if (otherStage === stage) return;
+                        var otherVideo = otherStage.querySelector('video');
+                        if (otherVideo && !otherVideo.paused) {
+                            otherVideo.pause();
+                            otherStage.classList.remove('is-playing');
+                        }
                     });
+                });
+
+                video.addEventListener('pause', function () {
+                    if (video.ended) return;
+                    if (video.currentTime > 0 && !video.ended) return;
+                    stage.classList.remove('is-playing');
+                });
+
+                video.addEventListener('ended', function () {
+                    stage.classList.remove('is-playing');
+                    try { video.currentTime = 0.001; } catch (e2) { /* ignore */ }
                 });
             });
         }
@@ -676,13 +784,13 @@
 
         function formatCostLabel(serviceKey, cost, fromLive) {
             if (serviceKey === 'daily') {
-                if (cost === 0) return '0 點（現行；簽到贈 +1 靈力）' + (fromLive ? ' <span class="live-badge">● 即時</span>' : '');
-                return cost + ' 點／次' + (fromLive ? ' <span class="live-badge">● 即時</span>' : '');
+                if (cost === 0) return '0 點（現行；簽到贈 +1 靈力）' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
+                return cost + ' 點／次' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
             }
             if (cost == null || Number.isNaN(Number(cost))) return null;
             var n = Math.round(Number(cost));
             if (serviceKey === 'face' && n <= 0) return null;
-            return n + ' 點／次' + (fromLive ? ' <span class="live-badge">● 即時</span>' : '');
+            return n + ' 點／次' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
         }
 
         function fillDeductionRows(tbody, rows, liveCosts) {
@@ -732,26 +840,25 @@
                 div.innerHTML =
                     '<span class="tier-points">💎 ' + Number(t.points).toLocaleString() + ' 靈力</span>' +
                     '<div class="tier-price">NT$ ' + esc(t.price) + '</div>' +
-                    (t.isPopular ? '<span class="tier-tag">熱門方案</span>' : '<span class="tier-tag">展示用</span>');
                 el.appendChild(div);
             });
         }
 
         function renderContact(el, c) {
             if (!el || !c) return;
-            var rows = [
-                ['服務提供者', c.entityName],
-                ['統一編號', c.taxId],
-                ['官網網址', c.siteUrl],
-                ['聯絡信箱', c.email],
-                ['連絡電話', c.phone],
-            ];
-            el.innerHTML = rows.map(function (pair) {
-                var inner = isPlaceholderVal(pair[1])
-                    ? '<span class="placeholder">' + esc(pair[1] || 'xxxx') + '</span>'
-                    : esc(pair[1]);
-                return '<p><strong>' + esc(pair[0]) + '：</strong>' + inner + '</p>';
-            }).join('');
+            var email = c.email || 'brand.decoderai@gmail.com';
+            var entity = c.entityName || 'BrandDecoder 命運解碼室';
+            var emailHtml = isPlaceholderVal(email)
+                ? '<span class="placeholder">' + esc(email) + '</span>'
+                : '<a href="mailto:' + esc(email) + '">' + esc(email) + '</a>';
+            el.innerHTML =
+                '<p><strong>服務提供者：</strong>' + esc(entity) + '</p>' +
+                '<p><strong>客服信箱：</strong>' + emailHtml + '</p>';
+            var emailLink = document.querySelector('[data-mj-contact-email]');
+            if (emailLink && !isPlaceholderVal(email)) {
+                emailLink.href = 'mailto:' + email;
+                emailLink.textContent = email;
+            }
         }
 
         async function fetchLiveCosts() {
