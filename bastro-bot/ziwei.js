@@ -148,6 +148,8 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 await client.pushMessage(userId, { type: 'text', text: `🏮 已排定 ${userName} 的星盤，大師正在起盤推演...` });
                 await showLoading(); 
 
+                const aiStartTime = Date.now();
+
                 timer1 = setTimeout(async () => {
                     if (!isDone) {
                         await client.pushMessage(userId, { type: 'text', text: `✨ 正在剖析您的【${topicStr}】格局...` });
@@ -171,6 +173,8 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 });
                 const result = await dynamicModel.generateContent(finalPrompt);
                 const rawAiText = result.response.text().trim();
+                const usage = result.response.usageMetadata || {};
+                const aiLatency = Date.now() - aiStartTime;
 
                 isDone = true; 
                 clearTimeout(timer1);
@@ -188,7 +192,13 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
 
                 await recordDivinationLog({
                     userId, userName, type: 'ziwei', summary: `紫微解碼[${topicStr}]：${genderStr}, ${birthData.date} ${birthData.time}時`, points_change: -aiConfig.cost, cost: aiConfig.cost,
-                    aiText: aiData.text, fortune_score: aiData.score
+                    aiText: aiData.text, fortune_score: aiData.score,
+                    metrics: {
+                        latency_ms: aiLatency,
+                        tokens_in: usage.promptTokenCount || 0,
+                        tokens_out: usage.candidatesTokenCount || 0,
+                        model: aiConfig.model,
+                    },
                 });
 
                 const decodedAt = formatTaipeiDateTimeLine(new Date());

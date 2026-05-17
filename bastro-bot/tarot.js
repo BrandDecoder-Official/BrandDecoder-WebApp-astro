@@ -135,6 +135,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
         let isDone = false;
         let timer1, timer2, timer3;
         let tarotConfig = null;
+        const aiStartTime = Date.now();
         try {
             timer1 = setTimeout(async () => {
                 if (!isDone) {
@@ -173,6 +174,8 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             });
             const result = await dynamicModel.generateContent(prompt);
             const rawAiText = result.response.text().trim();
+            const usage = result.response.usageMetadata || {};
+            const aiLatency = Date.now() - aiStartTime;
 
             isDone = true; 
             clearTimeout(timer1);
@@ -188,7 +191,13 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
 
             await recordDivinationLog({
                 userId, userName: userData.displayName, type: 'tarot', topic, cards, summary: `塔羅解碼：領域【${topic}】`,
-                points_change: -tarotConfig.cost, cost: tarotConfig.cost, aiText: aiData.text, fortune_score: aiData.score, timestamp: FieldValue.serverTimestamp()
+                points_change: -tarotConfig.cost, cost: tarotConfig.cost, aiText: aiData.text, fortune_score: aiData.score,
+                metrics: {
+                    latency_ms: aiLatency,
+                    tokens_in: usage.promptTokenCount || 0,
+                    tokens_out: usage.candidatesTokenCount || 0,
+                    model: tarotConfig.model,
+                },
             });
 
             const decodedAt = formatTaipeiDateTimeLine(new Date());

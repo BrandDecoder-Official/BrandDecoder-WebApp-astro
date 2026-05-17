@@ -43,7 +43,16 @@ async function recordDivinationLog(params) {
         if (result_card) logData.result_card = result_card;
         if (aiText) logData.aiText = aiText;
         if (fortune_score !== undefined) logData.fortune_score = fortune_score;
-        if (metrics) logData.metrics = metrics;
+        if (metrics) {
+            const tokensIn = Math.max(0, Number(metrics.tokens_in) || 0);
+            const tokensOut = Math.max(0, Number(metrics.tokens_out) || 0);
+            logData.metrics = {
+                ...metrics,
+                tokens_in: tokensIn,
+                tokens_out: tokensOut,
+                tokens_total: tokensIn + tokensOut,
+            };
+        }
 
         // 3. 🌟 雙寫入機制 (Batch)
         const batch = db.batch();

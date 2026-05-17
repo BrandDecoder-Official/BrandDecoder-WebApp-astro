@@ -140,12 +140,14 @@ async function loadDivinationLogsForDashboard(userId) {
     return { logs, latestBirthData };
 }
 
-async function sendTelegramRevenueAlert({ userName, amount, pointsGiven, paymentMethod }) {
+async function sendTelegramRevenueAlert({ userName, amount, pointsGiven, paymentMethod, merchantTradeNo, ecpayTradeNo }) {
     const token = process.env.TG_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
     const chatId = process.env.TG_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
     if (!token || !chatId) return;
     const now = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false });
-    const tgMessage = `🚀 【新香油錢入帳捷報】\n\n👤 靈魂代號：${userName}\n💎 儲值金額：NT$ ${amount}\n🔋 獲得靈力：${pointsGiven} 點\n💳 付款方式：${paymentMethod}\n⏱️ 交易時間：${now}\n\n✨ 命運解碼室營收持續增長中！`;
+    const orderLine = merchantTradeNo ? `\n📋 本站訂單：${merchantTradeNo}` : '';
+    const ecpayLine = ecpayTradeNo ? `\n🏦 綠界交易號：${ecpayTradeNo}` : '';
+    const tgMessage = `🚀 【新香油錢入帳捷報】\n\n👤 靈魂代號：${userName}\n💎 儲值金額：NT$ ${amount}\n🔋 獲得靈力：${pointsGiven} 點\n💳 付款方式：${paymentMethod}${orderLine}${ecpayLine}\n⏱️ 交易時間：${now}\n\n✨ 命運解碼室營收持續增長中！`;
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -198,7 +200,14 @@ async function fulfillRechargeOrder(orderId, ecpayBody) {
     await batch.commit();
 
     try {
-        await sendTelegramRevenueAlert({ userName, amount, pointsGiven, paymentMethod: paymentMethod || 'ECPay' });
+        await sendTelegramRevenueAlert({
+            userName,
+            amount,
+            pointsGiven,
+            paymentMethod: paymentMethod || 'ECPay',
+            merchantTradeNo: orderId,
+            ecpayTradeNo: ecpayBody.TradeNo || '',
+        });
     } catch (e) {
         console.error('TG捷報系統發生例外:', e);
     }
@@ -230,6 +239,7 @@ app.get('/api/user/profile', verifyLineToken, async (req, res) => {
             lastDrawDate = data.lastDrawDate;
             lastFirstRechargePeriod = data.lastFirstRechargePeriod || null;
         }
+        const dailyStreak = userDoc.exists ? (userDoc.data().dailyStreak || 0) : 0;
         const { logs, latestBirthData } = await loadDivinationLogsForDashboard(userId);
         res.status(200).json({
             success: true,
@@ -239,6 +249,7 @@ app.get('/api/user/profile', verifyLineToken, async (req, res) => {
                 points,
                 createdAt,
                 lastDrawDate,
+                dailyStreak,
                 lastFirstRechargePeriod,
                 birthData: latestBirthData,
                 logs,
@@ -542,9 +553,104 @@ app.get('/api/public/ai-model-options', (req, res) => {
 // ==========================================
 // 🌌 LINE Webhook 核心處理
 // ==========================================
-function getDailyQuickReply(lastDrawDate, today) {
-    if (lastDrawDate === today) return undefined;
-    return { items: [{ type: "action", action: { type: "message", label: "✨ 簽到領靈力 (每日一抽)", text: "每日一抽" } }] };
+const DAILY_STREAK_TARGET = 7;
+const DAILY_STREAK_BONUS = 3;
+const DAILY_BASE_POINTS = 1;
+
+/** 台北日曆日 YYYY-MM-DD（簽到／連續天數用） */
+function getTaipeiDateKey(date = new Date()) {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+}
+
+function normalizeDateKey(s) {
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const m = String(s).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+    if (!m) return null;
+    return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+}
+
+function addDaysToDateKey(dateKey, deltaDays) {
+    const [y, m, d] = dateKey.split('-').map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + deltaDays);
+    return getTaipeiDateKey(dt);
+}
+
+/** 方法一：每日 +1；連續第 7 日再 +3（本輪共 10 點）；中斷則連續天數重算 */
+function resolveDailyStreakReward(lastDrawDate, dailyStreak, todayKey) {
+    const last = normalizeDateKey(lastDrawDate);
+    const yesterdayKey = addDaysToDateKey(todayKey, -1);
+    let streak;
+    if (last === yesterdayKey) {
+        streak = Math.min(DAILY_STREAK_TARGET, (Number(dailyStreak) || 0) + 1);
+    } else {
+        streak = 1;
+    }
+    const bonus = streak === DAILY_STREAK_TARGET ? DAILY_STREAK_BONUS : 0;
+    const points = DAILY_BASE_POINTS + bonus;
+    const streakAfter = streak === DAILY_STREAK_TARGET ? 0 : streak;
+    return { streak, streakAfter, points, base: DAILY_BASE_POINTS, bonus };
+}
+
+function buildDailyPointsDisplay(currentPoints, reward) {
+    const finalPoints = currentPoints + reward.points;
+    let line = `🔋 靈力注入：原本 ${currentPoints} / 每日簽到 +${reward.base}`;
+    if (reward.bonus) line += ` / 連續 7 日獎勵 +${reward.bonus}`;
+    line += ` / 目前靈力：${finalPoints}`;
+    if (reward.streak === DAILY_STREAK_TARGET) {
+        line += `\n🎉 已完成本輪連續 ${DAILY_STREAK_TARGET} 日簽到！明日起重啟累積。`;
+    } else {
+        line += `\n📅 連續簽到進度：${reward.streak}/${DAILY_STREAK_TARGET} 日（滿 ${DAILY_STREAK_TARGET} 日再送 +${DAILY_STREAK_BONUS}）`;
+    }
+    return { finalPoints, line };
+}
+
+/** 給一般訊息／今日已簽到提示：顯示連續簽到進度（不觸發簽到） */
+function buildDailyStreakProgressHint(userData, todayKey) {
+    const last = normalizeDateKey(userData.lastDrawDate);
+    const stored = Number(userData.dailyStreak) || 0;
+    const yesterdayKey = addDaysToDateKey(todayKey, -1);
+
+    if (last === todayKey) {
+        if (stored === 0) {
+            return `📅 今日簽到已完成！本輪連續 ${DAILY_STREAK_TARGET} 日已達標，明天將從第 1 天重新累積（每日 +${DAILY_BASE_POINTS}，滿 ${DAILY_STREAK_TARGET} 日再 +${DAILY_STREAK_BONUS}）。`;
+        }
+        return `📅 今日簽到已完成！目前連續 ${stored}/${DAILY_STREAK_TARGET} 日，明天記得再來延續喔。`;
+    }
+
+    if (last === yesterdayKey) {
+        if (stored === 0) {
+            return `📅 上輪已達連續 ${DAILY_STREAK_TARGET} 日！今日簽到將開啟新一輪第 1 天（+${DAILY_BASE_POINTS} 靈力，滿 ${DAILY_STREAK_TARGET} 日再 +${DAILY_STREAK_BONUS}）。`;
+        }
+        const nextDay = stored + 1;
+        if (nextDay === DAILY_STREAK_TARGET) {
+            return `📅 目前已連續簽到 ${stored} 日，再努力一下！今日簽到即為第 ${DAILY_STREAK_TARGET} 日，可額外獲得 +${DAILY_STREAK_BONUS} 靈力 🎁`;
+        }
+        const daysLeft = DAILY_STREAK_TARGET - nextDay;
+        return `📅 目前已連續簽到 ${stored} 日，再努力一下！今日簽到可達第 ${nextDay} 日（距離 +${DAILY_STREAK_BONUS} 獎勵還差 ${daysLeft} 天）。`;
+    }
+
+    if (!last) {
+        return `📅 尚未開始連續簽到。今日簽到為第 1 天（免費 +${DAILY_BASE_POINTS} 靈力，連滿 ${DAILY_STREAK_TARGET} 日再 +${DAILY_STREAK_BONUS}）。`;
+    }
+
+    return `📅 連續簽到已中斷，今日將從第 1 天重新計算（+${DAILY_BASE_POINTS} 靈力，滿 ${DAILY_STREAK_TARGET} 日再 +${DAILY_STREAK_BONUS}）。`;
+}
+
+function getDailyQuickReply(lastDrawDate, todayKey) {
+    const last = normalizeDateKey(lastDrawDate);
+    if (last === todayKey) return undefined;
+    return {
+        items: [{
+            type: "action",
+            action: {
+                type: "message",
+                label: "✨ 每日免費一算(簽到送靈力+1)",
+                text: "每日一抽",
+            },
+        }],
+    };
 }
 
 app.post('/webhook', middleware(config), async (req, res) => {
@@ -560,7 +666,7 @@ async function handleEvent(event) {
 
   const userId = event.source.userId;
   const userRef = db.collection('users').doc(userId); 
-  const today = new Date().toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' });
+  const today = getTaipeiDateKey();
   const userMessage = (event.type === 'message' && event.message.type === 'text') ? event.message.text.trim() : "";
 
   try {
@@ -581,7 +687,7 @@ async function handleEvent(event) {
     }
 
     if (!userDoc.exists) {
-        userData.points = 100; userData.createdAt = FieldValue.serverTimestamp(); userData.lastDrawDate = null;
+        userData.points = 100; userData.createdAt = FieldValue.serverTimestamp(); userData.lastDrawDate = null; userData.dailyStreak = 0;
         await userRef.set(userData);
     } else if (needUpdateProfile) {
         await userRef.update({ displayName: userData.displayName, pictureUrl: userData.pictureUrl });
@@ -619,9 +725,20 @@ async function handleEvent(event) {
 
     // 🃏 每日一抽 (輕量邏輯留存)
     else if (userMessage === "每日一抽") {
-        if (userData.lastDrawDate === today) {
-            return client.replyMessage(event.replyToken, { type: 'text', text: '✨ 您今天已經領取過宇宙的訊息囉！明天再來抽取指引吧。' });
+        if (normalizeDateKey(userData.lastDrawDate) === today) {
+            const streakHint = buildDailyStreakProgressHint(userData, today);
+            return client.replyMessage(event.replyToken, {
+                type: 'text',
+                text: `✨ 您今天已經領取過宇宙的訊息囉！明天再來抽取指引吧。\n\n${streakHint}`,
+            });
         }
+
+        const dailyReward = resolveDailyStreakReward(userData.lastDrawDate, userData.dailyStreak, today);
+        const dailyUserUpdate = {
+            points: FieldValue.increment(dailyReward.points),
+            lastDrawDate: today,
+            dailyStreak: dailyReward.streakAfter,
+        };
 
         const aiStartTime = Date.now();
         await fetch('https://api.line.me/v2/bot/chat/loading/start', {
@@ -644,33 +761,42 @@ async function handleEvent(event) {
             const aiLatency = Date.now() - aiStartTime;
             const usage = result.response.usageMetadata || {};
 
-            await userRef.update({ points: FieldValue.increment(1), lastDrawDate: today });
+            await userRef.update(dailyUserUpdate);
 
+            const streakNote = dailyReward.bonus
+                ? `（連續 ${DAILY_STREAK_TARGET} 日，含獎勵 +${dailyReward.bonus}）`
+                : `（連續 ${dailyReward.streak}/${DAILY_STREAK_TARGET} 日）`;
             const dailyLogData = {
-                userId, userName: userData.displayName, log_class: 'consumption', summary: `每日簽到：抽到【${randomCard}】`,
-                stage: "Finish", type: "daily_draw", result_card: randomCard, aiText: aiData.text, fortune_score: aiData.score, 
-                points_change: 1, metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: DAILY_DRAW_AI_MODEL },
+                userId, userName: userData.displayName, log_class: 'consumption', summary: `每日簽到：抽到【${randomCard}】${streakNote}`,
+                stage: "Finish", type: "daily_draw", result_card: randomCard, aiText: aiData.text, fortune_score: aiData.score,
+                points_change: dailyReward.points, daily_streak: dailyReward.streak,
+                metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: DAILY_DRAW_AI_MODEL },
                 platform_version: PLATFORM_VERSION, timestamp: FieldValue.serverTimestamp()
             };
 
             await db.collection('divination_logs').add(dailyLogData);
             await userRef.collection('history').add(dailyLogData); 
 
-            const finalPoints = currentPoints + 1;
+            const { line: pointsLine } = buildDailyPointsDisplay(currentPoints, dailyReward);
             const liteOracleNote =
                 "\n\n──────────────\n✧ 此則為天幕隙縫泄下的一縷微光，由輕靈先知代筆速繪；若欲循星軌、披沙見金，細究因果之推演，請輕觸圖文選單，召喚命運解碼室之正式儀式。✧";
-            const displayMsg = `【今日指引：${randomCard}】\n\n${aiData.text}\n\n──────────────\n✨ 今日能量指數：${aiData.score} 分\n🔋 靈力注入：原本 ${currentPoints} / 每日簽到 +1 / 目前靈力：${finalPoints}${liteOracleNote}`;
+            const displayMsg = `【今日指引：${randomCard}】\n\n${aiData.text}\n\n──────────────\n✨ 今日能量指數：${aiData.score} 分\n${pointsLine}${liteOracleNote}`;
 
             return client.replyMessage(event.replyToken, { type: 'text', text: displayMsg });
         } catch (aiError) {
-            await userRef.update({ points: FieldValue.increment(1), lastDrawDate: today });
-            return client.replyMessage(event.replyToken, { type: 'text', text: `【今日指引：${randomCard}】\n\n請順應直覺，保持平靜。\n\n──────────────\n✨ 今日靈能修復：+1\n🔋 當前靈力儲備：${currentPoints + 1}` });
+            await userRef.update(dailyUserUpdate);
+            const { line: pointsLine } = buildDailyPointsDisplay(currentPoints, dailyReward);
+            return client.replyMessage(event.replyToken, {
+                type: 'text',
+                text: `【今日指引：${randomCard}】\n\n請順應直覺，保持平靜。\n\n──────────────\n${pointsLine}`,
+            });
         }
     } else {
+        const streakLine = buildDailyStreakProgressHint(userData, today);
         return client.replyMessage(event.replyToken, {
             type: 'text',
-            text: `✨ 歡迎來到命運解碼室！${userData.displayName}，您可以點擊下方的圖文選單，或領取今日簽到，來進行您的專屬命運解碼喔！`,
-            quickReply: quickReplyObj
+            text: `✨ ${userData.displayName} 您好，歡迎回到命運解碼室。\n\n${streakLine}\n\n免費簽到：每日一抽今日指引並 +1 靈力；連續 ${DAILY_STREAK_TARGET} 日再 +${DAILY_STREAK_BONUS}（本輪最多 ${DAILY_BASE_POINTS * DAILY_STREAK_TARGET + DAILY_STREAK_BONUS} 點）。\n也可點下方按鈕簽到，或從圖文選單進入塔羅、紫微、律動能量等服務。`,
+            quickReply: quickReplyObj,
         });
     }
   } catch (error) { console.error("處理用戶資料時發生錯誤:", error); }

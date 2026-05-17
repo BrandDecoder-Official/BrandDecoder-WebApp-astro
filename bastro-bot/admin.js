@@ -7,6 +7,7 @@ const { getAuth } = require('firebase-admin/auth');
 const { getFirestore } = require('firebase-admin/firestore');
 
 const db = getFirestore('astro-bot-db');
+const { normalizeMetrics } = require('./aiCostEstimate');
 
 // 🛡️ 門神：驗證 Firebase Google 登入的 Token 與超級管理員白名單
 async function verifyAdminToken(req, res, next) {
@@ -62,16 +63,23 @@ router.get('/logs', async (req, res) => {
             const log_class = data.log_class || (data.amount_paid ? 'revenue' : 'consumption');
             const points_change = data.points !== undefined ? data.points : (data.points_change || 0);
 
+            const metricsRaw = data.metrics || null;
+            const metrics = normalizeMetrics(metricsRaw);
+
             return {
                 id: doc.id,
                 userId: data.userId,
                 displayName: data.userName || data.displayName || '未知用戶',
-                type: data.type || data.serviceType, // 確保相容舊資料
+                type: data.type || data.serviceType,
                 stage: data.stage || '',
                 topic: data.summary || data.topic || data.result_card || '',
                 points_change: points_change,
                 log_class: log_class,
-                timestamp: data.timestamp ? data.timestamp.toDate().toISOString() : null
+                timestamp: data.timestamp ? data.timestamp.toDate().toISOString() : null,
+                metrics: metricsRaw,
+                metricsNormalized: metrics,
+                amount_paid: data.amount_paid,
+                paymentMethod: data.paymentMethod,
             };
         });
 

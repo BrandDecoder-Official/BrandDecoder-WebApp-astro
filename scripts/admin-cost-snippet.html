@@ -1,0 +1,30 @@
+
+                <h3 style="font-size: 15px; color: #555; margin: 24px 0 8px 0;">💰 成本總覽（預估）</h3>
+                <p class="cost-note" id="cost-disclaimer">載入中…</p>
+                <motion style="display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap;">
+                    <label style="font-size:13px;">統計區間</label>
+                    <select id="cost-period-days" style="padding:6px 10px; border:1px solid var(--border); border-radius:4px;">
+                        <option value="7">近 7 天</option>
+                        <option value="30" selected>近 30 天</option>
+                        <option value="90">近 90 天</option>
+                    </select>
+                    <button class="btn-primary" type="button" onclick="loadCostOverview()">重新計算</button>
+                </div>
+                <div class="cost-grid">
+                    <div class="cost-card ai"><div class="label">AI Token 成本（預估）</div><div class="value" id="cost-ai">--</motion><div class="sub" id="cost-ai-sub"></div></div>
+                    <div class="cost-card total"><div class="label">期間總成本（預估）</div><div class="value" id="cost-total">--</div><div class="sub" id="cost-total-sub"></div></div>
+                    <div class="cost-card revenue"><div class="label">期間儲值收入</div><div class="value" id="cost-revenue-period">--</div><div class="sub" id="cost-revenue-sub"></div></div>
+                    <div class="cost-card margin"><div class="label">期間毛利（收入－成本）</div><motion class="value" id="cost-margin">--</div><div class="sub">僅供營運參考</motion></motion>
+                </div>
+                <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:20px;">
+                    <div style="flex:1; min-width:280px;">
+                        <h4 style="margin:0 0 8px 0; font-size:13px;">依服務類型（Token / 台幣）</h4>
+                        <table class="cost-table"><thead><tr><th>服務</th><th>次數</th><th>In</th><th>Out</th><th>預估 NT$</th></tr></thead><tbody id="cost-by-service"></tbody></table>
+                    </div>
+                    <div style="flex:1; min-width:280px;">
+                        <h4 style="margin:0 0 8px 0; font-size:13px;">依模型</h4>
+                        <table class="cost-table"><thead><tr><th>模型</th><th>次數</th><th>In</th><th>Out</th><th>預估 NT$</th></tr></thead><tbody id="cost-by-model"></tbody></table>
+                    </div>
+                </div>
+                <h4 style="margin:0 0 8px 0; font-size:13px;">基礎設施月費預估（依區間按比例攤提）</h4>
+                <table class="cost-table" style="margin-bottom:24px;"><thead><tr><th>項目</th><th>月預估 NT$</th><th>本期攤提 NT$</th><th>說明</th></tr></thead><tbody id="cost-infra-body"></tbody></table>

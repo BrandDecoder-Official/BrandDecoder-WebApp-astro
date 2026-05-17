@@ -7,6 +7,12 @@ const { getAuth } = require('firebase-admin/auth');
 const { getFirestore } = require('firebase-admin/firestore');
 
 const db = getFirestore('astro-bot-db');
+const {
+    USD_TO_TWD,
+    aggregateLogsAiCost,
+    getInfraMonthlyEstimates,
+    prorateMonthlyToPeriod,
+} = require('./aiCostEstimate');
 
 // 🛡️ 門神：驗證超級管理員
 async function verifyAdminToken(req, res, next) {
@@ -92,5 +98,96 @@ router.get('/overview', async (req, res) => {
         res.status(500).json({ success: false, msg: "資料撈取失敗" });
     }
 });
+
+// ==========================================
+// 💰 API：成本總覽（Token → 台幣 + 基礎設施預估）
+// ==========================================
+router.get('/cost-overview', async (req, res) => {
+    try {
+        const periodDays = Math.min(90, Math.max(1, parseInt(req.query.days, 10) || 30));
+        const scanLimit = Math.min(2000, Math.max(100, parseInt(req.query.scanLimit, 10) || 800));
+
+        const start = new Date();
+        start.setDate(start.getDate() - periodDays);
+        start.setHours(0, 0, 0, 0);
+
+        const logsSnapshot = await db.collection('divination_logs')
+            .where('timestamp', '>=', start)
+            .orderBy('timestamp', 'desc')
+            .limit(scanLimit)
+            .get();
+
+        const logs = logsSnapshot.docs.map((doc) => {
+            const d = doc.data();
+            return {
+                type: d.type || d.serviceType,
+                metrics: d.metrics,
+            };
+        });
+
+        const aiAgg = aggregateLogsAiCost(logs);
+
+        const ordersSnap = await db.collection('orders').where('status', '==', 'success').get();
+        let revenueTwd = 0;
+        let orderCount = 0;
+        ordersSnap.forEach((doc) => {
+            const o = doc.data();
+            const completed = o.completedAt && o.completedAt.toDate ? o.completedAt.toDate() : null;
+            if (completed && completed >= start) {
+                revenueTwd += o.amount || 0;
+                orderCount += 1;
+            }
+        });
+
+        const infraMonthly = getInfraMonthlyEstimates();
+        const infraLines = infraMonthly.map((row) => {
+            if (row.dynamic) {
+                return {
+                    ...row,
+                    periodTwd: aiAgg.costTwd,
+                    monthlyTwd: aiAgg.costTwd,
+                };
+            }
+            const periodTwd = prorateMonthlyToPeriod(row.monthlyTwd, periodDays);
+            return { ...row, periodTwd };
+        });
+
+        const infraPeriodTotal = infraLines.reduce((s, row) => s + (row.periodTwd || 0), 0);
+        const infraMonthlyTotal = infraLines.reduce((s, row) => {
+            if (row.dynamic) return s + aiAgg.costTwd;
+            return s + (row.monthlyTwd || 0);
+        }, 0);
+
+        const totalCostPeriodTwd = roundTwdLocal(infraPeriodTotal);
+        const marginTwd = roundTwdLocal(revenueTwd - totalCostPeriodTwd);
+
+        res.json({
+            success: true,
+            data: {
+                periodDays,
+                usdToTwd: USD_TO_TWD,
+                disclaimer: 'AI 與基礎設施金額為預估，實際以 Google Cloud / Gemini 帳單為準。費率可透過環境變數 USD_TO_TWD、EST_*_TWD_MONTH 調整。',
+                ai: aiAgg,
+                revenue: { totalTwd: revenueTwd, orderCount },
+                cost: {
+                    aiTwd: aiAgg.costTwd,
+                    infraPeriodTwd: totalCostPeriodTwd,
+                    infraMonthlyTwd: roundTwdLocal(infraMonthlyTotal),
+                    totalPeriodTwd: totalCostPeriodTwd,
+                    marginTwd,
+                },
+                infra: infraLines,
+                scan: { limit: scanLimit, scanned: logsSnapshot.size },
+            },
+        });
+    } catch (error) {
+        console.error('成本總覽載入失敗:', error);
+        res.status(500).json({ success: false, msg: error.message || '成本資料撈取失敗' });
+    }
+});
+
+function roundTwdLocal(n) {
+    return Math.round((Number(n) + Number.EPSILON) * 100) / 100;
+}
 
 module.exports = router;
