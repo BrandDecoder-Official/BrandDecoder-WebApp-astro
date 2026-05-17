@@ -2,8 +2,24 @@
 
 let sharePlainText = '';
 
+/** LIFF 從 liff.line.me/…?token=xx 進入時，參數常在 liff.state 而非 ?token= */
 function getShareToken() {
-    return new URLSearchParams(window.location.search).get('token') || '';
+    const q = new URLSearchParams(window.location.search);
+    let token = q.get('token');
+    if (token) return token;
+
+    const state = q.get('liff.state');
+    if (state) {
+        const stateQuery = state.startsWith('?') ? state.slice(1) : state;
+        token = new URLSearchParams(stateQuery).get('token');
+        if (token) return token;
+    }
+
+    const hash = window.location.hash.replace(/^#/, '');
+    if (hash) {
+        token = new URLSearchParams(hash.startsWith('?') ? hash.slice(1) : hash).get('token');
+    }
+    return token || '';
 }
 
 function setStatus(msg, isError) {
