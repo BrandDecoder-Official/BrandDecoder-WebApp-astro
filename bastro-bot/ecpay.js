@@ -1,6 +1,7 @@
 /**
  * 綠界 ECPay 全方位金流 AioCheckOut/V5（導轉 POST）
- * 文件：https://developers.ecpay.com.tw/?p=2862
+ * 全方位金流：https://developers.ecpay.com.tw/2864/
+ * 測試環境：https://developers.ecpay.com.tw/2856/
  * 檢查碼：https://developers.ecpay.com.tw/?p=2902
  */
 
@@ -107,6 +108,7 @@ function buildAioCheckoutFields({
   itemName,
   returnUrl,
   clientBackUrl,
+  orderResultUrl,
 }) {
   const { merchantId, hashKey, hashIv } = getConfig();
   if (!merchantId || !hashKey || !hashIv) {
@@ -130,6 +132,9 @@ function buildAioCheckoutFields({
 
   if (clientBackUrl) {
     base.ClientBackURL = clientBackUrl.slice(0, 200);
+  }
+  if (orderResultUrl) {
+    base.OrderResultURL = orderResultUrl.slice(0, 200);
   }
 
   base.CheckMacValue = generateCheckMacValue(base, hashKey, hashIv);

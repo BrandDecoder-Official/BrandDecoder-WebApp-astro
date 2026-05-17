@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>儲值成功｜命運解碼室</title>
+    <script src="/env.js?v=8"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="/liff-mobile-only.js?v=1"></script>
+    <style>
+        :root { --gold: #D4AF37; --gold-light: #F9E498; --bg-deep: #050508; }
+        * { box-sizing: border-box; font-family: 'PingFang TC', 'Noto Serif TC', serif; }
+        body { margin: 0; min-height: 100vh; background: var(--bg-deep); color: #fff; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .card {
+            max-width: 400px; width: 100%; text-align: center;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.35);
+            border-radius: 16px; padding: 32px 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        .icon { font-size: 48px; margin-bottom: 12px; }
+        h1 { margin: 0 0 8px; font-size: 22px; color: var(--gold-light); letter-spacing: 2px; }
+        .sub { font-size: 14px; color: #aaa; line-height: 1.6; margin-bottom: 20px; }
+        .detail { font-size: 15px; color: #ddd; margin: 16px 0; min-height: 48px; }
+        .points { font-size: 36px; font-weight: bold; color: var(--gold-light); text-shadow: 0 0 16px var(--gold); }
+        .btn {
+            display: block; width: 100%; margin-top: 12px; padding: 12px; border-radius: 24px;
+            font-weight: bold; font-size: 14px; cursor: pointer; text-decoration: none;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--gold), #B8860B); color: #000; border: none; }
+        .btn-ghost { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+        .spinner { width: 40px; height: 40px; margin: 12px auto; border: 3px solid rgba(212,175,55,0.3); border-top-color: var(--gold); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon" id="state-icon">✨</div>
+        <h1 id="title">確認入帳中</h1>
+        <p class="sub" id="subtitle">已收到付款通知，靈力將於數秒內入帳。請稍候…</p>
+        <div class="detail" id="detail"><div class="spinner"></div></div>
+        <a class="btn btn-primary" id="btn-profile" href="#" style="display:none;">返回會員中心</a>
+        <a class="btn btn-ghost" href="/index.html" style="margin-top:8px;">查看服務說明</a>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(location.search);
+        const orderId = params.get('order') || sessionStorage.getItem('bd_pending_order') || '';
+        document.getElementById('btn-profile').href = 'https://liff.line.me/' + ENV.MEMBER_LIFF_ID;
+
+        let accessToken = null;
+        let pollTimer = null;
+        let pollCount = 0;
+        const MAX_POLL = 30;
+
+        function setState(kind, title, sub, detailHtml) {
+            const icons = { pending: '⏳', success: '🎉', timeout: '⏳', error: '⚠️' };
+            document.getElementById('state-icon').textContent = icons[kind] || '✨';
+            document.getElementById('title').textContent = title;
+            document.getElementById('subtitle').textContent = sub;
+            document.getElementById('detail').innerHTML = detailHtml;
+            if (kind === 'success' || kind === 'timeout') {
+                document.getElementById('btn-profile').style.display = 'block';
+            }
+        }
+
+        async function initLiff() {
+            await liff.init({ liffId: ENV.MEMBER_LIFF_ID });
+            if (!liff.isLoggedIn()) {
+                liff.login({ redirectUri: location.href });
+                return false;
+            }
+            accessToken = liff.getAccessToken();
+            return true;
+        }
+
+        async function pollOrderStatus() {
+            if (!orderId || !accessToken) return;
+            pollCount += 1;
+            try {
+                const res = await fetch(ENV.API_BASE + '/api/pay/order-status?orderId=' + encodeURIComponent(orderId), {
+                    headers: { Authorization: 'Bearer ' + accessToken },
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    if (res.status === 404 && pollCount < 5) return;
+                    throw new Error(data.msg || '查詢失敗');
+                }
+                if (data.status === 'success') {
+                    clearInterval(pollTimer);
+                    sessionStorage.removeItem('bd_pending_order');
+                    setState(
+                        'success',
+                        '儲值成功',
+                        '靈力已入帳，感謝您的支持。',
+                        '<p>獲得</p><p class="points">+' + data.pointsGiven + '</p><p style="font-size:13px;color:#888;">靈力 · NT$ ' + data.amount + '</p>'
+                    );
+                    return;
+                }
+                if (pollCount >= MAX_POLL) {
+                    clearInterval(pollTimer);
+                    setState(
+                        'timeout',
+                        '入帳處理中',
+                        '若已扣款，靈力通常會在數分鐘內入帳。可返回會員中心查看餘額，或聯絡客服。',
+                        '<p style="font-size:12px;color:#888;">訂單：' + orderId + '</p>'
+                    );
+                }
+            } catch (e) {
+                if (pollCount >= MAX_POLL) {
+                    clearInterval(pollTimer);
+                    setState('error', '無法確認狀態', '請返回會員中心查看靈力餘額，或稍後再試。', '');
+                }
+            }
+        }
+
+        async function main() {
+            if (!orderId) {
+                setState('error', '缺少訂單資訊', '請從會員中心重新儲值。', '');
+                document.getElementById('btn-profile').style.display = 'block';
+                return;
+            }
+            try {
+                const ok = await initLiff();
+                if (!ok) return;
+                pollTimer = setInterval(pollOrderStatus, 2000);
+                pollOrderStatus();
+            } catch (e) {
+                setState(
+                    'timeout',
+                    '儲值完成',
+                    '若您已完成付款，請在 LINE 內開啟會員中心確認靈力餘額。',
+                    '<p style="font-size:12px;color:#888;">訂單：' + orderId + '</p>'
+                );
+                document.getElementById('btn-profile').style.display = 'block';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', main);
+    </script>
+</body>
+</html>

@@ -24,8 +24,26 @@
 
 - 建單：`POST /api/pay/request`（需 LINE Bearer）→ 回傳 `{ action, fields }`，前端以 **POST form** 導轉至綠界 `Cashier/AioCheckOut/V5`。
 - 入帳：綠界 **幕後** `POST` 至 **`/api/pay/ecpay/notify`**（`ReturnURL`），驗證 **CheckMacValue**、`RtnCode === 1` 後寫入 Firestore 並加點；回應字串必須為 **`1|OK`**。
-- **ClientBackURL**（`MEMBER_PROFILE_URL`）：預設為會員 **LIFF 入口**（`liff.line.me/…`），讓使用者在 LINE 內按「返回商店」回到同一 LIFF。
+- **ClientBackURL**：預設導向 `https://astro.branddecoderai.com/member/payment-success.html?order=…`（`PAYMENT_SUCCESS_URL`）。
+- **OrderResultURL**：`POST` 至 `/api/pay/ecpay/result`（信用卡等即時付款完成後導回），再 **302** 至成功／失敗頁；**入帳仍以 ReturnURL 為準**。
+- **查詢入帳**：`GET /api/pay/order-status?orderId=…`（LINE Bearer），供成功頁輪詢。
+- **MEMBER_PROFILE_URL**：成功／失敗頁「返回會員中心」按鈕用 LIFF 入口。
 - 請勿將 **HashKey / HashIV** 提交至 Git；測試／正式網址與商店代號需一致（見 `.env.example`）。
+- 文件：[全方位金流付款](https://developers.ecpay.com.tw/2864/) · [測試介接資訊](https://developers.ecpay.com.tw/2856/)
+
+### 測試環境（Stage）設定
+
+在 **Cloud Run** 或本機 `.env` 設定（勿 commit）：
+
+| 變數 | 說明 |
+|------|------|
+| `ECPAY_MERCHANT_ID` | 測試特店編號（官方文件「模擬銀行3D驗證」範例為 `3002607`） |
+| `ECPAY_HASH_KEY` / `ECPAY_HASH_IV` | 與該測試特店後台「系統介接設定」一致 |
+| 勿設或 `ECPAY_STAGE` 非 `production` | 使用 `https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5` |
+| `PUBLIC_BASE_URL` | Cloud Run 對外網址，例如 `https://bastro-bot-….asia-east1.run.app`（供 `ReturnURL`） |
+
+測試信用卡（文件）：`4311-9511-1111-1111`、CVV 任意三碼；3D 簡訊驗證碼固定 `1234`。  
+後台模擬付款：`SimulatePaid=1` 時本系統**不會入帳**，僅驗證 `ReturnURL` 是否回 `1|OK`。
 
 ## 法務／條款字典檔（與前端、說明頁共用）
 

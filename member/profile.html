@@ -899,6 +899,8 @@
                 const data = await response.json();
                 
                 if (data.success && data.action && data.fields) {
+                    const tradeNo = data.merchantTradeNo || data.fields.MerchantTradeNo;
+                    if (tradeNo) sessionStorage.setItem('bd_pending_order', tradeNo);
                     submitEcpayForm(data.action, data.fields);
                 } else {
                     alert("🚨 無法建立付款單：" + (data.msg || data.message || "未知錯誤"));

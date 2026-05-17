@@ -43,6 +43,20 @@ app.set('trust proxy', 1);
 const payFormParser = express.urlencoded({ extended: false });
 
 const memberProfileUrl = (process.env.MEMBER_PROFILE_URL || 'https://liff.line.me/2009490171-ZuAjXwno').replace(/\/$/, '');
+const paymentSuccessPageUrl = (process.env.PAYMENT_SUCCESS_URL || 'https://astro.branddecoderai.com/member/payment-success.html').replace(/\/$/, '');
+const paymentFailedPageUrl = (process.env.PAYMENT_FAILED_URL || 'https://astro.branddecoderai.com/member/payment-failed.html').replace(/\/$/, '');
+
+function buildPaymentResultPageUrl(base, orderId, extraQuery = '') {
+    const q = new URLSearchParams();
+    if (orderId) q.set('order', orderId);
+    if (extraQuery) {
+        const extra = new URLSearchParams(extraQuery);
+        extra.forEach((v, k) => q.set(k, v));
+    }
+    const qs = q.toString();
+    const url = qs ? `${base}?${qs}` : base;
+    return url.length <= 200 ? url : `${base}?order=${encodeURIComponent(String(orderId || '').slice(0, 20))}`;
+}
 
 /** 綠界 ReturnURL 基底：優先環境變數；未設時在 Cloud Run 上可用 Host 推斷為 https://… */
 function resolvePublicBaseUrl(req) {
@@ -310,13 +324,20 @@ app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) =
         const pts = Math.floor(Number(pointsGiven != null ? pointsGiven : amount));
         const payStrings = buildPayStrings(pts, productName);
 
+        const clientBackUrl = buildPaymentResultPageUrl(paymentSuccessPageUrl, merchantTradeNo);
+        const orderResultUrl = `${base}/api/pay/ecpay/result`;
+        if (orderResultUrl.length > 200) {
+            return res.status(500).json({ success: false, msg: 'OrderResultURL 超過 200 字元，請縮短 PUBLIC_BASE_URL' });
+        }
+
         const fields = ecpay.buildAioCheckoutFields({
             merchantTradeNo,
             totalAmount: amount,
             tradeDesc: payStrings.tradeDesc,
             itemName: payStrings.itemName,
             returnUrl,
-            clientBackUrl: memberProfileUrl,
+            clientBackUrl,
+            orderResultUrl,
         });
 
         await db.collection('orders').doc(merchantTradeNo).set({
@@ -329,10 +350,56 @@ app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) =
             createdAt: Timestamp.now(),
         });
 
-        res.json({ success: true, action: ecpay.getCheckoutActionUrl(), fields });
+        res.json({ success: true, action: ecpay.getCheckoutActionUrl(), fields, merchantTradeNo });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, msg: error.message });
+    }
+});
+
+/** 綠界付款完成導回（OrderResultURL，信用卡等即時付款；入帳仍以 ReturnURL 為準） */
+app.post('/api/pay/ecpay/result', payFormParser, async (req, res) => {
+    try {
+        const orderId = String(req.body.MerchantTradeNo || '');
+        if (!ecpay.verifyCheckMacValue(req.body)) {
+            return res.redirect(302, buildPaymentResultPageUrl(paymentFailedPageUrl, orderId, 'reason=verify'));
+        }
+        if (!ecpay.isPaymentSuccess(req.body.RtnCode)) {
+            const code = encodeURIComponent(String(req.body.RtnCode || ''));
+            return res.redirect(302, buildPaymentResultPageUrl(paymentFailedPageUrl, orderId, `code=${code}`));
+        }
+        return res.redirect(302, buildPaymentResultPageUrl(paymentSuccessPageUrl, orderId));
+    } catch (e) {
+        console.error('ECPay result redirect:', e);
+        return res.redirect(302, paymentFailedPageUrl);
+    }
+});
+
+/** 付款結果頁輪詢：僅能查詢本人訂單 */
+app.get('/api/pay/order-status', verifyLineToken, async (req, res) => {
+    try {
+        const orderId = String(req.query.orderId || req.query.order || '').trim();
+        if (!orderId) return res.status(400).json({ success: false, msg: '缺少 orderId' });
+
+        const orderDoc = await db.collection('orders').doc(orderId).get();
+        if (!orderDoc.exists) {
+            return res.status(404).json({ success: false, msg: '找不到訂單' });
+        }
+        const data = orderDoc.data();
+        if (data.userId !== req.user.userId) {
+            return res.status(403).json({ success: false, msg: '無權查詢此訂單' });
+        }
+
+        res.json({
+            success: true,
+            status: data.status || 'pending',
+            amount: data.amount,
+            pointsGiven: data.pointsGiven,
+            merchantTradeNo: orderId,
+        });
+    } catch (e) {
+        console.error('order-status:', e);
+        res.status(500).json({ success: false, msg: '查詢失敗' });
     }
 });
 
@@ -344,6 +411,11 @@ app.post('/api/pay/ecpay/notify', payFormParser, async (req, res) => {
             return res.status(400).send('0|FAIL');
         }
         if (!ecpay.isPaymentSuccess(req.body.RtnCode)) {
+            return res.send('1|OK');
+        }
+        // 綠界後台「模擬付款」：SimulatePaid=1 僅測試 ReturnURL，不得入帳（官方文件）
+        if (String(req.body.SimulatePaid || '') === '1') {
+            console.log('ECPay notify: SimulatePaid=1，略過入帳', req.body.MerchantTradeNo);
             return res.send('1|OK');
         }
         const orderId = req.body.MerchantTradeNo;

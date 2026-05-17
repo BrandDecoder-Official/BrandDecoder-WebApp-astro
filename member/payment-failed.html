@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>付款未完成｜命運解碼室</title>
+    <script src="/env.js?v=8"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script src="/liff-mobile-only.js?v=1"></script>
+    <style>
+        :root { --gold: #D4AF37; --gold-light: #F9E498; --bg-deep: #050508; }
+        * { box-sizing: border-box; font-family: 'PingFang TC', 'Noto Serif TC', serif; }
+        body { margin: 0; min-height: 100vh; background: var(--bg-deep); color: #fff; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .card {
+            max-width: 400px; width: 100%; text-align: center;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,107,107,0.35);
+            border-radius: 16px; padding: 32px 24px;
+        }
+        .icon { font-size: 48px; margin-bottom: 12px; }
+        h1 { margin: 0 0 8px; font-size: 22px; color: #FF8A80; letter-spacing: 2px; }
+        .sub { font-size: 14px; color: #aaa; line-height: 1.6; margin-bottom: 20px; }
+        .btn {
+            display: block; width: 100%; margin-top: 12px; padding: 12px; border-radius: 24px;
+            font-weight: bold; font-size: 14px; cursor: pointer; text-decoration: none;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--gold), #B8860B); color: #000; border: none; }
+        .btn-ghost { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">😔</div>
+        <h1>付款未完成</h1>
+        <p class="sub" id="subtitle">交易已取消或失敗，尚未扣款。您可返回會員中心重新選擇方案。</p>
+        <p id="order-hint" style="font-size:12px;color:#666;display:none;"></p>
+        <a class="btn btn-primary" id="btn-profile" href="#">返回會員中心</a>
+        <a class="btn btn-ghost" href="/index.html" style="margin-top:8px;">查看服務說明</a>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(location.search);
+        const orderId = params.get('order');
+        const reason = params.get('reason');
+        document.getElementById('btn-profile').href = 'https://liff.line.me/' + ENV.MEMBER_LIFF_ID;
+
+        if (reason === 'verify') {
+            document.getElementById('subtitle').textContent = '付款結果驗證異常，請勿重複付款。若已扣款請聯絡客服。';
+        }
+        if (orderId) {
+            const el = document.getElementById('order-hint');
+            el.style.display = 'block';
+            el.textContent = '訂單：' + orderId;
+        }
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            try {
+                await liff.init({ liffId: ENV.MEMBER_LIFF_ID });
+                if (!liff.isLoggedIn()) liff.login({ redirectUri: location.href });
+            } catch (e) { /* 非 LINE 環境仍顯示靜態說明 */ }
+        });
+    </script>
+</body>
+</html>
