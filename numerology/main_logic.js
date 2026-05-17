@@ -20,31 +20,14 @@ let isRitualActive = false;
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("系統啟動：掛載 PixiJS 視覺引擎...");
-    
-    // 🌟 1. 啟動待機動畫 (緩慢旋轉)
-    initPixiBackground();
+    try { initPixiBackground(); } catch (pixiErr) { console.warn("Pixi 背景略過", pixiErr); }
 
     try {
-        await liff.init({ liffId: ENV.NUMEROLOGY_LIFF_ID }); 
-        
-        if (!liff.isLoggedIn()) {
-            const st = document.querySelector('.status-text');
-            if (st) st.innerText = '正在登入 LINE…';
-            liff.login({ redirectUri: window.location.href });
-            return;
-        }
-
-        if (typeof LiffMobileOnly !== 'undefined' && !LiffMobileOnly.enforceMobileLiffOnly()) {
-            const st = document.querySelector('.status-text');
-            if (st) st.innerText = '請改用手機 LINE 開啟';
-            return;
-        }
-
-        const profile = await liff.getProfile();
+        const session = await BdLiff.requireLiffSession(ENV.NUMEROLOGY_LIFF_ID, { withProfile: true });
+        currentAccessToken = session.token;
+        const profile = session.profile || (await liff.getProfile());
         userId = profile.userId;
-        currentAccessToken = liff.getAccessToken();
-        if (!currentAccessToken) throw new Error("無法取得安全通行證");
-        
+
         const uiNameEl = document.getElementById('ui-name');
         if(uiNameEl) uiNameEl.innerText = profile.displayName || "神祕旅人";
         console.log("✅ LIFF 登入成功 UID:", userId);
@@ -68,6 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         switchScreen('step-calibration', 'step-ritual');
 
     } catch (error) {
+        if (error && (error.code === 'LIFF_LOGIN_REDIRECT' || error.code === 'LIFF_MOBILE_ONLY')) return;
         console.error("初始化失敗:", error);
         const statusText = document.querySelector('.status-text');
         if(statusText) {

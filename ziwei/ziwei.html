@@ -2,13 +2,14 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://bastro-bot-217800246535.asia-east1.run.app https://api.line.me https://liff.line.me https://access.line.me https://static.line-scdn.net https://profile.line-scdn.net https://*.googleapis.com https://*.google.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; frame-src https://liff.line.me https://access.line.me; font-src 'self' data:; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw https://*.ecpay.com.tw;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https: wss: blob:; worker-src 'self' blob:; frame-src https://liff.line.me https://access.line.me; font-src 'self' data:; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw https://*.ecpay.com.tw;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>命運解碼室 | 紫微大運</title>
     
     <script src="/env.js?v=8"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="/liff-mobile-only.js?v=1"></script>
+    <script src="/js/liff-bootstrap.js?v=1"></script>
     <script src="/pixi.min.js"></script>
     
     <style>
@@ -431,16 +432,24 @@
         
         async function initLIFF() {
             try {
-                await liff.init({ liffId: ENV.ZIWEI_LIFF_ID }); 
-                if (!liff.isLoggedIn()) { liff.login(); return; }
-                if (typeof LiffMobileOnly !== 'undefined' && !LiffMobileOnly.enforceMobileLiffOnly()) return;
-                const prof = await liff.getProfile();
-                lineUserIdForTracking = prof.userId;
-                currentAccessToken = liff.getAccessToken();
-                if (!currentAccessToken) { alert("無法取得安全通行證，請重新開啟。"); return; }
+                const session = await BdLiff.requireLiffSession(ENV.ZIWEI_LIFF_ID, { withProfile: true });
+                currentAccessToken = session.token;
+                if (session.profile) lineUserIdForTracking = session.profile.userId;
                 liffReady = true;
                 sendTrackingLog("Stage 1: Page View");
-            } catch (err) { alert("無法開啟結界，請在 LINE 內部開啟！"); }
+            } catch (err) {
+                if (err && (err.code === 'LIFF_LOGIN_REDIRECT' || err.code === 'LIFF_MOBILE_ONLY')) return;
+                console.error('initLIFF', err);
+                if (typeof liff !== 'undefined' && liff.isLoggedIn && liff.isLoggedIn()) {
+                    const t = liff.getAccessToken();
+                    if (t) {
+                        currentAccessToken = t;
+                        liffReady = true;
+                        return;
+                    }
+                }
+                alert("無法開啟結界，請在 LINE 內部開啟！");
+            }
         }
 
         function initDatePicker() {
