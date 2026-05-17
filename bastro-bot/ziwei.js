@@ -117,13 +117,8 @@ function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, 
 // 2. 匯出紫微斗數主邏輯處理函數
 exports.processZiweiDivination = async function(req, res, db, client, genAI, FieldValue, recordDivinationLog) {
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) return res.status(401).json({ success: false, msg: "未授權的請求。" });
-        const token = authHeader.split(' ')[1];
-        const profileRes = await fetch('https://api.line.me/v2/profile', { headers: { Authorization: `Bearer ${token}` } });
-        if (!profileRes.ok) return res.status(401).json({ success: false, msg: "通行證驗證失敗" });
-        const lineProfile = await profileRes.json();
-        const userId = lineProfile.userId;
+        const userId = req.user && req.user.userId;
+        if (!userId) return res.status(401).json({ success: false, msg: "未授權的請求。" });
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const aiConfig = mergeModuleKey('ziwei', configDoc);

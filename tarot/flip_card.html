@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://bastro-bot-217800246535.asia-east1.run.app https://api.line.me https://*.googleapis.com https://*.google.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; frame-src https://liff.line.me https://access.line.me; font-src 'self' data:; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw https://*.ecpay.com.tw;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://bastro-bot-217800246535.asia-east1.run.app https://api.line.me https://liff.line.me https://access.line.me https://static.line-scdn.net https://profile.line-scdn.net https://*.googleapis.com https://*.google.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; frame-src https://liff.line.me https://access.line.me; font-src 'self' data:; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw https://*.ecpay.com.tw;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>命運解碼室-靈能調頻</title>
     
@@ -414,17 +414,18 @@
                 return;
             }
 
-            lineAccessToken = liff.getAccessToken();
-            if (!lineAccessToken) return;
-            const profile = await liff.getProfile();
-            lineUserIdForTracking = profile.userId;
-
-            sendTrackingLog("Stage 1: Page View");
-            
-            await fetchAiConfig();
-            
+            try {
+                lineAccessToken = liff.getAccessToken();
+                if (!lineAccessToken) return;
+                const profile = await liff.getProfile();
+                lineUserIdForTracking = profile.userId;
+                sendTrackingLog("Stage 1: Page View");
+                await fetchAiConfig();
+            } catch (err) {
+                console.warn("LIFF 附加初始化略過（不阻斷塔羅流程）", err);
+            }
         }).catch((err) => {
-            console.error("LIFF 初始化失敗", err);
+            console.error("LIFF SDK 初始化失敗", err);
             alert("⚠️ 系統初始化失敗，請確認網路連線或稍後再試。");
         });
 

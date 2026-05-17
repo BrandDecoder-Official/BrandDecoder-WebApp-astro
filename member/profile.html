@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://bastro-bot-217800246535.asia-east1.run.app https://api.line.me https://*.googleapis.com https://*.google.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; frame-src https://liff.line.me https://access.line.me; font-src 'self' data:; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw https://*.ecpay.com.tw;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://bastro-bot-217800246535.asia-east1.run.app https://api.line.me https://liff.line.me https://access.line.me https://static.line-scdn.net https://profile.line-scdn.net https://*.googleapis.com https://*.google.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; frame-src https://liff.line.me https://access.line.me; font-src 'self' data:; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw https://*.ecpay.com.tw;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>靈魂儀表板 | 命運解碼室</title>
     
@@ -449,8 +449,13 @@
                     fetch(`${ENV.API_BASE}/api/user/history?days=7`, { headers: { 'Authorization': `Bearer ${currentAccessToken}` } })
                 ]);
 
+                if (!profileRes.ok) {
+                    const errBody = await profileRes.json().catch(() => ({}));
+                    throw new Error(errBody.message || errBody.msg || `伺服器回應 ${profileRes.status}`);
+                }
+
                 const profileResult = await profileRes.json();
-                const chartResult = await chartRes.json();
+                const chartResult = chartRes.ok ? await chartRes.json() : { success: false };
 
                 if(profileResult.success) {
                     const data = profileResult.data;
@@ -479,7 +484,10 @@
 
             } catch (error) {
                 console.error("初始化失敗:", error);
-                alert("🚨 " + error.message);
+                const msg = (error && error.message === 'Load failed')
+                    ? '無法連線後端，請確認網路或稍後再試'
+                    : (error && error.message) || '初始化失敗';
+                alert("🚨 " + msg);
             }
         }
 

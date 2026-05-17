@@ -529,7 +529,7 @@ app.post('/api/tarot/ticket', express.json(), verifyLineToken, aiDecodeLimiter, 
 // ==========================================
 // 🏮 紫微斗數：專屬深度解碼 API (模組化路由)
 // ==========================================
-app.post('/api/divination/ziwei', express.json(), aiDecodeLimiter, async (req, res) => {
+app.post('/api/divination/ziwei', express.json(), verifyLineToken, aiDecodeLimiter, async (req, res) => {
     // 呼叫外部的紫微斗數微服務處理核心邏輯
     return await ziweiHandler.processZiweiDivination(req, res, db, client, genAI, FieldValue, recordDivinationLog);
 });

@@ -28,11 +28,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         await liff.init({ liffId: ENV.NUMEROLOGY_LIFF_ID }); 
         
         if (!liff.isLoggedIn()) {
+            const st = document.querySelector('.status-text');
+            if (st) st.innerText = '正在登入 LINE…';
             liff.login({ redirectUri: window.location.href });
             return;
         }
 
         if (typeof LiffMobileOnly !== 'undefined' && !LiffMobileOnly.enforceMobileLiffOnly()) {
+            const st = document.querySelector('.status-text');
+            if (st) st.innerText = '請改用手機 LINE 開啟';
             return;
         }
 

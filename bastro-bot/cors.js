@@ -1,6 +1,6 @@
 'use strict';
 
-const DEFAULT_CORS_ORIGINS = 'https://astro.branddecoderai.com';
+const DEFAULT_CORS_ORIGINS = 'https://astro.branddecoderai.com,https://liff.line.me';
 
 function parseCorsOrigins() {
     const raw = process.env.CORS_ALLOWED_ORIGINS || DEFAULT_CORS_ORIGINS;
