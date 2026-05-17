@@ -144,6 +144,20 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
         const genderStr = birthData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
         const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
 
+        try {
+            await recordDivinationLog({
+                userId,
+                userName,
+                type: 'ziwei',
+                log_class: 'system',
+                stage: 'Stage 2: Ticket Created',
+                summary: '系統背景程序：建立紫微解碼任務',
+                points_change: 0,
+            });
+        } catch (logErr) {
+            console.warn('紫微 Stage 2 日誌略過:', logErr.message);
+        }
+
         // 立刻回傳 200，讓前端關閉網頁
         res.json({ success: true, msg: "命盤已送交大師，請關閉網頁回聊天室查看" });
 

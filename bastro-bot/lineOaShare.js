@@ -26,9 +26,11 @@ function formatTaipeiDateTimeLine(date) {
     });
 }
 
-/** Flex 內文：移除 Markdown 星號等，避免顯示異常 */
+const { stripHtmlForLineText } = require('./lineFlexTextFormat');
+
+/** Flex 內文：移除 Markdown 星號、HTML 斷行等，避免顯示異常 */
 function sanitizeForFlexText(str) {
-    return String(str == null ? '' : str).replace(/\*\*/g, '');
+    return stripHtmlForLineText(String(str == null ? '' : str)).replace(/\*\*/g, '');
 }
 
 /**

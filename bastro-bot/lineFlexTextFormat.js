@@ -1,5 +1,14 @@
 'use strict';
 
+/** LINE Flex／純文字不支援 HTML；將常見斷行標籤轉為換行 */
+function stripHtmlForLineText(text) {
+    return String(text || '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>\s*/gi, '\n\n')
+        .replace(/<p[^>]*>/gi, '')
+        .replace(/<[^>]+>/g, '');
+}
+
 /**
  * 扣點服務 Flex 主文排版：保留 AI 既有換行；若幾乎無分段則依句讀切為 2～3 句一段（段間 \n\n）。
  * 塔羅／紫微／律動共用。
@@ -7,7 +16,7 @@
  * @returns {string}
  */
 function formatFlexBodyParagraphs(text) {
-    let s = String(text || '')
+    let s = stripHtmlForLineText(text)
         .trim()
         .replace(/\\n/g, '\n')
         .replace(/\r\n/g, '\n');
@@ -49,5 +58,6 @@ function formatFlexBodyParagraphs(text) {
 }
 
 module.exports = {
+    stripHtmlForLineText,
     formatFlexBodyParagraphs,
 };
