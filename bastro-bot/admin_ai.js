@@ -19,7 +19,10 @@ const express = require('express');
 const router = express.Router();
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { DEFAULT_AI_SETTINGS, mergeAiSettingsFromDoc } = require('./aiSettingsDefaults');
+const { verifyAdminToken } = require('./adminAuth');
 const db = getFirestore('astro-bot-db');
+
+router.use(verifyAdminToken);
 
 // 讀取 AI 動態設定（與 aiSettingsDefaults.js 合併：DB 優先，缺欄補預設；讀取失敗不回捏造資料）
 router.get('/config/ai', async (req, res) => {
@@ -40,7 +43,7 @@ router.post('/config/ai', async (req, res) => {
         // 準備要更新進資料庫的物件
         const updateData = {
             updatedAt: FieldValue.serverTimestamp(),
-            updatedBy: req.user ? req.user.email : "system"
+            updatedBy: req.admin ? req.admin.email : 'system',
         };
 
         // 安全賦值：確保有資料才更新

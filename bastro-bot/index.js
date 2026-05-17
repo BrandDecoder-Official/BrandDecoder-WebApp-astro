@@ -4,7 +4,8 @@
 // ==========================================
 
 const ecpay = require('./ecpay');
-const { buildPayStrings } = require('./legalManifest');
+const { buildPayStrings, validateRechargeOrder } = require('./legalManifest');
+const { verifyLineToken } = require('./lineAuth');
 const express = require('express');
 const { middleware, Client } = require('@line/bot-sdk');
 const { initializeApp } = require('firebase-admin/app');
@@ -89,30 +90,6 @@ app.use('/api/admin', express.json(), adminRouter);
 app.use('/api/admin', express.json(), adminAiRouter);
 app.use('/api/admin', express.json(), adminKpiRouter);
 app.use('/api/numerology', express.json(), numerologyRouter);
-
-// 🛡️ LINE OAuth 2.0 User Access Token（LIFF：`liff.getAccessToken()`）。
-// 客戶端請勿用 ID Token 呼叫帶此 middleware 的 API：https://api.line.me/v2/profile 需使用 access token。
-async function verifyLineToken(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ success: false, message: '結界阻擋：未提供有效通行證' });
-    }
-    const token = authHeader.split(' ')[1];
-    
-    try {
-        const response = await fetch('https://api.line.me/v2/profile', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (!response.ok) throw new Error('Token 無效或已過期');
-        
-        const profile = await response.json();
-        req.user = profile; 
-        next(); 
-    } catch (error) {
-        console.error("Token 驗證失敗:", error.message);
-        res.status(401).json({ success: false, message: '結界阻擋：通行證驗證失敗' });
-    }
-}
 
 /** 會員儀表板用：自 divination_logs 組 logs + 最近紫微生辰（Firestore 複合索引：collection=divination_logs, userId ASC, timestamp DESC） */
 async function loadDivinationLogsForDashboard(userId) {
@@ -325,15 +302,30 @@ app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) =
         }
         const { amount, productName, pointsGiven, periodCode } = req.body;
         const userId = req.user.userId;
+
+        const userDoc = await db.collection('users').doc(userId).get();
+        const lastFirstRechargePeriod = userDoc.exists ? userDoc.data().lastFirstRechargePeriod : null;
+        const tierCheck = validateRechargeOrder({
+            amount,
+            pointsGiven,
+            periodCode,
+            lastFirstRechargePeriod,
+        });
+        if (!tierCheck.ok) {
+            return res.status(400).json({ success: false, msg: tierCheck.msg });
+        }
+
         const merchantTradeNo = ecpay.buildMerchantTradeNo(userId);
+        const validatedAmount = tierCheck.amount;
+        const validatedPoints = tierCheck.pointsGiven;
+        const validatedPeriodCode = tierCheck.periodCode;
 
         const returnUrl = `${base}/api/pay/ecpay/notify`;
         if (returnUrl.length > 200) {
             return res.status(500).json({ success: false, msg: 'ReturnURL 超過 200 字元，請縮短網域（PUBLIC_BASE_URL 或自訂網域）' });
         }
 
-        const pts = Math.floor(Number(pointsGiven != null ? pointsGiven : amount));
-        const payStrings = buildPayStrings(pts, productName);
+        const payStrings = buildPayStrings(validatedPoints, productName);
 
         const clientBackUrl = buildPaymentResultPageUrl(paymentSuccessPageUrl, merchantTradeNo);
         const orderResultUrl = `${base}/api/pay/ecpay/result`;
@@ -343,7 +335,7 @@ app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) =
 
         const fields = ecpay.buildAioCheckoutFields({
             merchantTradeNo,
-            totalAmount: amount,
+            totalAmount: validatedAmount,
             tradeDesc: payStrings.tradeDesc,
             itemName: payStrings.itemName,
             returnUrl,
@@ -353,9 +345,9 @@ app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) =
 
         await db.collection('orders').doc(merchantTradeNo).set({
             userId,
-            amount: Math.floor(Number(amount)),
-            pointsGiven: pointsGiven || amount,
-            periodCode: periodCode || null,
+            amount: validatedAmount,
+            pointsGiven: validatedPoints,
+            periodCode: validatedPeriodCode,
             status: 'pending',
             paymentMethod: 'ECPay',
             createdAt: Timestamp.now(),

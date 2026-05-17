@@ -35,6 +35,7 @@ const {
     LINE_LOADING_FINAL_SECONDS,
     LINE_LOADING_FINAL_AT_MS,
 } = require('./lineLoading');
+const { verifyLineToken } = require('./lineAuth');
 
 const db = getFirestore('astro-bot-db');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -44,15 +45,18 @@ const lineClient = new Client({
     channelSecret: process.env.LINE_CHANNEL_SECRET,
 });
 
-router.post('/generate', async (req, res) => {
-    const { userId } = req.body; 
-    if (!userId) return res.status(400).json({ status: 'error', message: 'Missing userId' });
+router.post('/generate', verifyLineToken, async (req, res) => {
+    const userId = req.user.userId;
 
     try {
         const userRef = db.collection('users').doc(userId);
         const userDoc = await userRef.get();
         if (!userDoc.exists) throw new Error('找不到該用戶資料');
-        const userName = userDoc.data().displayName || userDoc.data().name || '神祕旅人';
+        const userName =
+            userDoc.data().displayName ||
+            userDoc.data().name ||
+            req.user.displayName ||
+            '神祕旅人';
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const aiConfig = mergeModuleKey('numerology', configDoc);
