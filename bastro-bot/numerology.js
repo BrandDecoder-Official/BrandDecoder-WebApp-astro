@@ -33,6 +33,7 @@ const {
     startLineChatLoading,
     LINE_LOADING_EARLY_SECONDS,
     LINE_LOADING_FINAL_SECONDS,
+    LINE_LOADING_FINAL_AT_MS,
 } = require('./lineLoading');
 
 const db = getFirestore('astro-bot-db');
@@ -79,16 +80,16 @@ router.post('/generate', async (req, res) => {
                 timer1 = setTimeout(async () => {
                     if (!isDone) {
                         await lineClient.pushMessage(userId, { type: 'text', text: `🌌 正在解碼您的專屬幸運共振與財富金鑰...` });
-                        await showLoading();
+                        if (!isDone) await showLoading();
                     }
                 }, 4000);
 
                 timer3 = setTimeout(async () => {
                     if (!isDone) {
                         await lineClient.pushMessage(userId, { type: 'text', text: `💫 數字頻率正在共振，大師為您提取最終的高維度指引...` });
-                        await showLoading(LINE_LOADING_FINAL_SECONDS);
+                        if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
                     }
-                }, 15000);
+                }, LINE_LOADING_FINAL_AT_MS);
 
                 const aiStartTime = Date.now();
                 const model = genAI.getGenerativeModel({

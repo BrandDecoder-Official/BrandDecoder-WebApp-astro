@@ -27,6 +27,7 @@ const {
     startLineChatLoading,
     LINE_LOADING_EARLY_SECONDS,
     LINE_LOADING_FINAL_SECONDS,
+    LINE_LOADING_FINAL_AT_MS,
 } = require('./lineLoading');
 const { formatFlexBodyParagraphs } = require('./lineFlexTextFormat');
 
@@ -140,23 +141,23 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             timer1 = setTimeout(async () => {
                 if (!isDone) {
                     await client.pushMessage(userId, { type: 'text', text: '✨ 正在透過牌陣連結您的潛意識能量場...' });
-                    await showLoading(); 
+                    if (!isDone) await showLoading();
                 }
             }, 3000);
 
             timer2 = setTimeout(async () => {
                 if (!isDone) {
                     await client.pushMessage(userId, { type: 'text', text: '🌌 靈感湧現！正在將宇宙指引轉化為文字報告，請稍候...' });
-                    await showLoading(); 
+                    if (!isDone) await showLoading();
                 }
             }, 7000);
 
             timer3 = setTimeout(async () => {
                 if (!isDone) {
                     await client.pushMessage(userId, { type: 'text', text: '🧘‍♂️ 宇宙訊息量龐大，大師正在為您進行最後的統整與收斂...' });
-                    await showLoading(LINE_LOADING_FINAL_SECONDS);
+                    if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
                 }
-            }, 15000);
+            }, LINE_LOADING_FINAL_AT_MS);
 
             const configDoc = await db.collection('system_config').doc('ai_settings').get();
             tarotConfig = mergeModuleKey('tarot', configDoc);

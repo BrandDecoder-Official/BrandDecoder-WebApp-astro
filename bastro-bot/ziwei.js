@@ -26,6 +26,7 @@ const {
     startLineChatLoading,
     LINE_LOADING_EARLY_SECONDS,
     LINE_LOADING_FINAL_SECONDS,
+    LINE_LOADING_FINAL_AT_MS,
 } = require('./lineLoading');
 const { formatFlexBodyParagraphs } = require('./lineFlexTextFormat');
 
@@ -153,16 +154,16 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 timer1 = setTimeout(async () => {
                     if (!isDone) {
                         await client.pushMessage(userId, { type: 'text', text: `✨ 正在剖析您的【${topicStr}】格局...` });
-                        await showLoading(); 
+                        if (!isDone) await showLoading();
                     }
                 }, 4000);
 
                 timer3 = setTimeout(async () => {
                     if (!isDone) {
                         await client.pushMessage(userId, { type: 'text', text: `⏳ 星象軌跡極為錯綜複雜，正在進行最後的命盤校準...` });
-                        await showLoading(LINE_LOADING_FINAL_SECONDS);
+                        if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
                     }
-                }, 15000);
+                }, LINE_LOADING_FINAL_AT_MS);
 
                 const systemPrompt = aiConfig.prompt || "你是一位精通紫微斗數的國學大師...";
                 const finalPrompt = `${systemPrompt}\n\n【命主生辰與探詢資訊】\n- 探詢領域：${topicStr}\n- 生理性別：${genderStr}\n- 曆法時間：${calStr} ${birthData.date} ${birthData.time}時${buildTarotZiweiOutputSuffix(topicStr)}`;
