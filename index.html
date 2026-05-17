@@ -1088,7 +1088,7 @@
                 div.className = 'tier-card-show' + (t.isPopular ? ' popular' : '');
                 div.innerHTML =
                     '<span class="tier-points">💎 ' + Number(t.points).toLocaleString() + ' 靈力</span>' +
-                    '<div class="tier-price">NT$ ' + esc(t.price) + '</div>' +
+                    '<div class="tier-price">NT$ ' + esc(t.price) + '</div>';
                 el.appendChild(div);
             });
         }
