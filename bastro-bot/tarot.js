@@ -163,8 +163,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             tarotConfig = mergeModuleKey('tarot', configDoc);
 
             const { topic, cards } = userData.pendingDraw;
-            const currentPoints = userData.points || 0;
-            const remainPoints = currentPoints - tarotConfig.cost;
+            const remainPoints = Math.max(0, Math.floor(Number(userData.points)) || 0);
 
             const systemPrompt = tarotConfig.prompt || "你是一位充滿溫度的神祕塔羅解碼師。";
             const prompt = `${systemPrompt}\n\n【本次使用者占卜資訊】\n- 探詢領域：【${topic}】\n- 抽出的牌陣：1.過去【${cards[0]}】 2.現在【${cards[1]}】 3.未來【${cards[2]}】${buildTarotZiweiOutputSuffix(topic)}`;

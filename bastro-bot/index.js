@@ -6,6 +6,18 @@
 const ecpay = require('./ecpay');
 const { buildPayStrings, validateRechargeOrder } = require('./legalManifest');
 const { verifyLineToken } = require('./lineAuth');
+const { corsMiddleware } = require('./cors');
+const {
+    aiDecodeLimiter,
+    payRequestLimiter,
+    logStageLimiter,
+    publicConfigLimiter,
+} = require('./rateLimit');
+const {
+    InsufficientPointsError,
+    deductPointsTransaction,
+    refundPoints,
+} = require('./pointsLedger');
 const express = require('express');
 const { middleware, Client } = require('@line/bot-sdk');
 const { initializeApp } = require('firebase-admin/app');
@@ -41,6 +53,7 @@ const config = {
 
 const client = new Client(config);
 const app = express();
+app.set('trust proxy', 1);
 app.set('trust proxy', 1);
 const payFormParser = express.urlencoded({ extended: false });
 
@@ -78,13 +91,7 @@ const dailyDrawModel = genAI.getGenerativeModel({
     generationConfig: { temperature: 0.75, maxOutputTokens: 400 },
 });
 
-app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-    if (req.method === "OPTIONS") return res.status(200).end();
-    next();
-});
+app.use(corsMiddleware);
 
 // 🚀 掛載各大微服務 Router
 app.use('/api/admin', express.json(), adminRouter);
@@ -292,7 +299,7 @@ app.get('/api/user/history', verifyLineToken, async (req, res) => {
 // ==========================================
 // 💳 綠界 ECPay 金流（全方位 AioCheckOut / V5）
 // ==========================================
-app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) => {
+app.post('/api/pay/request', express.json(), verifyLineToken, payRequestLimiter, async (req, res) => {
     try {
         const base = resolvePublicBaseUrl(req);
         if (!base) {
@@ -376,9 +383,6 @@ app.post('/api/pay/ecpay/result', payFormParser, async (req, res) => {
                     return res.redirect(302, buildPaymentResultPageUrl(paymentSuccessPageUrl, orderId));
                 }
             }
-            if (rtnOk && orderId) {
-                return res.redirect(302, buildPaymentResultPageUrl(paymentSuccessPageUrl, orderId));
-            }
             return res.redirect(302, buildPaymentResultPageUrl(paymentFailedPageUrl, orderId, 'reason=verify'));
         }
         if (!rtnOk) {
@@ -447,7 +451,7 @@ app.post('/api/pay/ecpay/notify', payFormParser, async (req, res) => {
 // ==========================================
 // 📊 API: 埋點與票根
 // ==========================================
-app.post('/api/log/stage', express.json(), verifyLineToken, async (req, res) => {
+app.post('/api/log/stage', express.json(), verifyLineToken, logStageLimiter, async (req, res) => {
     try {
         const { stage, type } = req.body;
         const userId = req.user.userId;
@@ -479,7 +483,7 @@ app.post('/api/log/stage', express.json(), verifyLineToken, async (req, res) => 
     }
 });
 
-app.post('/api/tarot/ticket', express.json(), verifyLineToken, async (req, res) => {
+app.post('/api/tarot/ticket', express.json(), verifyLineToken, aiDecodeLimiter, async (req, res) => {
     try {
         const userId = req.user.userId; 
         const { topic, cards } = req.body;
@@ -492,15 +496,32 @@ app.post('/api/tarot/ticket', express.json(), verifyLineToken, async (req, res) 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const tarotConfig = mergeModuleKey('tarot', configDoc);
 
-        const currentPoints = userDoc.exists ? (userDoc.data().points || 0) : 100;
-        if (currentPoints < tarotConfig.cost) return res.status(403).json({ success: false, message: `靈力不足 (需 ${tarotConfig.cost} 點)，請先儲值` });
+        try {
+            await db.runTransaction(async (t) => {
+                const doc = await t.get(userRef);
+                const pts = doc.exists ? Math.floor(Number(doc.data().points)) || 0 : 100;
+                if (pts < tarotConfig.cost) {
+                    throw new InsufficientPointsError(tarotConfig.cost, pts);
+                }
+                t.update(userRef, {
+                    pendingDraw: { topic, cards, timestamp: FieldValue.serverTimestamp() },
+                });
+            });
+        } catch (e) {
+            if (e instanceof InsufficientPointsError) {
+                return res.status(403).json({
+                    success: false,
+                    message: `靈力不足 (需 ${tarotConfig.cost} 點)，請先儲值`,
+                });
+            }
+            throw e;
+        }
 
         await db.collection('divination_logs').add({ 
             userId, userName: req.user.displayName, topic, cards, stage: "Stage 2: Ticket Created", type: "tarot", 
             log_class: 'system', summary: `系統背景程序：建立塔羅票根`, points_change: 0, platform_version: PLATFORM_VERSION, timestamp: FieldValue.serverTimestamp() 
         });
 
-        await userRef.set({ pendingDraw: { topic, cards, timestamp: FieldValue.serverTimestamp() } }, { merge: true });
         return res.status(200).json({ success: true });
     } catch (error) { return res.status(500).json({ success: false, message: "結界開啓失敗" }); }
 });
@@ -508,23 +529,15 @@ app.post('/api/tarot/ticket', express.json(), verifyLineToken, async (req, res) 
 // ==========================================
 // 🏮 紫微斗數：專屬深度解碼 API (模組化路由)
 // ==========================================
-app.post('/api/divination/ziwei', express.json(), async (req, res) => {
+app.post('/api/divination/ziwei', express.json(), aiDecodeLimiter, async (req, res) => {
     // 呼叫外部的紫微斗數微服務處理核心邏輯
     return await ziweiHandler.processZiweiDivination(req, res, db, client, genAI, FieldValue, recordDivinationLog);
 });
 
 // ==========================================
-// ⚙️ 系統設定與定價 API
+// ⚙️ 系統設定與定價 API（admin 完整設定見 admin_ai.js，須 Admin token）
 // ==========================================
-app.get('/api/admin/config/ai', async (req, res) => {
-    try {
-        const docRef = db.collection('system_config').doc('ai_settings');
-        const doc = await docRef.get();
-        res.json({ success: true, data: mergeAiSettingsFromDoc(doc) });
-    } catch (error) { res.status(500).json({ success: false, msg: "讀取後台資料失敗" }); }
-});
-
-app.get('/api/public/config/ai', async (req, res) => {
+app.get('/api/public/config/ai', publicConfigLimiter, async (req, res) => {
     try {
         const docRef = db.collection('system_config').doc('ai_settings');
         const doc = await docRef.get();
@@ -706,11 +719,22 @@ async function handleEvent(event) {
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const tarotConfig = mergeModuleKey('tarot', configDoc);
 
-        if (currentPoints < tarotConfig.cost) {
-            return client.replyMessage(event.replyToken, { type: 'text', text: `🔋 靈力不足 (需 ${tarotConfig.cost} 點)，請前往會員中心補充靈力：\nhttps://astro.branddecoderai.com/member/profile.html` });
+        let balanceAfterDeduct;
+        try {
+            balanceAfterDeduct = await deductPointsTransaction(db, userRef, tarotConfig.cost, {
+                pendingDraw: FieldValue.delete(),
+            });
+        } catch (e) {
+            if (e instanceof InsufficientPointsError) {
+                return client.replyMessage(event.replyToken, {
+                    type: 'text',
+                    text: `🔋 靈力不足 (需 ${tarotConfig.cost} 點)，請前往會員中心補充靈力：\nhttps://astro.branddecoderai.com/member/profile.html`,
+                });
+            }
+            throw e;
         }
 
-        await userRef.update({ points: FieldValue.increment(-tarotConfig.cost), pendingDraw: FieldValue.delete() });
+        userData.points = balanceAfterDeduct;
 
         // 🚀 呼叫外部的塔羅牌模組處理核心邏輯 (依賴注入)
         return await tarotHandler.processTarotDraw(event, userId, userData, userRef, db, client, genAI, FieldValue, recordDivinationLog);

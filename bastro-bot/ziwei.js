@@ -28,6 +28,11 @@ const {
     LINE_LOADING_FINAL_SECONDS,
     LINE_LOADING_FINAL_AT_MS,
 } = require('./lineLoading');
+const {
+    InsufficientPointsError,
+    deductPointsTransaction,
+    refundPoints,
+} = require('./pointsLedger');
 const { formatFlexBodyParagraphs } = require('./lineFlexTextFormat');
 
 /** 表頭至「────────」後換行為止；正文另傳，避免截斷時誤傷表頭 */
@@ -125,10 +130,19 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
 
         const userRef = db.collection('users').doc(userId);
         const userDoc = await userRef.get();
-        const currentPoints = userDoc.exists ? (userDoc.data().points || 0) : 0;
         const userName = userDoc.exists ? (userDoc.data().displayName || userDoc.data().name || '神祕旅人') : '神祕旅人';
 
-        if (currentPoints < aiConfig.cost) return res.status(400).json({ success: false, msg: "靈力不足" });
+        let balanceAfterDeduct;
+        try {
+            balanceAfterDeduct = await deductPointsTransaction(db, userRef, aiConfig.cost, {
+                lastDivination: FieldValue.serverTimestamp(),
+            });
+        } catch (e) {
+            if (e instanceof InsufficientPointsError) {
+                return res.status(400).json({ success: false, msg: '靈力不足' });
+            }
+            throw e;
+        }
 
         const { birthData } = req.body;
         const topicStr = birthData.topic || '本命格局';
@@ -141,6 +155,12 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
         (async () => {
             let isDone = false;
             let timer1, timer3;
+            let pointsRefunded = false;
+            const rollbackPoints = async () => {
+                if (pointsRefunded) return;
+                pointsRefunded = true;
+                await refundPoints(userRef, aiConfig.cost);
+            };
 
             const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
                 startLineChatLoading(userId, seconds);
@@ -188,8 +208,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 if (textMatch) aiData.text = textMatch[1].trim(); else aiData.text = rawAiText.replace(/【分數】[：:]\s*\d+/g, '').trim();
                 aiData.text = clampTextChars(formatFlexBodyParagraphs(aiData.text), MAX_TAROT_ZIWEI_BODY_CHARS);
 
-                await userRef.set({ points: FieldValue.increment(-aiConfig.cost), lastDivination: FieldValue.serverTimestamp() }, { merge: true });
-                const remainPoints = currentPoints - aiConfig.cost;
+                const remainPoints = balanceAfterDeduct;
 
                 await recordDivinationLog({
                     userId, userName, type: 'ziwei', summary: `紫微解碼[${topicStr}]：${genderStr}, ${birthData.date} ${birthData.time}時`, points_change: -aiConfig.cost, cost: aiConfig.cost,
@@ -215,7 +234,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 try {
                     await client.pushMessage(userId, flexMessage);
                 } catch (pushErr) {
-                    await userRef.set({ points: FieldValue.increment(aiConfig.cost) }, { merge: true });
+                    await rollbackPoints();
                     const lineDetail =
                         pushErr && pushErr.originalError && pushErr.originalError.response && pushErr.originalError.response.data
                             ? pushErr.originalError.response.data
@@ -237,6 +256,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
             } catch (bgError) {
                 isDone = true;
                 clearTimeout(timer1); clearTimeout(timer3);
+                await rollbackPoints();
                 const errStr = (() => {
                     try {
                         return typeof bgError === 'string' ? bgError : JSON.stringify(bgError);

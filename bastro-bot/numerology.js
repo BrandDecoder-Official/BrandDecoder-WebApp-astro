@@ -36,6 +36,12 @@ const {
     LINE_LOADING_FINAL_AT_MS,
 } = require('./lineLoading');
 const { verifyLineToken } = require('./lineAuth');
+const { aiDecodeLimiter } = require('./rateLimit');
+const {
+    InsufficientPointsError,
+    deductPointsTransaction,
+    refundPoints,
+} = require('./pointsLedger');
 
 const db = getFirestore('astro-bot-db');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -45,7 +51,7 @@ const lineClient = new Client({
     channelSecret: process.env.LINE_CHANNEL_SECRET,
 });
 
-router.post('/generate', verifyLineToken, async (req, res) => {
+router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
     const userId = req.user.userId;
 
     try {
@@ -62,15 +68,27 @@ router.post('/generate', verifyLineToken, async (req, res) => {
         const aiConfig = mergeModuleKey('numerology', configDoc);
         const cost = aiConfig.cost;
 
-        const currentPoints = userDoc.data().points || 0;
-        if (currentPoints < cost) {
-            return res.status(400).json({ status: 'error', message: `靈力值不足，需 ${cost} 點` });
+        let newBalanceAfterDeduct;
+        try {
+            newBalanceAfterDeduct = await deductPointsTransaction(db, userRef, cost, {
+                lastDivination: FieldValue.serverTimestamp(),
+            });
+        } catch (e) {
+            if (e instanceof InsufficientPointsError) {
+                return res.status(400).json({ status: 'error', message: `靈力值不足，需 ${cost} 點` });
+            }
+            throw e;
         }
 
-        // 立刻回傳，讓前端關閉
         res.json({ status: 'success', message: '命盤已送交大師，請回聊天室查看' });
 
         (async () => {
+            let pointsRefunded = false;
+            const rollbackPoints = async () => {
+                if (pointsRefunded) return;
+                pointsRefunded = true;
+                await refundPoints(userRef, cost);
+            };
             let isDone = false;
             let timer1, timer3;
 
@@ -135,6 +153,7 @@ router.post('/generate', verifyLineToken, async (req, res) => {
                 clearTimeout(timer3);
 
                 if (!aiData) {
+                    await rollbackPoints();
                     await lineClient.pushMessage(userId, {
                         type: 'text',
                         text: '⚠️ 律動能量解碼未能完成（AI 回覆格式異常）。本次不會扣除您的靈力，請稍後再試。',
@@ -145,13 +164,7 @@ router.post('/generate', verifyLineToken, async (req, res) => {
                 const fortuneScore = aiData.score;
                 const aiLatency = Date.now() - aiStartTime;
                 const usage = (aiResponse && aiResponse.response.usageMetadata) || {};
-
-                const newBalance = await db.runTransaction(async (t) => {
-                    const doc = await t.get(userRef);
-                    const updatedPoints = doc.data().points - cost;
-                    t.update(userRef, { points: updatedPoints, lastDivination: FieldValue.serverTimestamp() });
-                    return updatedPoints;
-                });
+                const newBalance = newBalanceAfterDeduct;
 
                 await recordDivinationLog({
                     userId: userId, userName: userName, type: 'numerology', summary: `數字能量：核心數[${aiData.coreNumber}]`,
@@ -171,6 +184,7 @@ router.post('/generate', verifyLineToken, async (req, res) => {
             } catch (error) {
                 isDone = true;
                 clearTimeout(timer1); clearTimeout(timer3);
+                await rollbackPoints();
                 const lineDetail =
                     error && error.originalError && error.originalError.response && error.originalError.response.data
                         ? error.originalError.response.data
