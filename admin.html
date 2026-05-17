@@ -527,8 +527,6 @@
         
         const SERVICE_LABELS = { tarot: '塔羅', ziwei: '紫微', numerology: '律動', daily_draw: '每日一抽', face: '面手相', other: '其他' };
 
-        function fmtTwd(n) { return 'NT$ ' + Number(n || 0).toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-
         function fillCostTable(tbodyId, mapObj) {
             const tbody = document.getElementById(tbodyId);
             if (!tbody) return;
