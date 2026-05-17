@@ -361,10 +361,23 @@ app.post('/api/pay/request', express.json(), verifyLineToken, async (req, res) =
 app.post('/api/pay/ecpay/result', payFormParser, async (req, res) => {
     try {
         const orderId = String(req.body.MerchantTradeNo || '');
-        if (!ecpay.verifyCheckMacValue(req.body)) {
+        const macOk = ecpay.verifyCheckMacValue(req.body);
+        const rtnOk = ecpay.isPaymentSuccess(req.body.RtnCode);
+
+        if (!macOk) {
+            console.warn('ECPay result: CheckMacValue 驗證失敗', orderId);
+            if (orderId) {
+                const orderDoc = await db.collection('orders').doc(orderId).get();
+                if (orderDoc.exists && orderDoc.data().status === 'success') {
+                    return res.redirect(302, buildPaymentResultPageUrl(paymentSuccessPageUrl, orderId));
+                }
+            }
+            if (rtnOk && orderId) {
+                return res.redirect(302, buildPaymentResultPageUrl(paymentSuccessPageUrl, orderId));
+            }
             return res.redirect(302, buildPaymentResultPageUrl(paymentFailedPageUrl, orderId, 'reason=verify'));
         }
-        if (!ecpay.isPaymentSuccess(req.body.RtnCode)) {
+        if (!rtnOk) {
             const code = encodeURIComponent(String(req.body.RtnCode || ''));
             return res.redirect(302, buildPaymentResultPageUrl(paymentFailedPageUrl, orderId, `code=${code}`));
         }

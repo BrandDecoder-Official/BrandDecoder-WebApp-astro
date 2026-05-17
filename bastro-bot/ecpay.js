@@ -24,13 +24,18 @@ function getConfig() {
   return { merchantId, hashKey, hashIv };
 }
 
+/** 綠界檢查碼參與欄位：僅排除 CheckMacValue；空字串仍須納入（如 RtnMsg=） */
+function macParamKeys(params) {
+  return Object.keys(params).filter((k) => k !== "CheckMacValue" && params[k] != null);
+}
+
 /**
  * 產生 CheckMacValue（SHA256，EncryptType=1）
  */
 function generateCheckMacValue(params, hashKey, hashIv) {
-  const keys = Object.keys(params)
-    .filter((k) => k !== "CheckMacValue" && params[k] !== "" && params[k] != null)
-    .sort((a, b) => (a.toLowerCase() < b.toLowerCase() ? -1 : a.toLowerCase() > b.toLowerCase() ? 1 : 0));
+  const keys = macParamKeys(params).sort((a, b) =>
+    a.toLowerCase() < b.toLowerCase() ? -1 : a.toLowerCase() > b.toLowerCase() ? 1 : 0
+  );
 
   let raw = `HashKey=${hashKey}&`;
   for (const k of keys) {
@@ -51,14 +56,24 @@ function generateCheckMacValue(params, hashKey, hashIv) {
   return crypto.createHash("sha256").update(enc).digest("hex").toUpperCase();
 }
 
+function normalizeInboundParams(body) {
+  const out = {};
+  for (const [k, v] of Object.entries(body || {})) {
+    if (v == null) continue;
+    out[k] = Array.isArray(v) ? String(v[0]) : String(v);
+  }
+  return out;
+}
+
 function verifyCheckMacValue(body) {
   const { hashKey, hashIv } = getConfig();
-  if (!body || !body.CheckMacValue) return false;
-  const received = String(body.CheckMacValue);
-  const clone = { ...body };
+  const params = normalizeInboundParams(body);
+  if (!params.CheckMacValue) return false;
+  const received = String(params.CheckMacValue);
+  const clone = { ...params };
   delete clone.CheckMacValue;
   const computed = generateCheckMacValue(clone, hashKey, hashIv);
-  return received === computed;
+  return received.toUpperCase() === computed.toUpperCase();
 }
 
 function sanitizeTradeDesc(s) {

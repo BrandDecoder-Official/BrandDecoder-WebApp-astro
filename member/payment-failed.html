@@ -44,7 +44,16 @@
         document.getElementById('btn-profile').href = 'https://liff.line.me/' + ENV.MEMBER_LIFF_ID;
 
         if (reason === 'verify') {
-            document.getElementById('subtitle').textContent = '付款結果驗證異常，請勿重複付款。若已扣款請聯絡客服。';
+            document.getElementById('subtitle').textContent =
+                '付款結果驗證異常。若您已完成付款，請勿重複付款；可先返回會員中心查看靈力是否已入帳。';
+            if (orderId) {
+                const retry = document.createElement('a');
+                retry.className = 'btn btn-ghost';
+                retry.style.marginTop = '8px';
+                retry.href = '/member/payment-success.html?order=' + encodeURIComponent(orderId);
+                retry.textContent = '查看入帳狀態';
+                document.querySelector('.card').insertBefore(retry, document.querySelector('.btn-ghost'));
+            }
         }
         if (orderId) {
             const el = document.getElementById('order-hint');
