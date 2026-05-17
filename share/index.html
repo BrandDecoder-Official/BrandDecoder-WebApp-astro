@@ -29,6 +29,11 @@
             font-size: 17px; font-weight: bold; cursor: pointer;
         }
         .btn-share:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-copy {
+            width: 100%; padding: 12px; margin-top: 12px; border-radius: 22px;
+            border: 1px solid rgba(212,175,55,0.5); background: transparent; color: var(--gold);
+            font-size: 15px; cursor: pointer;
+        }
         .status { margin-top: 16px; font-size: 13px; color: #888; min-height: 1.2em; }
         .status.err { color: #ff6b6b; }
         .loader { color: var(--gold); font-size: 14px; }
@@ -42,6 +47,7 @@
             <p class="hint">以下為即將傳送的內容預覽（含完整解盤與官方帳號邀請）</p>
             <div class="preview" id="preview"></div>
             <button type="button" class="btn-share" id="btn-share">選擇分享對象</button>
+            <button type="button" class="btn-copy" id="btn-copy" style="display:none;">複製全文，自行貼到聊天室</button>
             <p class="status" id="status"></p>
         </div>
     </div>
@@ -50,6 +56,6 @@
     <script src="/env.js?v=9"></script>
     <script src="/liff-mobile-only.js?v=1"></script>
     <script src="/js/liff-bootstrap.js?v=1"></script>
-    <script src="share.js?v=2"></script>
+    <script src="share.js?v=3"></script>
 </body>
 </html>
