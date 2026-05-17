@@ -49,7 +49,7 @@
 
 - **單一來源**：`bastro-bot/legal-service-manifest.json`（儲值檔位、扣點表、聯絡資訊、`termsGate` 儲值前摘要、`templates` 綠界品名模板等）。
 - **後端**：`legalManifest.js` 於建單時 `require` 讀取；`POST /api/pay/request` 使用 `buildPayStrings()` 產生 **TradeDesc / ItemName**。
-- **前端／說明頁**：請以 **`/bastro-bot/legal-service-manifest.json`** 同網域 fetch（GitHub Pages 部署整個 repo 時路徑即存在）。會員 LIFF 與 `service-points-notice.html` 已改為讀此檔；fetch 失敗時會員頁有內嵌後備檔位與條款摘要。
+- **前端／說明頁**：請以 **`/bastro-bot/legal-service-manifest.json`** 同網域 fetch（GitHub Pages 部署整個 repo 時路徑即存在）。官網 `index.html` 與會員 LIFF 皆讀此檔；fetch 失敗時會員頁有內嵌後備檔位與條款摘要。
 
 ## 與 Cloud Run 原始碼同步
 
