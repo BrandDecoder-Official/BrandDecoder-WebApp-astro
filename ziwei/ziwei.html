@@ -422,7 +422,7 @@
                 await fetch(`${ENV.API_BASE}/api/log/stage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
-                    body: JSON.stringify({ type: 'ziwei', stage: stageName, userId: lineUserIdForTracking })
+                    body: JSON.stringify({ type: 'ziwei', stage: stageName })
                 });
             } catch (e) { console.log("Tracking Error:", e); }
         }

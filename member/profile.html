@@ -9,6 +9,7 @@
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="/liff-mobile-only.js?v=1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/js/safe-dom.js"></script>
     <style>
         :root {
             --gold: #D4AF37; --gold-light: #F9E498; --bg-deep: #050508;
@@ -528,33 +529,29 @@
                     topicText = `💸 成功支付 NT$ ${item.amount_paid || 0}`;
                     extraHtml = `<span style="font-size: 10px; color: #4CAF50; border: 1px solid rgba(76,175,80,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">🎉 能量注入</span>`;
                 } 
-                // 🌟 分流判斷 2：紫微斗數
                 else if (item.type === "ziwei" || item.serviceType === "ziwei") {
                     typeText = "🏮 紫微斗數";
                     topicText = item.summary || "排盤解碼";
                     extraHtml = `<span style="font-size: 10px; color: #d8b4e2; border: 1px solid rgba(216,180,226,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">深度解析</span>`;
                 }
-                // 🌟 分流判斷 3：數字學 (律動能量) - CTO 新增！
                 else if (item.type === "numerology") {
                     typeText = "🌌 律動能量";
                     topicText = item.summary || `核心能量：${item.result_card || '?'}`;
                     const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
-                    extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${score} 分</span>`;
+                    extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
                 }
-                // 🌟 分流判斷 4：塔羅牌
                 else if (item.type === "tarot") {
                     typeText = "🔮 塔羅解碼";
                     topicText = `領域：${item.topic}`;
                     const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
-                    extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${score} 分</span>`;
+                    extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
                 }
-                // 🌟 分流判斷 5：每日一抽或其他
                 else {
                     typeText = "✨ 每日一抽";
                     topicText = `指引：${item.result_card || item.topic || '抽牌'}`;
                     const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
                     if (score !== '--') {
-                        extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${score} 分</span>`;
+                        extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
                     }
                 }
                 
@@ -576,10 +573,10 @@
                     <div class="history-item" ${clickAction} ${activeStyle}>
                         <div class="history-left">
                             <div class="history-type">${typeText} ${extraHtml}</div>
-                            <div class="history-topic">${topicText}</div>
-                            <div class="history-date">${dateStr}</div>
+                            <div class="history-topic">${esc(topicText)}</div>
+                            <div class="history-date">${esc(dateStr)}</div>
                         </div>
-                        <div class="history-points ${pointsClass}">${pointsText}</div>
+                        <div class="history-points ${pointsClass}">${esc(pointsText)}</div>
                     </div>
                 `;
                 list.insertAdjacentHTML('beforeend', html);
@@ -780,9 +777,18 @@
                 body.innerText = contentText;
                 
             } else if (item.type === 'tarot') {
-                // 🔮 塔羅解碼
-                title.innerText = `🔮 塔羅解碼：${item.topic}`;
-                body.innerHTML = `<b>牌陣：</b>${(item.cards || []).join('、')}<br><br>${contentText}`;
+                title.innerText = `🔮 塔羅解碼：${item.topic || ''}`;
+                body.textContent = '';
+                const cardsLine = document.createElement('p');
+                const bold = document.createElement('strong');
+                bold.textContent = '牌陣：';
+                cardsLine.appendChild(bold);
+                cardsLine.appendChild(document.createTextNode((item.cards || []).join('、')));
+                body.appendChild(cardsLine);
+                const textBlock = document.createElement('p');
+                textBlock.style.whiteSpace = 'pre-wrap';
+                textBlock.textContent = contentText;
+                body.appendChild(textBlock);
                 
             } else if (item.type === 'numerology') {
                 // 🌌 數字學 (律動能量)

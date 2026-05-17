@@ -20,7 +20,8 @@ const db = getFirestore('astro-bot-db');
 // 2. 🌟 引入所有的子模組 (依賴注入)
 const adminRouter = require('./admin');
 const adminAiRouter = require('./admin_ai');
-const { mergeModuleKey, mergeAiSettingsFromDoc, DEFAULT_AI_SETTINGS } = require('./aiSettingsDefaults');
+const { mergeModuleKey, mergeAiSettingsFromDoc, DEFAULT_AI_SETTINGS, toPublicAiConfig } = require('./aiSettingsDefaults');
+const { isAllowedLogStage } = require('./logStageAllowlist');
 const {
     AI_MODEL_OPTIONS,
     AI_BRAIN_RELEASE,
@@ -446,36 +447,36 @@ app.post('/api/pay/ecpay/notify', payFormParser, async (req, res) => {
 // ==========================================
 // 📊 API: 埋點與票根
 // ==========================================
-// 建議 body 帶 userId：LIFF OAuth access token 多為不透明字串，無法像 ID Token 般解出 sub。
-app.post('/api/log/stage', express.json(), async (req, res) => {
+app.post('/api/log/stage', express.json(), verifyLineToken, async (req, res) => {
     try {
         const { stage, type } = req.body;
-        let userId = req.body.userId; 
-        let userName = '未知用戶';
+        const userId = req.user.userId;
 
-        const authHeader = req.headers.authorization;
-        if (authHeader && authHeader.startsWith('Bearer ')) {
-            const token = authHeader.split(' ')[1];
-            try {
-                const parts = token.split('.');
-                if (parts.length === 3) {
-                    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-                    userId = userId || payload.sub;
-                }
-            } catch (e) { /* ignore */ }
+        if (!isAllowedLogStage(type, stage)) {
+            return res.status(400).json({ success: false, msg: '不允許的埋點類型或階段' });
         }
 
-        if (!userId) return res.status(200).json({ success: true, msg: "無 userId，忽略埋點" });
-
+        let userName = req.user.displayName || '未知用戶';
         const userDoc = await db.collection('users').doc(userId).get();
-        if (userDoc.exists) userName = userDoc.data().displayName || userDoc.data().name || '未知用戶';
+        if (userDoc.exists) {
+            userName = userDoc.data().displayName || userDoc.data().name || userName;
+        }
 
         await recordDivinationLog({
-            userId, userName, type, log_class: 'system', stage, summary: `系統背景程序：${stage}`, points_change: 0
+            userId,
+            userName,
+            type,
+            log_class: 'system',
+            stage,
+            summary: `系統背景程序：${stage}`,
+            points_change: 0,
         });
 
         res.status(200).json({ success: true });
-    } catch (e) { res.status(500).end(); }
+    } catch (e) {
+        console.error('log/stage:', e);
+        res.status(500).json({ success: false });
+    }
 });
 
 app.post('/api/tarot/ticket', express.json(), verifyLineToken, async (req, res) => {
@@ -527,7 +528,7 @@ app.get('/api/public/config/ai', async (req, res) => {
     try {
         const docRef = db.collection('system_config').doc('ai_settings');
         const doc = await docRef.get();
-        res.json({ success: true, data: mergeAiSettingsFromDoc(doc) });
+        res.json({ success: true, data: toPublicAiConfig(mergeAiSettingsFromDoc(doc)) });
     } catch (error) { res.status(500).json({ success: false, msg: "讀取公開定價資料失敗" }); }
 });
 

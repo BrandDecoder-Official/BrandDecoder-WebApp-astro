@@ -74,9 +74,22 @@ function mergeModuleKey(moduleKey, configDoc) {
     return mergeModuleSettings(base, patch);
 }
 
+/** 公開 API：僅回傳扣點，不含 prompt / model */
+function toPublicAiConfig(merged) {
+    const out = {};
+    for (const key of Object.keys(DEFAULT_AI_SETTINGS)) {
+        const mod = merged && merged[key];
+        if (mod && typeof mod === 'object' && mod.cost != null) {
+            out[key] = { cost: mod.cost };
+        }
+    }
+    return out;
+}
+
 module.exports = {
     DEFAULT_AI_SETTINGS,
     mergeAiSettingsFromDoc,
     mergeModuleKey,
     mergePromptField,
+    toPublicAiConfig,
 };

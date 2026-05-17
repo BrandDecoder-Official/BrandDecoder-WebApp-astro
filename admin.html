@@ -348,6 +348,7 @@
         </div>
     </div>
 
+    <script src="/js/safe-dom.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
@@ -491,34 +492,32 @@
                     // 👇 新增律動能量的專屬橘色標籤
                     else if(serviceType === 'numerology') { typeBadge = '<span class="badge" style="background:#FFF8E1; color:#F57F17; border: 1px solid #FFE082;">✨ 律動能量</span>'; }
                     else if(serviceType === 'face' || serviceType === 'palm') { typeBadge = '<span class="badge badge-face">👁️ 面手相學</span>'; }
-                    else { typeBadge = `<span class="badge">${serviceType || '未知服務'}</span>`; }
+                    else { typeBadge = `<span class="badge">${esc(serviceType || '未知服務')}</span>`; }
                 }
 
                 let showName = log.displayName || log.userName || '未知用戶';
 
-                // 👇👇👇 CTO 新增：解析 AI Token 成本並產生標籤 👇👇👇
                 let tokenBadge = "";
                 const m = log.metricsNormalized || (log.metrics ? null : null);
                 if (m && m.model) {
                     tokenBadge = `<br><span style="color:#8E24AA; font-size:11px; background:#F3E5F5; padding:2px 6px; border-radius:4px; margin-top:4px; display:inline-block;">
-                        🤖 ${m.model} | In ${m.tokens_in} / Out ${m.tokens_out} / 計 ${m.tokens_total} · 預估 ${fmtTwd(m.cost_twd)}
+                        🤖 ${esc(m.model)} | In ${esc(m.tokens_in)} / Out ${esc(m.tokens_out)} / 計 ${esc(m.tokens_total)} · 預估 ${esc(fmtTwd(m.cost_twd))}
                     </span>`;
                 } else if (log.metrics && log.metrics.model) {
-                    tokenBadge = `<br><span style="color:#888; font-size:11px;">🤖 ${log.metrics.model}（無 Token 明細）</span>`;
+                    tokenBadge = `<br><span style="color:#888; font-size:11px;">🤖 ${esc(log.metrics.model)}（無 Token 明細）</span>`;
                 }
-                // 👆👆👆 標籤邏輯結束 👆👆👆
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td ${rowStyle}>${timeStr}</td>
+                    <td ${rowStyle}>${esc(timeStr)}</td>
                     <td ${rowStyle}>${typeBadge}</td>
-                    <td ${rowStyle} class="${pointClass}">${pointText}</td>
+                    <td ${rowStyle} class="${pointClass}">${esc(pointText)}</td>
                     <td ${rowStyle} style="font-size:11px;max-width:140px;">${tokenBadge || '-'}</td>
                     <td ${rowStyle}>
-                        <span style="color:var(--primary); font-weight:bold;">👤 ${showName}</span> 
-                        <br> <span style="color:#aaa; font-size:10px;">${log.userId}</span> 
-                        <br> <span style="font-size:12px;">${summary}</span>
-                        ${tokenBadge} </td>
+                        <span style="color:var(--primary); font-weight:bold;">👤 ${esc(showName)}</span> 
+                        <br> <span style="color:#aaa; font-size:10px;">${esc(log.userId)}</span> 
+                        <br> <span style="font-size:12px;">${esc(summary)}</span>
+                    </td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -539,7 +538,7 @@
             keys.forEach((k) => {
                 const row = mapObj[k];
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${SERVICE_LABELS[k] || k}</td><td>${row.calls}</td><td>${row.tokensIn.toLocaleString()}</td><td>${row.tokensOut.toLocaleString()}</td><td>${fmtTwd(row.costTwd)}</td>`;
+                tr.innerHTML = `<td>${esc(SERVICE_LABELS[k] || k)}</td><td>${esc(row.calls)}</td><td>${esc(row.tokensIn.toLocaleString())}</td><td>${esc(row.tokensOut.toLocaleString())}</td><td>${esc(fmtTwd(row.costTwd))}</td>`;
                 tbody.appendChild(tr);
             });
         }
@@ -570,7 +569,7 @@
                 infraBody.innerHTML = '';
                 (d.infra || []).forEach((row) => {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${row.name}</td><td>${row.dynamic ? fmtTwd(d.cost.aiTwd) : fmtTwd(row.monthlyTwd)}</td><td>${fmtTwd(row.periodTwd)}</td><td style="color:#888;font-size:11px;">${row.note || ''}</td>`;
+                    tr.innerHTML = `<td>${esc(row.name)}</td><td>${esc(row.dynamic ? fmtTwd(d.cost.aiTwd) : fmtTwd(row.monthlyTwd))}</td><td>${esc(fmtTwd(row.periodTwd))}</td><td style="color:#888;font-size:11px;">${esc(row.note || '')}</td>`;
                     infraBody.appendChild(tr);
                 });
             } catch (e) {
