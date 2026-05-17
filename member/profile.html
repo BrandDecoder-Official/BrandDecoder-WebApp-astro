@@ -259,7 +259,7 @@
             <p style="text-align: center; font-size: 12px; color: #888; margin-top: 10px;">請選擇您要注入的能量級別</p>
             
             <div class="tier-grid" id="tier-grid"></div>
-            <a class="recharge-legal-link" id="recharge-legal-fullpage-link" href="/service-points-notice.html" target="_blank" rel="noopener noreferrer">服務條款與扣點說明（完整頁）</a>
+            <a class="recharge-legal-link" id="recharge-legal-fullpage-link" href="/index.html" target="_blank" rel="noopener noreferrer">服務條款與扣點說明（完整頁）</a>
             
             <button class="modal-close-btn" onclick="closeModal('recharge-modal')">離開祭壇</button>
         </div>
@@ -347,7 +347,7 @@
                         '目前無法載入條款字典檔（網路或設定問題）。請稍後重新整理、檢查連線，或先開啟下方「完整說明頁」閱讀《服務條款》與扣點說明；載入成功後將自動顯示完整摘要。',
                     ],
                     fullPageLinkLabel: '開啟完整說明頁',
-                    fullPagePath: '/service-points-notice.html',
+                    fullPagePath: '/index.html',
                     checkboxLabel: '本人已自行開啟並閱讀下方「完整說明頁」所示之《服務條款》及《扣點機制與點數說明》，並了解點數於成功使用服務後可能無法退還之情形。',
                     linkHint: '若無法開啟新分頁，請長按連結複製網址於瀏覽器開啟。',
                 },
@@ -378,9 +378,9 @@
                 a.rel = 'noopener noreferrer';
                 a.textContent = g.fullPageLinkLabel || '開啟完整說明頁';
                 try {
-                    a.href = new URL(g.fullPagePath || '/service-points-notice.html', window.location.origin).href;
+                    a.href = new URL(g.fullPagePath || '/index.html', window.location.origin).href;
                 } catch (e2) {
-                    a.href = '/service-points-notice.html';
+                    a.href = '/index.html';
                 }
                 wrap.appendChild(a);
                 sc.appendChild(wrap);

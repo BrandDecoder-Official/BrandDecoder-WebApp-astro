@@ -2,7 +2,7 @@
   "version": "2026.02.4",
   "meta": {
     "manifestPublicPath": "/bastro-bot/legal-service-manifest.json",
-    "pageUpdatedDate": "xxxx 年 xx 月 xx 日",
+    "pageUpdatedDate": "2026年05月17日",
     "brandLine": "BrandDecoder｜命運解碼室",
     "draftMarker": "xxxx"
   },
@@ -20,26 +20,31 @@
   ],
   "deductionServices": [
     {
+      "serviceKey": "tarot",
       "name": "塔羅星陣解碼（LINE 內選牌後由官方帳號回覆解碼）",
       "timing": "於官方帳號處理解碼請求並成功產出結果時，自帳戶扣點；若靈力不足，將無法完成該次解碼並提示儲值。",
-      "referencePoints": "10 點／次（預設）"
+      "referencePoints": "15 點／次"
     },
     {
+      "serviceKey": "ziwei",
       "name": "紫微斗數深度解碼（LIFF 送出命盤資料）",
       "timing": "後端確認接單並開始排程處理時扣點；若點數不足，送出時將無法完成。",
-      "referencePoints": "39 點／次（程式預設；後台若改為例如 30 點，以後台為準）"
+      "referencePoints": "50 點／次"
     },
     {
+      "serviceKey": "numerology",
       "name": "律動能量（數字學）",
       "timing": "後端確認接單並開始處理時扣點。",
-      "referencePoints": "10 點／次（預設）"
+      "referencePoints": "10 點／次"
     },
     {
+      "serviceKey": "daily",
       "name": "每日一抽（聊天室指令）",
       "timing": "符合「每日一次」等條件時，目前機制為贈與 +1 靈力並提供簽到指引，不扣點。若日後改為扣點或有限次免費，以公告為準。",
       "referencePoints": "0 點（現行）"
     },
     {
+      "serviceKey": "face",
       "name": "面相／其他預留模組",
       "timing": "以上線公告為準；後台預留設定常見為每則 20 點（未開通前可能無法使用）。",
       "referencePoints": "20 點／次（預留參考）"
@@ -51,26 +56,26 @@
     }
   ],
   "contact": {
-    "entityName": "xxxx（請填負責人本名或可公開之商號／工作室名稱）",
+    "entityName": "BrandDecoder 命運解碼室",
     "taxId": "不適用（未辦理營業登記）",
-    "siteUrl": "https://xxxx",
-    "email": "xxxx@gmail.com",
+    "siteUrl": "https://astro.branddecoderai.com",
+    "email": "brand.decoderai@gmail.com",
     "phone": "0908859917"
   },
   "draftPlaceholders": {
-    "refundPolicy": "xxxx（請經法務確認後填入正式退費政策）",
-    "complaintResponseSla": "xxxx（例如：受理後 N 個工作日內初步回覆）"
+    "refundPolicy": "未使用之預付點數，得依消費者保護法及本站公告辦理退費申請；已用於塔羅、紫微、律動等解碼服務之點數，原則不予退還。",
+    "complaintResponseSla": "受理後 3 個工作日內以電子郵件初步回覆（遇國定假日順延）。"
   },
   "termsGate": {
     "title": "儲值前請閱讀",
     "subtitle": "服務條款、點數性質與扣點說明",
     "paragraphs": [
       "購買之「靈力」為服務提供者以「命運解碼室」名義提供之線上占卜／解碼服務預付點數，用於折抵站內付費功能；非現金、非具流通性之虛擬貨幣。",
-      "扣點（參考預設，實際以站內與後台為準）：塔羅約 10 點／次、紫微約 39 點／次、律動能量約 10 點／次；每日一抽現行為贈點不扣點。",
+      "扣點：塔羅 15 點／次、紫微斗數 50 點／次、律動能量 10 點／次；每日一抽 0 點（簽到贈 +1 靈力）。實際以站內與後台為準。",
       "完整條款、儲值對照、退費與客服請見完整說明頁（連結於下方）。"
     ],
     "fullPageLinkLabel": "開啟完整說明頁",
-    "fullPagePath": "/service-points-notice.html",
+    "fullPagePath": "/index.html",
     "checkboxLabel": "本人已閱讀並同意《服務條款》及《扣點機制與點數說明》（含完整頁連結所示內容），並了解點數於成功使用服務後可能無法退還之情形。",
     "linkHint": "若無法開啟新分頁，請長按連結複製網址於瀏覽器開啟。"
   }
