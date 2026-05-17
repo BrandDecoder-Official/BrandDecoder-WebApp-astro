@@ -5,10 +5,11 @@ const fetch = require('node-fetch');
 const { mergeModuleKey } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
-    buildLineShareUriFromHeadAndBody,
+    buildShareLiffUri,
     appendShareButtonToFooterContents,
     sanitizeForFlexText,
 } = require('./lineOaShare');
+const { createShareSnapshot } = require('./shareSnapshot');
 const {
     FLEX_SIZE,
     FLEX_COLOR,
@@ -54,7 +55,7 @@ majorArcanaMap.forEach(str => { const [n,e,k] = str.split('|'); tarotMap[n] = { 
 suitsMap.forEach(suit => { suit.k.forEach((kw, i) => { const ranks = ["一","二","三","四","五","六","七","八","九","十","侍者","騎士","王后","國王"]; tarotMap[`${suit.s}${ranks[i]}`] = { emoji: suit.e, keyword: kw }; }); });
 
 // 2. 塔羅牌尊爵版 Flex Message 產生器
-function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cost = 15, decodedAt) {
+function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cost = 15, decodedAt, shareUri = null) {
     const cardBoxes = cards.map((cardName, index) => {
         const labels = ["過去", "現在", "未來"];
         const cardData = tarotMap[cardName] || { emoji: "🃏", keyword: "未知" }; 
@@ -82,9 +83,6 @@ function generateTarotFlexMessage(cards, remainPoints, aiText, topic, score, cos
             ]
         };
     });
-
-    const shareHead = buildTarotShareHead(cards, topic, score, decodedAt);
-    const shareUri = buildLineShareUriFromHeadAndBody(shareHead, aiText);
 
     return {
         type: "flex", altText: "您的靈能解碼報告已具現化",
@@ -201,6 +199,14 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             });
 
             const decodedAt = formatTaipeiDateTimeLine(new Date());
+            const shareHead = buildTarotShareHead(cards, topic, aiData.score, decodedAt);
+            const shareToken = await createShareSnapshot(db, {
+                type: 'tarot',
+                head: shareHead,
+                body: aiData.text,
+                userId,
+            });
+            const shareUri = buildShareLiffUri(shareToken);
             let flexMessage = generateTarotFlexMessage(
                 cards,
                 remainPoints,
@@ -208,7 +214,8 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
                 topic,
                 aiData.score,
                 tarotConfig.cost,
-                decodedAt
+                decodedAt,
+                shareUri
             );
             try {
                 await client.pushMessage(userId, flexMessage);

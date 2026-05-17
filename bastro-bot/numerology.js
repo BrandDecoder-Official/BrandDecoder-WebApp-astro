@@ -7,11 +7,12 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { Client } = require('@line/bot-sdk'); 
 const { recordDivinationLog } = require('./logger');
+const { createShareSnapshot } = require('./shareSnapshot');
 const fetch = require('node-fetch');
 const { mergeModuleKey } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
-    buildLineShareUriFromHeadAndBody,
+    buildShareLiffUri,
     appendShareButtonToFooterContents,
     sanitizeForFlexText,
 } = require('./lineOaShare');
@@ -178,7 +179,24 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
                 });
 
                 const decodedAt = formatTaipeiDateTimeLine(new Date());
-                const flexMessage = generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, newBalance, decodedAt);
+                const shareHead = buildNumerologyShareHead(aiData, fortuneScore, decodedAt);
+                const shareBody = String(aiData.interpretation || '').trim();
+                const shareToken = await createShareSnapshot(db, {
+                    type: 'numerology',
+                    head: shareHead,
+                    body: shareBody,
+                    userId,
+                });
+                const shareUri = buildShareLiffUri(shareToken);
+                const flexMessage = generateNumerologyFlexMessage(
+                    userName,
+                    aiData,
+                    fortuneScore,
+                    cost,
+                    newBalance,
+                    decodedAt,
+                    shareUri
+                );
                 await lineClient.pushMessage(userId, flexMessage);
 
             } catch (error) {
@@ -221,10 +239,7 @@ function buildNumerologyShareHead(aiData, fortuneScore, decodedAt) {
     ].join('\n');
 }
 
-function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, newBalance, decodedAt) {
-    const shareHead = buildNumerologyShareHead(aiData, fortuneScore, decodedAt);
-    const shareBody = String(aiData.interpretation || '').trim();
-    const shareUri = buildLineShareUriFromHeadAndBody(shareHead, shareBody);
+function generateNumerologyFlexMessage(userName, aiData, fortuneScore, cost, newBalance, decodedAt, shareUri = null) {
     const safeText = clampTextChars(
         String(aiData.interpretation || '宇宙能量正在匯聚中...'),
         MAX_NUMEROLOGY_INTERPRETATION_CHARS

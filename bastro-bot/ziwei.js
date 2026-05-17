@@ -5,10 +5,11 @@ const fetch = require('node-fetch');
 const { mergeModuleKey } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
-    buildLineShareUriFromHeadAndBody,
+    buildShareLiffUri,
     appendShareButtonToFooterContents,
     sanitizeForFlexText,
 } = require('./lineOaShare');
+const { createShareSnapshot } = require('./shareSnapshot');
 const {
     FLEX_SIZE,
     FLEX_COLOR,
@@ -52,11 +53,9 @@ function buildZiweiShareHead(birthData, score, decodedAt) {
 }
 
 // 1. 紫微斗數尊爵版 Flex Message 產生器
-function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, remainPoints, decodedAt) {
+function generateZiweiFlexMessage(userName, birthData, resultText, score, cost, remainPoints, decodedAt, shareUri = null) {
     const genderStr = birthData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
     const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
-    const shareHead = buildZiweiShareHead(birthData, score, decodedAt);
-    const shareUri = buildLineShareUriFromHeadAndBody(shareHead, resultText);
 
     return {
         type: "flex", altText: "✨ 您的專屬天命占星盤已解碼完成",
@@ -231,6 +230,14 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 });
 
                 const decodedAt = formatTaipeiDateTimeLine(new Date());
+                const shareHead = buildZiweiShareHead(birthData, aiData.score, decodedAt);
+                const shareToken = await createShareSnapshot(db, {
+                    type: 'ziwei',
+                    head: shareHead,
+                    body: aiData.text,
+                    userId,
+                });
+                const shareUri = buildShareLiffUri(shareToken);
                 const flexMessage = generateZiweiFlexMessage(
                     userName,
                     birthData,
@@ -238,7 +245,8 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                     aiData.score,
                     aiConfig.cost,
                     remainPoints,
-                    decodedAt
+                    decodedAt,
+                    shareUri
                 );
                 try {
                     await client.pushMessage(userId, flexMessage);

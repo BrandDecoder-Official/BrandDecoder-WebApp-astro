@@ -41,7 +41,8 @@ const {
     AI_BRAIN_REVIEW_POLICY,
 } = require('./aiModelCatalog');
 const adminKpiRouter = require('./admin_kpi');
-const { recordDivinationLog } = require('./logger'); 
+const { recordDivinationLog } = require('./logger');
+const { getShareSnapshot } = require('./shareSnapshot'); 
 const numerologyRouter = require('./numerology');
 const tarotHandler = require('./tarot');   // 🔮 塔羅牌微服務
 const ziweiHandler = require('./ziwei');   // 🏮 紫微斗數微服務
@@ -543,6 +544,20 @@ app.get('/api/public/config/ai', publicConfigLimiter, async (req, res) => {
         const doc = await docRef.get();
         res.json({ success: true, data: toPublicAiConfig(mergeAiSettingsFromDoc(doc)) });
     } catch (error) { res.status(500).json({ success: false, msg: "讀取公開定價資料失敗" }); }
+});
+
+/** 分享專用 LIFF：以 token 讀取解盤全文（30 天過期，無個資欄位） */
+app.get('/api/public/share/:token', publicConfigLimiter, async (req, res) => {
+    try {
+        const data = await getShareSnapshot(db, req.params.token);
+        if (!data) {
+            return res.status(404).json({ success: false, msg: '分享內容已過期或不存在' });
+        }
+        res.json({ success: true, data });
+    } catch (error) {
+        console.error('GET /api/public/share:', error.message);
+        res.status(500).json({ success: false, msg: '讀取分享內容失敗' });
+    }
 });
 
 /** 後台 admin.html 模型下拉選單：與 aiModelCatalog.js 單一來源（含釘選版次） */

@@ -8,8 +8,9 @@ const ENV = {
     MEMBER_LIFF_ID: "2009490171-ZuAjXwno", // 與後端 MEMBER_PROFILE_URL 預設（liff.line.me/…）同一支 LIFF
     // 👇 新增這行：數字能量專屬 LIFF ID
     NUMEROLOGY_LIFF_ID: "2009490171-krjD4SBL",
-    
-    
+    /** 分享專用 LIFF（Endpoint: https://astro.branddecoderai.com/share/） */
+    SHARE_LIFF_ID: "2009490171-1GpbJQ4d",
+
     // 🌐 後端 API 基底網址
     API_BASE: "https://bastro-bot-217800246535.asia-east1.run.app",
     
