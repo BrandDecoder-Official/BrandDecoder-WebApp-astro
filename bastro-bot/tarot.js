@@ -39,7 +39,7 @@ function buildTarotShareHead(cards, topic, score, decodedAt) {
     const scoreLabel = score != null && score !== '' && !Number.isNaN(Number(score)) ? String(score) : '--';
     return [
         '【命運解碼室｜塔羅】',
-        `台北 ${decodedAt}`,
+        decodedAt,
         `領域:${topic}`,
         `牌陣:${c0}→${c1}→${c2}`,
         `指數:${scoreLabel}`,

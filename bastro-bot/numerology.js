@@ -230,7 +230,7 @@ function buildNumerologyShareHead(aiData, fortuneScore, decodedAt) {
     const scoreLabel = fortuneScore != null && !Number.isNaN(Number(fortuneScore)) ? String(fortuneScore) : '--';
     return [
         '【命運解碼室｜律動能量】',
-        `台北 ${decodedAt}`,
+        decodedAt,
         `核心:${coreNum}`,
         `幸運:${luckyStr}`,
         `財富:${wealthStr}`,

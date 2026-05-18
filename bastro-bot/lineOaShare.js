@@ -25,8 +25,10 @@ function buildShareLiffUri(token) {
 /** 盡量短，為分享正文保留 URI 編碼後空間 */
 const LINE_OA_INVITE_FOOTER = '\n\n命運解碼室 OA\nhttps://lin.ee/yObB3Ga';
 
+/** 分享表頭用：台北時區，格式 2026/05/17 22:52（不含地名） */
 function formatTaipeiDateTimeLine(date) {
-    return date.toLocaleString('zh-TW', {
+    const d = date instanceof Date ? date : new Date(date);
+    const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Taipei',
         year: 'numeric',
         month: '2-digit',
@@ -34,7 +36,9 @@ function formatTaipeiDateTimeLine(date) {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
-    });
+    }).formatToParts(d);
+    const get = (type) => parts.find((p) => p.type === type)?.value || '';
+    return `${get('year')}/${get('month')}/${get('day')} ${get('hour')}:${get('minute')}`;
 }
 
 const { stripHtmlForLineText } = require('./lineFlexTextFormat');

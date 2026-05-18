@@ -44,7 +44,7 @@ function buildZiweiShareHead(birthData, score, decodedAt) {
     const scoreLabel = score != null && score !== '' && !Number.isNaN(Number(score)) ? String(score) : '--';
     return [
         '【命運解碼室｜紫微】',
-        `台北 ${decodedAt}`,
+        decodedAt,
         `領域:${topicStr}`,
         `命造:${genderStr} ${calStr} ${birthData.date} ${birthData.time}時`,
         `指數:${scoreLabel}`,
