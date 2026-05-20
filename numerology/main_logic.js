@@ -13,6 +13,10 @@ const btnActivate = document.getElementById('btn-activate');
 let pixiApp;
 let magicCircle; 
 let particles = []; 
+/** 背景飄動數字（數字解碼主題） */
+let digitFloaters = [];
+let outerRingGfx;
+let innerRingGfx;
 let isRitualActive = false; 
 
 // ==========================================
@@ -20,7 +24,22 @@ let isRitualActive = false;
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("系統啟動：掛載 PixiJS 視覺引擎...");
-    try { initPixiBackground(); } catch (pixiErr) { console.warn("Pixi 背景略過", pixiErr); }
+    // LINE / LIFF WebView 常在首幀前 window 尺寸尚未穩定；延後初始化並綁定 #pixi-container 較可靠
+    function schedulePixiInit() {
+        const run = () => {
+            try {
+                initPixiBackground();
+            } catch (pixiErr) {
+                console.warn("Pixi 背景略過", pixiErr);
+            }
+        };
+        if (typeof window.requestAnimationFrame === "function") {
+            window.requestAnimationFrame(() => window.requestAnimationFrame(run));
+        } else {
+            setTimeout(run, 0);
+        }
+    }
+    schedulePixiInit();
 
     try {
         const session = await BdLiff.requireLiffSession(ENV.NUMEROLOGY_LIFF_ID, { withProfile: true });
@@ -142,57 +161,153 @@ function switchScreen(hideId, showId) {
 }
 
 // ==========================================
-// 🎨 4. PixiJS 視覺引擎 (100% 完整保留)
+// 🎨 4. PixiJS 視覺引擎（飄字 + 粒子 + 雙環魔法陣）
 // ==========================================
 function startPixiBlast() { isRitualActive = true; }
 function stopPixiBlast() { isRitualActive = false; }
 
 function initPixiBackground() {
+    if (pixiApp) return;
+
     const container = document.getElementById('pixi-container');
-    if (!container || typeof PIXI === 'undefined') return;
+    if (!container) {
+        console.warn("Pixi: 找不到 #pixi-container");
+        return;
+    }
+    if (typeof PIXI === "undefined") {
+        console.warn("Pixi: PIXI 未載入（請確認 /pixi.min.js）");
+        return;
+    }
 
     pixiApp = new PIXI.Application({
-        resizeTo: window, backgroundAlpha: 0, antialias: true,
-        resolution: window.devicePixelRatio || 1
+        resizeTo: container,
+        transparent: true,
+        antialias: true,
+        autoDensity: true,
+        resolution: window.devicePixelRatio || 1,
     });
     container.appendChild(pixiApp.view);
 
+    function centerMagicCircle() {
+        if (!pixiApp || !magicCircle) return;
+        magicCircle.x = pixiApp.screen.width / 2;
+        magicCircle.y = pixiApp.screen.height / 2;
+    }
+    window.addEventListener('resize', centerMagicCircle);
+
     magicCircle = new PIXI.Container();
-    magicCircle.x = pixiApp.screen.width / 2;
-    magicCircle.y = pixiApp.screen.height / 2;
+    centerMagicCircle();
     pixiApp.stage.addChild(magicCircle);
 
-    const outerRing = new PIXI.Graphics();
-    outerRing.lineStyle(2, 0xE5C07B, 0.4);
-    outerRing.drawCircle(0, 0, 180);
-    magicCircle.addChild(outerRing);
+    if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => centerMagicCircle());
+        ro.observe(container);
+    }
+    requestAnimationFrame(() => centerMagicCircle());
 
-    for (let i = 0; i < 50; i++) {
+    outerRingGfx = new PIXI.Graphics();
+    outerRingGfx.lineStyle(2.5, 0xE5C07B, 0.45);
+    outerRingGfx.drawCircle(0, 0, 188);
+    magicCircle.addChild(outerRingGfx);
+
+    innerRingGfx = new PIXI.Graphics();
+    innerRingGfx.lineStyle(1.2, 0x9FA8DA, 0.35);
+    innerRingGfx.drawCircle(0, 0, 112);
+    magicCircle.addChild(innerRingGfx);
+
+    const digitPool = "0123456789";
+    const fontStack = '"PingFang TC","Microsoft JhengHei","Helvetica Neue",Helvetica,sans-serif';
+
+    for (let i = 0; i < 42; i++) {
+        const baseAlpha = 0.18 + Math.random() * 0.38;
+        const ch = digitPool[Math.floor(Math.random() * digitPool.length)];
+        const style = new PIXI.TextStyle({
+            fontFamily: fontStack,
+            fontSize: 11 + Math.random() * 16,
+            fill: Math.random() > 0.48 ? 0xe5c07b : 0xb8bef5,
+            fontWeight: Math.random() > 0.75 ? "600" : "400",
+        });
+        const t = new PIXI.Text(ch, style);
+        t.anchor.set(0.5);
+        t.baseAlpha = baseAlpha;
+        t.alpha = baseAlpha;
+        t.x = Math.random() * pixiApp.screen.width;
+        t.y = Math.random() * pixiApp.screen.height;
+        t.driftSpeed = 0.22 + Math.random() * 0.55;
+        t.wobblePhase = Math.random() * Math.PI * 2;
+        t.wobbleSpeed = 0.018 + Math.random() * 0.038;
+        digitFloaters.push(t);
+        pixiApp.stage.addChild(t);
+    }
+
+    const particleCount = 78;
+    for (let i = 0; i < particleCount; i++) {
         const p = new PIXI.Graphics();
         const color = Math.random() > 0.5 ? 0xE5C07B : 0x7B84E5;
-        p.beginFill(color, Math.random() * 0.5 + 0.2);
-        p.drawCircle(0, 0, Math.random() * 2 + 1);
+        p.beginFill(color, Math.random() * 0.55 + 0.22);
+        p.drawCircle(0, 0, Math.random() * 2.4 + 0.8);
+        p.endFill();
         p.x = Math.random() * pixiApp.screen.width;
         p.y = Math.random() * pixiApp.screen.height;
-        p.speed = Math.random() * 0.5 + 0.1;
+        p.speed = Math.random() * 0.62 + 0.12;
         particles.push(p);
         pixiApp.stage.addChild(p);
     }
 
     pixiApp.ticker.add((delta) => {
-        // 🌟 isRitualActive 控制了魔法陣的轉速與脈衝
-        const rotationSpeed = isRitualActive ? 0.08 : 0.002;
+        const ritual = isRitualActive;
+        const rotationSpeed = ritual ? 0.105 : 0.0035;
         magicCircle.rotation += rotationSpeed * delta;
-        
-        if (isRitualActive) {
-            magicCircle.scale.x = magicCircle.scale.y = 1 + Math.sin(Date.now() / 100) * 0.1;
+
+        if (ritual) {
+            magicCircle.scale.x = magicCircle.scale.y = 1 + Math.sin(Date.now() / 95) * 0.12;
         } else {
             magicCircle.scale.x = magicCircle.scale.y = 1;
         }
 
-        particles.forEach(p => {
-            p.y -= p.speed * delta * (isRitualActive ? 15 : 1);
-            if (p.y < 0) p.y = pixiApp.screen.height;
+        if (outerRingGfx) {
+            outerRingGfx.alpha = ritual ? 0.72 + Math.sin(Date.now() / 220) * 0.22 : 0.42;
+        }
+        if (innerRingGfx) {
+            innerRingGfx.alpha = ritual ? 0.62 + Math.cos(Date.now() / 180) * 0.18 : 0.32;
+        }
+
+        const dotBoost = ritual ? 17 : 1;
+        particles.forEach((p) => {
+            p.y -= p.speed * delta * dotBoost;
+            if (p.y < -8) {
+                p.y = pixiApp.screen.height + 8;
+                p.x = Math.random() * pixiApp.screen.width;
+            }
+            if (ritual) {
+                p.alpha = Math.min(1, 0.55 + Math.sin(Date.now() / 140 + p.x * 0.01) * 0.22);
+            } else {
+                p.alpha = 1;
+            }
+        });
+
+        const digitBoost = ritual ? 14 : 1;
+        digitFloaters.forEach((d, idx) => {
+            d.y -= d.driftSpeed * delta * digitBoost;
+            d.wobblePhase += d.wobbleSpeed * delta * (ritual ? 1.45 : 1);
+            d.x += Math.sin(d.wobblePhase) * (ritual ? 1.15 : 0.55) * delta;
+
+            if (d.y < -28) {
+                d.y = pixiApp.screen.height + 28;
+                d.x = Math.random() * pixiApp.screen.width;
+                const pool = "0123456789";
+                d.text = pool[Math.floor(Math.random() * pool.length)];
+            }
+
+            if (ritual) {
+                const pulse = Math.sin(Date.now() / 110 + idx * 0.7);
+                d.alpha = Math.min(0.92, d.baseAlpha + 0.38 + pulse * 0.12);
+                const sc = 1 + pulse * 0.14;
+                d.scale.set(sc);
+            } else {
+                d.alpha = d.baseAlpha;
+                d.scale.set(1);
+            }
         });
     });
 }

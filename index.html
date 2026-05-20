@@ -741,7 +741,7 @@
                 <li><strong>退費</strong>：已使用點數原則不退；詳見下方「退費與客服」。</li>
                 <li><strong>條款修訂</strong>：依法令或營運需求修訂並公告。</li>
             </ol>
-            <p class="note">疑義請洽客服信箱 <a href="mailto:brand.decoderai@gmail.com">brand.decoderai@gmail.com</a>。</p>
+            <p class="note">疑義請洽客服信箱 <a href="mailto:branddecoderai@gmail.com">branddecoderai@gmail.com</a>，或來電 <a href="tel:+886908859917">0908-859-917</a>。</p>
         </article>
 
         <article class="panel" id="refund">
@@ -749,7 +749,8 @@
             <ul>
                 <li><strong>未使用點數</strong>：依消費者保護法及公告政策辦理：<span data-mj-bind="draftPlaceholders.refundPolicy" class="placeholder">請見正式公告</span>。</li>
                 <li><strong>已使用點數</strong>：原則不予退還。</li>
-                <li><strong>客服信箱</strong>：<a href="mailto:brand.decoderai@gmail.com" data-mj-contact-email>brand.decoderai@gmail.com</a></li>
+                <li><strong>客服信箱</strong>：<a href="mailto:branddecoderai@gmail.com" data-mj-contact-email>branddecoderai@gmail.com</a></li>
+                <li><strong>客服電話</strong>：<a href="tel:+886908859917">0908-859-917</a></li>
             </ul>
         </article>
 
@@ -775,7 +776,7 @@
                 <span data-mj-bind="meta.brandLine">BrandDecoder｜命運解碼室</span>
             </div>
             <p>命運解碼室 · 解碼你的星軌與命運</p>
-            <p class="note" style="margin-top:8px;"><a href="mailto:brand.decoderai@gmail.com">brand.decoderai@gmail.com</a></p>
+            <p class="note" style="margin-top:8px;"><a href="mailto:branddecoderai@gmail.com">branddecoderai@gmail.com</a> · <a href="tel:+886908859917">0908-859-917</a></p>
         </footer>
     </div>
 
@@ -1096,14 +1097,24 @@
 
         function renderContact(el, c) {
             if (!el || !c) return;
-            var email = c.email || 'brand.decoderai@gmail.com';
+            var email = c.email || 'branddecoderai@gmail.com';
             var entity = c.entityName || 'BrandDecoder 命運解碼室';
+            var phone = (c.phone || '').trim();
             var emailHtml = isPlaceholderVal(email)
                 ? '<span class="placeholder">' + esc(email) + '</span>'
                 : '<a href="mailto:' + esc(email) + '">' + esc(email) + '</a>';
+            var phoneHtml = '';
+            if (phone && !isPlaceholderVal(phone)) {
+                var digits = phone.replace(/\D/g, '');
+                var telHref = digits.indexOf('0') === 0 ? 'tel:+886' + digits.slice(1) : 'tel:' + digits;
+                phoneHtml = '<a href="' + esc(telHref) + '">' + esc(phone) + '</a>';
+            } else if (phone && isPlaceholderVal(phone)) {
+                phoneHtml = '<span class="placeholder">' + esc(phone) + '</span>';
+            }
             el.innerHTML =
                 '<p><strong>服務提供者：</strong>' + esc(entity) + '</p>' +
-                '<p><strong>客服信箱：</strong>' + emailHtml + '</p>';
+                '<p><strong>客服信箱：</strong>' + emailHtml + '</p>' +
+                (phoneHtml ? '<p><strong>客服電話：</strong>' + phoneHtml + '</p>' : '');
             var emailLink = document.querySelector('[data-mj-contact-email]');
             if (emailLink && !isPlaceholderVal(email)) {
                 emailLink.href = 'mailto:' + email;
