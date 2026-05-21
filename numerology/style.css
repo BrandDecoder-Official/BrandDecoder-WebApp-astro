@@ -17,18 +17,23 @@ body, html {
     color: #FFFFFF;
 }
 
+body {
+    position: relative;
+}
+
 /* ==========================================
    圖層系統 (Z-Index)
 ========================================== */
 #pixi-container {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: fixed;
+    inset: 0;
     width: 100%;
     height: 100%;
     min-height: 100vh;
-    min-height: 100dvh; /* 行動版 LIFF 較可靠的視窗高度 */
-    z-index: 0; /* 底層：Pixi 動畫 */
+    min-height: 100dvh;
+    z-index: -1; /* 與紫微頁一致：全螢幕背景在 UI 之下 */
+    overflow: hidden;
+    pointer-events: none;
 }
 
 #pixi-container canvas {
@@ -36,6 +41,48 @@ body, html {
     position: absolute;
     top: 0;
     left: 0;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* 飄動數字（DOM 層，LINE WebView 比 PIXI.Text 穩定） */
+#digit-fx-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.digit-floater {
+    position: absolute;
+    bottom: -2rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 8px rgba(229, 192, 123, 0.45);
+    opacity: 0;
+    animation: digitFloatUp linear infinite;
+    will-change: transform, opacity;
+}
+
+.digit-floater.gold { color: rgba(229, 192, 123, 0.75); }
+.digit-floater.violet { color: rgba(184, 190, 245, 0.7); }
+
+@keyframes digitFloatUp {
+    0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+    }
+    8% { opacity: 1; }
+    92% { opacity: 1; }
+    100% {
+        transform: translateY(-115vh) translateX(var(--drift-x, 0));
+        opacity: 0;
+    }
+}
+
+body.ritual-blast .digit-floater {
+    animation-duration: calc(var(--dur, 12s) * 0.35);
+    text-shadow: 0 0 14px rgba(229, 192, 123, 0.85);
 }
 
 #ui-layer {

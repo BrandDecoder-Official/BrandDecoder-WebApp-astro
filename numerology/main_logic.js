@@ -6,15 +6,13 @@ let userId = "";
 let currentAccessToken = "";
 let dynamicCost = 10; 
 
-// UI 元素 Ref
-const btnActivate = document.getElementById('btn-activate');
+// UI 元素 Ref（DOMContentLoaded 後再綁定，避免腳本提早執行）
+let btnActivate = null;
 
 // PixiJS 狀態
 let pixiApp;
 let magicCircle; 
 let particles = []; 
-/** 背景飄動數字（數字解碼主題） */
-let digitFloaters = [];
 let outerRingGfx;
 let innerRingGfx;
 let isRitualActive = false; 
@@ -23,23 +21,14 @@ let isRitualActive = false;
 // ⚙️ 1. 初始化 (LIFF 登入 & 抓取後台定價)
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
-    console.log("系統啟動：掛載 PixiJS 視覺引擎...");
-    // LINE / LIFF WebView 常在首幀前 window 尺寸尚未穩定；延後初始化並綁定 #pixi-container 較可靠
-    function schedulePixiInit() {
-        const run = () => {
-            try {
-                initPixiBackground();
-            } catch (pixiErr) {
-                console.warn("Pixi 背景略過", pixiErr);
-            }
-        };
-        if (typeof window.requestAnimationFrame === "function") {
-            window.requestAnimationFrame(() => window.requestAnimationFrame(run));
-        } else {
-            setTimeout(run, 0);
-        }
-    }
-    schedulePixiInit();
+    btnActivate = document.getElementById('btn-activate');
+    if (btnActivate) bindActivateButton();
+
+    console.log("系統啟動：掛載背景特效...");
+    initDigitFloatLayer();
+    scheduleBackgroundFxInit();
+    window.addEventListener('load', scheduleBackgroundFxInit);
+    window.addEventListener('pageshow', scheduleBackgroundFxInit);
 
     try {
         const session = await BdLiff.requireLiffSession(ENV.NUMEROLOGY_LIFF_ID, { withProfile: true });
@@ -83,7 +72,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ==========================================
 // 🔮 2. 算命 Ritual 邏輯 (按鈕變形 + 秒回關閉)
 // ==========================================
-btnActivate.addEventListener('click', async (e) => {
+function bindActivateButton() {
+    if (!btnActivate || btnActivate.dataset.bound === '1') return;
+    btnActivate.dataset.bound = '1';
+    btnActivate.addEventListener('click', onActivateClick);
+}
+
+async function onActivateClick(e) {
+    if (!btnActivate) return;
     // 阻止事件冒泡與預設行為，防止意外重整
     e.preventDefault(); 
     if (btnActivate.disabled) return;
@@ -148,7 +144,7 @@ btnActivate.addEventListener('click', async (e) => {
         btnActivate.style.boxShadow = "";
         alert("🚨 系統異常：" + error.message);
     }
-});
+}
 
 // ==========================================
 // 🚪 3. UI 輔助控制
@@ -163,8 +159,60 @@ function switchScreen(hideId, showId) {
 // ==========================================
 // 🎨 4. PixiJS 視覺引擎（飄字 + 粒子 + 雙環魔法陣）
 // ==========================================
-function startPixiBlast() { isRitualActive = true; }
-function stopPixiBlast() { isRitualActive = false; }
+function startPixiBlast() {
+    isRitualActive = true;
+    document.body.classList.add('ritual-blast');
+}
+function stopPixiBlast() {
+    isRitualActive = false;
+    document.body.classList.remove('ritual-blast');
+}
+
+let bgFxInitPending = false;
+function scheduleBackgroundFxInit() {
+    if (pixiApp) return;
+    if (bgFxInitPending) return;
+    bgFxInitPending = true;
+    const run = () => {
+        bgFxInitPending = false;
+        try {
+            initPixiBackground();
+        } catch (pixiErr) {
+            console.error("Pixi 背景初始化失敗", pixiErr);
+        }
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => requestAnimationFrame(run));
+    } else {
+        setTimeout(run, 50);
+    }
+}
+
+/** DOM 飄字（不依賴 WebGL，進頁即顯示） */
+function initDigitFloatLayer() {
+    const layer = document.getElementById('digit-fx-layer');
+    if (!layer || layer.dataset.ready === '1') return;
+    layer.dataset.ready = '1';
+    const pool = '0123456789';
+    const count = 48;
+    for (let i = 0; i < count; i++) {
+        const span = document.createElement('span');
+        span.className = 'digit-floater ' + (Math.random() > 0.5 ? 'gold' : 'violet');
+        span.textContent = pool[Math.floor(Math.random() * pool.length)];
+        const size = 14 + Math.floor(Math.random() * 18);
+        const left = Math.random() * 100;
+        const dur = 9 + Math.random() * 14;
+        const delay = Math.random() * dur;
+        const drift = (Math.random() - 0.5) * 40;
+        span.style.left = left + '%';
+        span.style.fontSize = size + 'px';
+        span.style.setProperty('--dur', dur + 's');
+        span.style.setProperty('--drift-x', drift + 'px');
+        span.style.animationDuration = dur + 's';
+        span.style.animationDelay = (-delay) + 's';
+        layer.appendChild(span);
+    }
+}
 
 function initPixiBackground() {
     if (pixiApp) return;
@@ -179,14 +227,27 @@ function initPixiBackground() {
         return;
     }
 
+    const w = window.innerWidth || document.documentElement.clientWidth || 360;
+    const h = window.innerHeight || document.documentElement.clientHeight || 640;
+    if (w < 2 || h < 2) {
+        console.warn("Pixi: 視窗尺寸尚未就緒，稍後重試");
+        scheduleBackgroundFxInit();
+        return;
+    }
+
     pixiApp = new PIXI.Application({
-        resizeTo: container,
+        resizeTo: window,
         transparent: true,
         antialias: true,
         autoDensity: true,
-        resolution: window.devicePixelRatio || 1,
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
     });
-    container.appendChild(pixiApp.view);
+    const canvas = pixiApp.view;
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.zIndex = '0';
+    container.insertBefore(canvas, container.firstChild);
 
     function centerMagicCircle() {
         if (!pixiApp || !magicCircle) return;
@@ -214,31 +275,6 @@ function initPixiBackground() {
     innerRingGfx.lineStyle(1.2, 0x9FA8DA, 0.35);
     innerRingGfx.drawCircle(0, 0, 112);
     magicCircle.addChild(innerRingGfx);
-
-    const digitPool = "0123456789";
-    const fontStack = '"PingFang TC","Microsoft JhengHei","Helvetica Neue",Helvetica,sans-serif';
-
-    for (let i = 0; i < 42; i++) {
-        const baseAlpha = 0.18 + Math.random() * 0.38;
-        const ch = digitPool[Math.floor(Math.random() * digitPool.length)];
-        const style = new PIXI.TextStyle({
-            fontFamily: fontStack,
-            fontSize: 11 + Math.random() * 16,
-            fill: Math.random() > 0.48 ? 0xe5c07b : 0xb8bef5,
-            fontWeight: Math.random() > 0.75 ? "600" : "400",
-        });
-        const t = new PIXI.Text(ch, style);
-        t.anchor.set(0.5);
-        t.baseAlpha = baseAlpha;
-        t.alpha = baseAlpha;
-        t.x = Math.random() * pixiApp.screen.width;
-        t.y = Math.random() * pixiApp.screen.height;
-        t.driftSpeed = 0.22 + Math.random() * 0.55;
-        t.wobblePhase = Math.random() * Math.PI * 2;
-        t.wobbleSpeed = 0.018 + Math.random() * 0.038;
-        digitFloaters.push(t);
-        pixiApp.stage.addChild(t);
-    }
 
     const particleCount = 78;
     for (let i = 0; i < particleCount; i++) {
@@ -286,28 +322,7 @@ function initPixiBackground() {
             }
         });
 
-        const digitBoost = ritual ? 14 : 1;
-        digitFloaters.forEach((d, idx) => {
-            d.y -= d.driftSpeed * delta * digitBoost;
-            d.wobblePhase += d.wobbleSpeed * delta * (ritual ? 1.45 : 1);
-            d.x += Math.sin(d.wobblePhase) * (ritual ? 1.15 : 0.55) * delta;
-
-            if (d.y < -28) {
-                d.y = pixiApp.screen.height + 28;
-                d.x = Math.random() * pixiApp.screen.width;
-                const pool = "0123456789";
-                d.text = pool[Math.floor(Math.random() * pool.length)];
-            }
-
-            if (ritual) {
-                const pulse = Math.sin(Date.now() / 110 + idx * 0.7);
-                d.alpha = Math.min(0.92, d.baseAlpha + 0.38 + pulse * 0.12);
-                const sc = 1 + pulse * 0.14;
-                d.scale.set(sc);
-            } else {
-                d.alpha = d.baseAlpha;
-                d.scale.set(1);
-            }
-        });
     });
+
+    console.log("✅ Pixi 背景已啟動", pixiApp.screen.width, "x", pixiApp.screen.height);
 }
