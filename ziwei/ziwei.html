@@ -332,10 +332,62 @@
         }
 
         // --- 🌌 PixiJS 全域特效 ---
+        let bgFxInitPending = false;
+        function scheduleBackgroundFxInit() {
+            if (pixiApp) return;
+            if (bgFxInitPending) return;
+            bgFxInitPending = true;
+            const run = () => {
+                bgFxInitPending = false;
+                try {
+                    initPixiBackground();
+                } catch (pixiErr) {
+                    console.error("Pixi 背景初始化失敗", pixiErr);
+                }
+            };
+            if (typeof window.requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => requestAnimationFrame(run));
+            } else {
+                setTimeout(run, 50);
+            }
+        }
+
         function initPixiBackground() {
+            if (pixiApp) return;
+
             const container = document.getElementById('pixi-background');
-            pixiApp = new PIXI.Application({ resizeTo: window, backgroundColor: 0x0A0B10, transparent: false, autoDensity: true, resolution: window.devicePixelRatio || 1 });
-            container.appendChild(pixiApp.view);
+            if (!container) {
+                console.warn("Pixi: 找不到 #pixi-background");
+                return;
+            }
+            if (typeof PIXI === "undefined") {
+                console.warn("Pixi: PIXI 未載入（請確認 /pixi.min.js）");
+                return;
+            }
+
+            const w = window.innerWidth || document.documentElement.clientWidth || 360;
+            const h = window.innerHeight || document.documentElement.clientHeight || 640;
+            if (w < 2 || h < 2) {
+                console.warn("Pixi: 視窗尺寸尚未就緒，稍後重試");
+                scheduleBackgroundFxInit();
+                return;
+            }
+
+            pixiApp = new PIXI.Application({ 
+                resizeTo: window, 
+                backgroundColor: 0x0A0B10, 
+                transparent: false, 
+                autoDensity: true, 
+                resolution: Math.min(window.devicePixelRatio || 1, 2) 
+            });
+
+            const canvas = pixiApp.view;
+            canvas.style.position = 'absolute';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            container.appendChild(canvas);
 
             const starContainer = new PIXI.Container();
             pixiApp.stage.addChild(starContainer);
@@ -504,7 +556,11 @@
             document.getElementById('toggle-fuzzy-time').addEventListener('change', (e) => {
                 populateTimeOptions(e.target.checked);
             });
-            try { initPixiBackground(); } catch (e) { console.warn('Pixi 背景略過', e); }
+            
+            // 🌟 啟動多重背景初始化防護
+            scheduleBackgroundFxInit();
+            window.addEventListener('load', scheduleBackgroundFxInit);
+            window.addEventListener('pageshow', scheduleBackgroundFxInit);
 
             await fetchAiConfig();
             await initLIFF();
