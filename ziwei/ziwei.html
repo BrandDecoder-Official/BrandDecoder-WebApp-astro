@@ -32,6 +32,8 @@
             inset: 0; 
             z-index: 0; 
             background-color: var(--bg-color);
+            transform: translate3d(0, 0, 0);
+            -webkit-transform: translate3d(0, 0, 0);
         }
 
         /* 🔮 步驟容器 */
@@ -332,7 +334,7 @@
         // --- 🌌 PixiJS 全域特效 ---
         function initPixiBackground() {
             const container = document.getElementById('pixi-background');
-            pixiApp = new PIXI.Application({ resizeTo: window, transparent: true, autoDensity: true, resolution: window.devicePixelRatio || 1 });
+            pixiApp = new PIXI.Application({ resizeTo: window, backgroundColor: 0x0A0B10, transparent: false, autoDensity: true, resolution: window.devicePixelRatio || 1 });
             container.appendChild(pixiApp.view);
 
             const starContainer = new PIXI.Container();

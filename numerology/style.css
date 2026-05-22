@@ -34,6 +34,8 @@ body {
     z-index: 0; /* 修改：設為 0 以防在某些 webview 下被 body 背景色遮擋 */
     overflow: hidden;
     pointer-events: none;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
 }
 
 #pixi-container canvas {

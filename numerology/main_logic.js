@@ -270,7 +270,8 @@ function initPixiBackground() {
 
     pixiApp = new PIXI.Application({
         resizeTo: window,
-        transparent: true,
+        backgroundColor: 0x05050A,
+        transparent: false,
         antialias: true,
         autoDensity: true,
         resolution: Math.min(window.devicePixelRatio || 1, 2),
