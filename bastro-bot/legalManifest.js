@@ -101,10 +101,30 @@ function validateRechargeOrder({ amount, pointsGiven, periodCode, lastFirstRecha
 function buildPayStrings(points, productNameFromClient) {
     const m = loadLegalManifest();
     const pts = points != null ? points : '';
-    const templates = m.templates || {};
-    const tradeDesc = interpolate(templates.tradeDesc, { points: pts });
+    const tiers = m.pricingTiers || [];
+
+    // 尋找符合點數的 Tier 方案（同時考慮 10% 首充贈點的情形，如 2000 * 1.1 = 2200）
+    const tier = tiers.find(t => t.points === Number(pts) || Math.floor(t.points * 1.1) === Number(pts));
+
+    let itemName = "";
+    let tradeDesc = "";
+
+    if (tier && tier.productName) {
+        itemName = tier.productName;
+        tradeDesc = tier.tradeDesc || tier.productName;
+    } else {
+        const templates = m.templates || {};
+        itemName = interpolate(templates.productName, { points: pts });
+        tradeDesc = interpolate(templates.tradeDesc, { points: pts });
+    }
+
+    // 如果前端有傳入，且不包含敏感字眼，則優先使用前端品名
     const trimmed = productNameFromClient != null ? String(productNameFromClient).trim() : '';
-    const itemName = trimmed ? trimmed : interpolate(templates.productName, { points: pts });
+    const isSensitive = /點|儲值|靈力|充值/.test(trimmed);
+    if (trimmed && !isSensitive) {
+        itemName = trimmed;
+    }
+
     return { tradeDesc, itemName };
 }
 

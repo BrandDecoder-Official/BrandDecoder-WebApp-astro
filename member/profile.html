@@ -210,9 +210,9 @@
         </div>
 
         <div class="glass-card energy-section">
-            <div class="energy-title">當前靈力儲備 (Points)</div>
+            <div class="energy-title">當前可用服務額度 (Points)</div>
             <div class="energy-points" id="ui-points">--</div>
-            <button class="recharge-btn" type="button" onclick="openRechargeTermsGate()">補充靈力</button>
+            <button class="recharge-btn" type="button" onclick="openRechargeTermsGate()">獲取服務額度</button>
         </div>
 
         <div class="glass-card chart-section">
@@ -258,13 +258,13 @@
 
     <div id="recharge-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">靈力補充祭壇</h3>
-            <p style="text-align: center; font-size: 12px; color: #888; margin-top: 10px;">請選擇您要注入的能量級別</p>
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">獲取服務額度方案</h3>
+            <p style="text-align: center; font-size: 12px; color: #888; margin-top: 10px;">請選擇您要獲取的服務方案</p>
             
             <div class="tier-grid" id="tier-grid"></div>
-            <a class="recharge-legal-link" id="recharge-legal-fullpage-link" href="/index.html" target="_blank" rel="noopener noreferrer">服務條款與扣點說明（完整頁）</a>
+            <a class="recharge-legal-link" id="recharge-legal-fullpage-link" href="/index.html" target="_blank" rel="noopener noreferrer">服務條款與扣除額度說明（完整頁）</a>
             
-            <button class="modal-close-btn" onclick="closeModal('recharge-modal')">離開祭壇</button>
+            <button class="modal-close-btn" onclick="closeModal('recharge-modal')">關閉方案選擇</button>
         </div>
     </div>
 
@@ -336,8 +336,15 @@
 
         function buildProductNameFromManifest(pointsToGive) {
             const m = window.__LEGAL_MANIFEST;
+            const pts = Number(pointsToGive);
+            if (m && Array.isArray(m.pricingTiers)) {
+                const tier = m.pricingTiers.find(t => t.points === pts || Math.floor(t.points * 1.1) === pts);
+                if (tier && tier.productName) {
+                    return tier.productName;
+                }
+            }
             const t = m && m.templates && m.templates.productName;
-            return t ? tpl(t, { points: pointsToGive }) : `線上占卜服務點數（靈力 ${pointsToGive} 點） 命運解碼室`;
+            return t ? tpl(t, { points: pointsToGive }) : `線上命理諮詢與解碼服務方案 命運解碼室`;
         }
 
         /** 條款內文以 bastro-bot/legal-service-manifest.json 為單一來源；此函式僅在 fetch 失敗時提供簡短降級文案（避免與 manifest 雙軌維護） */
@@ -528,10 +535,10 @@
                 
                 // 🌟 分流判斷 1：儲值
                 if (item.type === "recharge") {
-                    typeText = "💎 靈力充能";
+                    typeText = "💎 獲取服務額度";
                     topicText = `💸 成功支付 NT$ ${item.amount_paid || 0}`;
-                    extraHtml = `<span style="font-size: 10px; color: #4CAF50; border: 1px solid rgba(76,175,80,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">🎉 能量注入</span>`;
-                } 
+                    extraHtml = `<span style="font-size: 10px; color: #4CAF50; border: 1px solid rgba(76,175,80,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">🎉 方案開通</span>`;
+                }  
                 else if (item.type === "ziwei" || item.serviceType === "ziwei") {
                     typeText = "🏮 紫微斗數";
                     topicText = item.summary || "排盤解碼";
@@ -851,7 +858,7 @@
                 if (applyFirstBonus) {
                     const bonusPoints = Math.floor(tier.points * 0.1); 
                     finalPoints += bonusPoints;
-                    bonusHtml = `<span class="tier-bonus" style="display:inline;">首充 +${bonusPoints} 點</span>`;
+                    bonusHtml = `<span class="tier-bonus" style="display:inline;">首購加碼 +${bonusPoints} 額度</span>`;
                 }
 
                 const popularClass = tier.isPopular ? "popular" : "";
@@ -860,7 +867,7 @@
                 const html = `
                     <div class="tier-card ${popularClass}${testClass}" onclick="requestEcpayCheckout(${tier.price}, ${finalPoints}, '${periodForCheckout}')">
                         <div class="tier-info">
-                            <span class="tier-points">💎 ${finalPoints} 靈力</span>
+                            <span class="tier-points">✨ 服務額度 ${finalPoints}</span>
                             ${bonusHtml}
                         </div>
                         <div class="tier-price">NT$ ${tier.price}</div>

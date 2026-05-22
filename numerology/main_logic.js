@@ -20,7 +20,10 @@ let isRitualActive = false;
 // ==========================================
 // ⚙️ 1. 初始化 (LIFF 登入 & 抓取後台定價)
 // ==========================================
-document.addEventListener("DOMContentLoaded", async () => {
+async function initAll() {
+    if (window.__numerologyInitStarted) return;
+    window.__numerologyInitStarted = true;
+
     btnActivate = document.getElementById('btn-activate');
     if (btnActivate) bindActivateButton();
 
@@ -33,8 +36,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
         const session = await BdLiff.requireLiffSession(ENV.NUMEROLOGY_LIFF_ID, { withProfile: true });
         currentAccessToken = session.token;
-        const profile = session.profile || (await liff.getProfile());
-        userId = profile.userId;
+        
+        let profile = null;
+        if (session.profile) {
+            profile = session.profile;
+        } else {
+            try {
+                profile = await liff.getProfile();
+            } catch (pErr) {
+                console.warn("無法獲取個人資料，使用預設值:", pErr);
+                profile = { displayName: "神祕旅人", userId: "" };
+            }
+        }
+        
+        // 嘗試從 ID Token 解析 userId 作為備用
+        if (!profile.userId) {
+            try {
+                const idToken = liff.getDecodedIDToken();
+                if (idToken && idToken.sub) {
+                    profile.userId = idToken.sub;
+                }
+            } catch (tokenErr) {
+                console.warn("解析 ID Token 失敗:", tokenErr);
+            }
+        }
+
+        userId = profile.userId || "";
 
         const uiNameEl = document.getElementById('ui-name');
         if(uiNameEl) uiNameEl.innerText = profile.displayName || "神祕旅人";
@@ -47,12 +74,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (configData.success && configData.data.numerology) {
                 dynamicCost = parseInt(configData.data.numerology.cost);
                 const costTextEl = document.querySelector('.cost-text');
-                if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 靈力值)`;
+                if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 額度)`;
             }
         } catch(apiErr) { 
             console.warn("無法取得動態定價", apiErr); 
             const costTextEl = document.querySelector('.cost-text');
-            if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 靈力值)`;
+            if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 額度)`;
         }
 
         // 隱藏「同步中」畫面，顯示主按鈕畫面
@@ -67,7 +94,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             statusText.style.color = "#ff4d4f";
         }
     }
-});
+}
+
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initAll);
+} else {
+    initAll();
+}
 
 // ==========================================
 // 🔮 2. 算命 Ritual 邏輯 (按鈕變形 + 秒回關閉)
@@ -139,7 +172,7 @@ async function onActivateClick(e) {
         // 失敗時恢復原狀，魔法陣降速回待機狀態
         stopPixiBlast();
         btnActivate.disabled = false;
-        btnActivate.innerHTML = `啟動律動能量 <br><span class="cost-text" style="color: rgba(255,255,255,0.6);">(消耗 ${dynamicCost} 靈力值)</span>`;
+        btnActivate.innerHTML = `啟動律動能量 <br><span class="cost-text" style="color: rgba(255,255,255,0.6);">(消耗 ${dynamicCost} 額度)</span>`;
         btnActivate.style.background = ""; 
         btnActivate.style.boxShadow = "";
         alert("🚨 系統異常：" + error.message);
@@ -246,8 +279,7 @@ function initPixiBackground() {
     canvas.style.position = 'absolute';
     canvas.style.top = '0';
     canvas.style.left = '0';
-    canvas.style.zIndex = '0';
-    container.insertBefore(canvas, container.firstChild);
+    container.appendChild(canvas);
 
     function centerMagicCircle() {
         if (!pixiApp || !magicCircle) return;
@@ -291,6 +323,11 @@ function initPixiBackground() {
     }
 
     pixiApp.ticker.add((delta) => {
+        if (magicCircle && pixiApp) {
+            magicCircle.x = pixiApp.screen.width / 2;
+            magicCircle.y = pixiApp.screen.height / 2;
+        }
+
         const ritual = isRitualActive;
         const rotationSpeed = ritual ? 0.105 : 0.0035;
         magicCircle.rotation += rotationSpeed * delta;
@@ -313,6 +350,9 @@ function initPixiBackground() {
             p.y -= p.speed * delta * dotBoost;
             if (p.y < -8) {
                 p.y = pixiApp.screen.height + 8;
+                p.x = Math.random() * pixiApp.screen.width;
+            }
+            if (p.x > pixiApp.screen.width) {
                 p.x = Math.random() * pixiApp.screen.width;
             }
             if (ritual) {

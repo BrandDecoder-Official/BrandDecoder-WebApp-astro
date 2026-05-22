@@ -31,18 +31,13 @@ body {
     height: 100%;
     min-height: 100vh;
     min-height: 100dvh;
-    z-index: -1; /* 與紫微頁一致：全螢幕背景在 UI 之下 */
+    z-index: 0; /* 修改：設為 0 以防在某些 webview 下被 body 背景色遮擋 */
     overflow: hidden;
     pointer-events: none;
 }
 
 #pixi-container canvas {
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100% !important;
 }
 
 /* 飄動數字（DOM 層，LINE WebView 比 PIXI.Text 穩定） */
