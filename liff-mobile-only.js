@@ -3,6 +3,8 @@
  * 依賴：先載入 /env.js 與 LIFF SDK，再載入本檔。
  */
 (function (global) {
+    const ALLOW_PC_TEST = true; // 🌟 設為 true 允許在 PC WEB 瀏覽器進行測試，上線部署前請改回 false
+
     function isLikelyDesktopLineClient() {
         if (typeof liff === "undefined" || !liff || !liff.isInClient || !liff.isInClient()) return false;
         let os = "";
@@ -48,6 +50,10 @@
      * @returns {boolean} true = 可繼續初始化
      */
     function enforceMobileLiffOnly() {
+        if (ALLOW_PC_TEST) {
+            console.warn("⚠️ [BrandDecoder 開發模式] 已啟用 ALLOW_PC_TEST，允許 PC 瀏覽器直接測試。");
+            return true;
+        }
         if (typeof liff === "undefined" || !liff) {
             showGate("無法啟動", "請重新整理或從 LINE 官方帳號選單開啟。");
             return false;
