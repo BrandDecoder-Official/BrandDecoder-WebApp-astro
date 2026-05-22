@@ -21,13 +21,18 @@
         }
 
         body {
-            margin: 0; padding: 0; background-color: var(--bg-color); color: #E0E0E0;
+            margin: 0; padding: 0; background: transparent; color: #E0E0E0;
             font-family: 'PingFang TC', 'Noto Serif TC', serif; 
             overflow: hidden; height: 100vh; position: relative;
         }
 
         /* 🌟 PixiJS 全局背景畫布 */
-        #pixi-background { position: absolute; inset: 0; z-index: -1; }
+        #pixi-background { 
+            position: absolute; 
+            inset: 0; 
+            z-index: 0; 
+            background-color: var(--bg-color);
+        }
 
         /* 🔮 步驟容器 */
         .step-section {
@@ -375,6 +380,13 @@
             let tick = 0;
             pixiApp.ticker.add((delta) => {
                 tick += delta;
+                
+                // 強制將星盤中心置中，適應螢幕 resize 與轉向
+                if (pixiApp) {
+                    center.x = pixiApp.screen.width / 2;
+                    center.y = pixiApp.screen.height / 2;
+                }
+
                 starContainer.children.forEach(star => {
                     star.y += star.vy * delta;
                     if(star.y < 0) star.y = pixiApp.screen.height;
@@ -481,7 +493,10 @@
             updateDays();
         }
 
-        window.onload = async () => {
+        async function initAll() {
+            if (window.__ziweiInitStarted) return;
+            window.__ziweiInitStarted = true;
+            
             initDatePicker();
             populateTimeOptions(false);
             document.getElementById('toggle-fuzzy-time').addEventListener('change', (e) => {
@@ -491,7 +506,13 @@
 
             await fetchAiConfig();
             await initLIFF();
-        };
+        }
+
+        if (document.readyState === "loading") {
+            window.addEventListener("load", initAll);
+        } else {
+            initAll();
+        }
 
         function makeChoice(currentStep, key, value, btn) {
             userAstrolabeData[key] = value;
