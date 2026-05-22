@@ -10,6 +10,7 @@ const USD_TO_TWD = Number(process.env.USD_TO_TWD || 32);
 
 /** USD / 1M tokens（預估；未知模型用 default） */
 const MODEL_PRICING_USD_PER_MILLION = {
+    'gemini-3.5-flash': { input: 1.5, output: 9.0 },
     'gemini-3.1-flash-lite': { input: 0.075, output: 0.3 },
     'gemini-3.1-flash-lite-preview': { input: 0.075, output: 0.3 },
     'gemini-3-flash-preview': { input: 0.1, output: 0.4 },

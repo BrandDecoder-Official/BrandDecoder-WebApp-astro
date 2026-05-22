@@ -4,12 +4,12 @@
  * 大腦釘選版次（程式庫內固定標記；每次調整本檔選項或 `aiSettingsDefaults.js` 預設模型時請递增，便於追蹤與定期覆核）
  * @see aiSettingsDefaults.js
  */
-const AI_BRAIN_RELEASE = '2026.05.3';
+const AI_BRAIN_RELEASE = '2026.05.4';
 /** 最近一次人工覆核日期（ISO 8601） */
-const AI_BRAIN_LAST_REVIEWED = '2026-05-15';
+const AI_BRAIN_LAST_REVIEWED = '2026-05-22';
 /** 覆核節奏說明（給後台與 API 消費端顯示） */
 const AI_BRAIN_REVIEW_POLICY =
-    '建議每季或 Google 發布模型退役／更名時，覆核 aiModelCatalog.js、aiSettingsDefaults.js，並在後台重存 ai_settings。';
+    '建議每季或 Google 發布模型退役／更名時，覆核 aiModelCatalog.js、aiSettingsDefaults.js，並在後台重存 ai_settings.';
 
 /**
  * 後台「運算模型」下拉選單 — **唯一選項源**
@@ -33,6 +33,7 @@ const AI_BRAIN_REVIEW_POLICY =
  * 未列入官方對照表者不放入選單（例如未公告之 `gemini-3.1-flash-preview` 文字版）。
  */
 const AI_MODEL_OPTIONS = Object.freeze([
+    { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash（GA正式版）' },
     { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite（正式版）' },
     { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite Preview（預覽·將停用）' },
     { value: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash Image Preview（多模態）' },
