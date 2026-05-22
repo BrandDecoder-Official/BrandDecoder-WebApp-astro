@@ -158,142 +158,141 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
         }
 
         // 立刻回傳 200，讓前端關閉網頁
-        res.json({ success: true, msg: "命盤已送交大師，請關閉網頁回聊天室查看" });
+        let isDone = false;
+        let timer1, timer3;
+        let pointsRefunded = false;
+        const rollbackPoints = async () => {
+            if (pointsRefunded) return;
+            pointsRefunded = true;
+            await refundPoints(userRef, aiConfig.cost);
+        };
 
-        (async () => {
-            let isDone = false;
-            let timer1, timer3;
-            let pointsRefunded = false;
-            const rollbackPoints = async () => {
-                if (pointsRefunded) return;
-                pointsRefunded = true;
-                await refundPoints(userRef, aiConfig.cost);
-            };
+        const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
+            startLineChatLoading(userId, seconds);
 
-            const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
-                startLineChatLoading(userId, seconds);
+        try {
+            await client.pushMessage(userId, { type: 'text', text: `🏮 已排定 ${userName} 的星盤，大師正在起盤推演...` });
+            await showLoading(); 
 
-            try {
-                await client.pushMessage(userId, { type: 'text', text: `🏮 已排定 ${userName} 的星盤，大師正在起盤推演...` });
-                await showLoading(); 
+            const aiStartTime = Date.now();
 
-                const aiStartTime = Date.now();
-
-                timer1 = setTimeout(async () => {
-                    if (!isDone) {
-                        await client.pushMessage(userId, { type: 'text', text: `✨ 正在剖析您的【${topicStr}】格局...` });
-                        if (!isDone) await showLoading();
-                    }
-                }, 4000);
-
-                timer3 = setTimeout(async () => {
-                    if (!isDone) {
-                        await client.pushMessage(userId, { type: 'text', text: `⏳ 星象軌跡極為錯綜複雜，正在進行最後的命盤校準...` });
-                        if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
-                    }
-                }, LINE_LOADING_FINAL_AT_MS);
-
-                const systemPrompt = aiConfig.prompt || "你是一位精通紫微斗數的國學大師...";
-                const finalPrompt = `${systemPrompt}\n\n【命主生辰與探詢資訊】\n- 探詢領域：${topicStr}\n- 生理性別：${genderStr}\n- 曆法時間：${calStr} ${birthData.date} ${birthData.time}時${buildTarotZiweiOutputSuffix(topicStr)}`;
-                
-                const dynamicModel = genAI.getGenerativeModel({
-                    model: aiConfig.model,
-                    generationConfig: { temperature: 0.7, maxOutputTokens: MAX_AI_OUTPUT_TOKENS },
-                });
-                const result = await dynamicModel.generateContent(finalPrompt);
-                const rawAiText = result.response.text().trim();
-                const usage = result.response.usageMetadata || {};
-                const aiLatency = Date.now() - aiStartTime;
-
-                isDone = true; 
-                clearTimeout(timer1);
-                clearTimeout(timer3);
-
-                let aiData = { score: 75, text: "命盤解析中..." };
-                const scoreMatch = rawAiText.match(/【分數】[：:]\s*(\d+)/);
-                const textMatch = rawAiText.match(/【解析】[：:]\s*([\s\S]*)/);
-                if (scoreMatch) aiData.score = parseInt(scoreMatch[1], 10);
-                if (textMatch) aiData.text = textMatch[1].trim(); else aiData.text = rawAiText.replace(/【分數】[：:]\s*\d+/g, '').trim();
-                aiData.text = clampTextChars(formatFlexBodyParagraphs(aiData.text), MAX_TAROT_ZIWEI_BODY_CHARS);
-
-                const remainPoints = balanceAfterDeduct;
-
-                await recordDivinationLog({
-                    userId, userName, type: 'ziwei', summary: `紫微解碼[${topicStr}]：${genderStr}, ${birthData.date} ${birthData.time}時`, points_change: -aiConfig.cost, cost: aiConfig.cost,
-                    aiText: aiData.text, fortune_score: aiData.score,
-                    metrics: {
-                        latency_ms: aiLatency,
-                        tokens_in: usage.promptTokenCount || 0,
-                        tokens_out: usage.candidatesTokenCount || 0,
-                        model: aiConfig.model,
-                    },
-                });
-
-                const decodedAt = formatTaipeiDateTimeLine(new Date());
-                const shareHead = buildZiweiShareHead(birthData, aiData.score, decodedAt);
-                const shareToken = await createShareSnapshot(db, {
-                    type: 'ziwei',
-                    head: shareHead,
-                    body: aiData.text,
-                    userId,
-                });
-                const shareUri = buildShareLiffUri(shareToken);
-                const flexMessage = generateZiweiFlexMessage(
-                    userName,
-                    birthData,
-                    aiData.text,
-                    aiData.score,
-                    aiConfig.cost,
-                    remainPoints,
-                    decodedAt,
-                    shareUri
-                );
-                try {
-                    await client.pushMessage(userId, flexMessage);
-                } catch (pushErr) {
-                    await rollbackPoints();
-                    const lineDetail =
-                        pushErr && pushErr.originalError && pushErr.originalError.response && pushErr.originalError.response.data
-                            ? pushErr.originalError.response.data
-                            : pushErr && pushErr.response && pushErr.response.data
-                              ? pushErr.response.data
-                              : null;
-                    console.error(
-                        '紫微 Flex 推播失敗，已退還靈力:',
-                        pushErr && pushErr.message ? pushErr.message : pushErr,
-                        lineDetail != null ? JSON.stringify(lineDetail) : ''
-                    );
-                    await client.pushMessage(userId, {
-                        type: 'text',
-                        text: '⚠️ 解盤已完成，但訊息無法送達 LINE（連線或官方限制）。已為您退還本次靈力，請稍後再試。',
-                    });
-                    return;
+            timer1 = setTimeout(async () => {
+                if (!isDone) {
+                    await client.pushMessage(userId, { type: 'text', text: `✨ 正在剖析您的【${topicStr}】格局...` });
+                    if (!isDone) await showLoading();
                 }
+            }, 4000);
 
-            } catch (bgError) {
-                isDone = true;
-                clearTimeout(timer1); clearTimeout(timer3);
+            timer3 = setTimeout(async () => {
+                if (!isDone) {
+                    await client.pushMessage(userId, { type: 'text', text: `⏳ 星象軌跡極為錯綜複雜，正在進行最後的命盤校準...` });
+                    if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
+                }
+            }, LINE_LOADING_FINAL_AT_MS);
+
+            const systemPrompt = aiConfig.prompt || "你是一位精通紫微斗數的國學大師...";
+            const finalPrompt = `${systemPrompt}\n\n【命主生辰與探詢資訊】\n- 探詢領域：${topicStr}\n- 生理性別：${genderStr}\n- 曆法時間：${calStr} ${birthData.date} ${birthData.time}時${buildTarotZiweiOutputSuffix(topicStr)}`;
+            
+            const dynamicModel = genAI.getGenerativeModel({
+                model: aiConfig.model,
+                generationConfig: { temperature: 0.7, maxOutputTokens: MAX_AI_OUTPUT_TOKENS },
+            });
+            const result = await dynamicModel.generateContent(finalPrompt);
+            const rawAiText = result.response.text().trim();
+            const usage = result.response.usageMetadata || {};
+            const aiLatency = Date.now() - aiStartTime;
+
+            isDone = true; 
+            clearTimeout(timer1);
+            clearTimeout(timer3);
+
+            let aiData = { score: 75, text: "命盤解析中..." };
+            const scoreMatch = rawAiText.match(/【分數】[：:]\s*(\d+)/);
+            const textMatch = rawAiText.match(/【解析】[：:]\s*([\s\S]*)/);
+            if (scoreMatch) aiData.score = parseInt(scoreMatch[1], 10);
+            if (textMatch) aiData.text = textMatch[1].trim(); else aiData.text = rawAiText.replace(/【分數】[：:]\s*\d+/g, '').trim();
+            aiData.text = clampTextChars(formatFlexBodyParagraphs(aiData.text), MAX_TAROT_ZIWEI_BODY_CHARS);
+
+            const remainPoints = balanceAfterDeduct;
+
+            await recordDivinationLog({
+                userId, userName, type: 'ziwei', summary: `紫微解碼[${topicStr}]：${genderStr}, ${birthData.date} ${birthData.time}時`, points_change: -aiConfig.cost, cost: aiConfig.cost,
+                aiText: aiData.text, fortune_score: aiData.score,
+                metrics: {
+                    latency_ms: aiLatency,
+                    tokens_in: usage.promptTokenCount || 0,
+                    tokens_out: usage.candidatesTokenCount || 0,
+                    model: aiConfig.model,
+                },
+            });
+
+            const decodedAt = formatTaipeiDateTimeLine(new Date());
+            const shareHead = buildZiweiShareHead(birthData, aiData.score, decodedAt);
+            const shareToken = await createShareSnapshot(db, {
+                type: 'ziwei',
+                head: shareHead,
+                body: aiData.text,
+                userId,
+            });
+            const shareUri = buildShareLiffUri(shareToken);
+            const flexMessage = generateZiweiFlexMessage(
+                userName,
+                birthData,
+                aiData.text,
+                aiData.score,
+                aiConfig.cost,
+                remainPoints,
+                decodedAt,
+                shareUri
+            );
+            try {
+                await client.pushMessage(userId, flexMessage);
+            } catch (pushErr) {
                 await rollbackPoints();
-                const errStr = (() => {
-                    try {
-                        return typeof bgError === 'string' ? bgError : JSON.stringify(bgError);
-                    } catch (e) {
-                        return String(bgError && bgError.message ? bgError.message : bgError);
-                    }
-                })();
-                console.error('紫微背景失敗:', { model: aiConfig.model, message: bgError && bgError.message, stack: bgError && bgError.stack, errStr });
-
-                const looksLikeModel404 =
-                    /404|"Not Found"|NOT_FOUND|is not found|not supported for generateContent/i.test(errStr) ||
-                    (bgError && (bgError.status === 404 || bgError.code === 404));
-
-                const lineText = looksLikeModel404
-                    ? '⚠️ 解盤中斷：目前設定的 AI 模型無法使用（可能已更名、未開放或專案未啟用）。請聯絡管理員檢查後台「紫微」模型 ID。本次不會扣除您的靈力。'
-                    : '⚠️ 星象干擾過強，大師解盤中斷。本次不會扣除您的靈力。';
-
-                await client.pushMessage(userId, { type: 'text', text: lineText });
+                const lineDetail =
+                    pushErr && pushErr.originalError && pushErr.originalError.response && pushErr.originalError.response.data
+                        ? pushErr.originalError.response.data
+                        : pushErr && pushErr.response && pushErr.response.data
+                          ? pushErr.response.data
+                          : null;
+                console.error(
+                    '紫微 Flex 推播失敗，已退還靈力:',
+                    pushErr && pushErr.message ? pushErr.message : pushErr,
+                    lineDetail != null ? JSON.stringify(lineDetail) : ''
+                );
+                await client.pushMessage(userId, {
+                    type: 'text',
+                    text: '⚠️ 解盤已完成，但訊息無法送達 LINE（連線或官方限制）。已為您退還本次靈力，請稍後再試。',
+                });
+                return res.status(500).json({ success: false, msg: '訊息送達 LINE 失敗' });
             }
-        })();
+
+            return res.json({ success: true, msg: "命盤已送交大師，請關閉網頁回聊天室查看" });
+
+        } catch (bgError) {
+            isDone = true;
+            clearTimeout(timer1); clearTimeout(timer3);
+            await rollbackPoints();
+            const errStr = (() => {
+                try {
+                    return typeof bgError === 'string' ? bgError : JSON.stringify(bgError);
+                } catch (e) {
+                    return String(bgError && bgError.message ? bgError.message : bgError);
+                }
+            })();
+            console.error('紫微背景失敗:', { model: aiConfig.model, message: bgError && bgError.message, stack: bgError && bgError.stack, errStr });
+
+            const looksLikeModel404 =
+                /404|"Not Found"|NOT_FOUND|is not found|not supported for generateContent/i.test(errStr) ||
+                (bgError && (bgError.status === 404 || bgError.code === 404));
+
+            const lineText = looksLikeModel404
+                ? '⚠️ 解盤中斷：目前設定的 AI 模型無法使用（可能已更名、未開放或專案未啟用）。請聯絡管理員檢查後台「紫微」模型 ID。本次不會扣除您的靈力。'
+                : '⚠️ 星象干擾過強，大師解盤中斷。本次不會扣除您的靈力。';
+
+            await client.pushMessage(userId, { type: 'text', text: lineText });
+            return res.status(500).json({ success: false, msg: lineText });
+        }
 
     } catch (error) {
         res.status(500).json({ success: false, msg: error.message });

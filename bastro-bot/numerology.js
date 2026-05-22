@@ -81,142 +81,141 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
             throw e;
         }
 
-        res.json({ status: 'success', message: '命盤已送交大師，請回聊天室查看' });
+        let pointsRefunded = false;
+        const rollbackPoints = async () => {
+            if (pointsRefunded) return;
+            pointsRefunded = true;
+            await refundPoints(userRef, cost);
+        };
+        let isDone = false;
+        let timer1, timer3;
 
-        (async () => {
-            let pointsRefunded = false;
-            const rollbackPoints = async () => {
-                if (pointsRefunded) return;
-                pointsRefunded = true;
-                await refundPoints(userRef, cost);
-            };
-            let isDone = false;
-            let timer1, timer3;
+        const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
+            startLineChatLoading(userId, seconds);
 
-            const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
-                startLineChatLoading(userId, seconds);
+        try {
+            await lineClient.pushMessage(userId, { type: 'text', text: `✨ 收到 ${userName} 的請求，大師正在為您連結宇宙高維度頻率...` });
+            await showLoading();
 
-            try {
-                await lineClient.pushMessage(userId, { type: 'text', text: `✨ 收到 ${userName} 的請求，大師正在為您連結宇宙高維度頻率...` });
-                await showLoading();
-
-                timer1 = setTimeout(async () => {
-                    if (!isDone) {
-                        await lineClient.pushMessage(userId, { type: 'text', text: `🌌 正在解碼您的專屬幸運共振與財富金鑰...` });
-                        if (!isDone) await showLoading();
-                    }
-                }, 4000);
-
-                timer3 = setTimeout(async () => {
-                    if (!isDone) {
-                        await lineClient.pushMessage(userId, { type: 'text', text: `💫 數字頻率正在共振，大師為您提取最終的高維度指引...` });
-                        if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
-                    }
-                }, LINE_LOADING_FINAL_AT_MS);
-
-                const aiStartTime = Date.now();
-                const model = genAI.getGenerativeModel({
-                    model: aiConfig.model,
-                    generationConfig: {
-                        temperature: 0.75,
-                        maxOutputTokens: MAX_AI_OUTPUT_TOKENS,
-                        responseMimeType: 'application/json',
-                    },
-                });
-
-                const finalPromptBase = `${aiConfig.prompt}${buildNumerologyOutputSuffix()}`;
-                const retryPromptSuffix =
-                    '\n\n【重試】上次 JSON 無法解析。請輸出完整合法 JSON（含 coreNumber、luckySet、wealthSet、score、interpretation），interpretation 可適度精簡以確保 JSON 完整閉合。';
-
-                let aiData = null;
-                let aiResponse;
-                let lastRaw = '';
-                for (let attempt = 1; attempt <= 2; attempt++) {
-                    const finalPrompt =
-                        attempt === 1 ? finalPromptBase : `${finalPromptBase}${retryPromptSuffix}`;
-                    aiResponse = await model.generateContent(finalPrompt);
-                    lastRaw = aiResponse.response.text();
-                    aiData = parseNumerologyFromAi(lastRaw);
-                    if (aiData) break;
-
-                    const finishReason =
-                        aiResponse.response.candidates &&
-                        aiResponse.response.candidates[0] &&
-                        aiResponse.response.candidates[0].finishReason;
-                    console.error(
-                        `數字學 JSON 解析失敗 (第 ${attempt} 次, finishReason=${finishReason || 'unknown'}):`,
-                        String(lastRaw).slice(0, 800)
-                    );
+            timer1 = setTimeout(async () => {
+                if (!isDone) {
+                    await lineClient.pushMessage(userId, { type: 'text', text: `🌌 正在解碼您的專屬幸運共振與財富金鑰...` });
+                    if (!isDone) await showLoading();
                 }
+            }, 4000);
 
-                isDone = true;
-                clearTimeout(timer1);
-                clearTimeout(timer3);
-
-                if (!aiData) {
-                    await rollbackPoints();
-                    await lineClient.pushMessage(userId, {
-                        type: 'text',
-                        text: '⚠️ 律動能量解碼未能完成（AI 回覆格式異常）。本次不會扣除您的靈力，請稍後再試。',
-                    });
-                    return;
+            timer3 = setTimeout(async () => {
+                if (!isDone) {
+                    await lineClient.pushMessage(userId, { type: 'text', text: `💫 數字頻率正在共振，大師為您提取最終的高維度指引...` });
+                    if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
                 }
+            }, LINE_LOADING_FINAL_AT_MS);
 
-                const fortuneScore = aiData.score;
-                const aiLatency = Date.now() - aiStartTime;
-                const usage = (aiResponse && aiResponse.response.usageMetadata) || {};
-                const newBalance = newBalanceAfterDeduct;
+            const aiStartTime = Date.now();
+            const model = genAI.getGenerativeModel({
+                model: aiConfig.model,
+                generationConfig: {
+                    temperature: 0.75,
+                    maxOutputTokens: MAX_AI_OUTPUT_TOKENS,
+                    responseMimeType: 'application/json',
+                },
+            });
 
-                await recordDivinationLog({
-                    userId: userId, userName: userName, type: 'numerology', summary: `數字能量：核心數[${aiData.coreNumber}]`,
-                    points_change: -cost, cost: cost, aiText: aiData.interpretation, fortune_score: fortuneScore,
-                    metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: aiConfig.model }
-                });
+            const finalPromptBase = `${aiConfig.prompt}${buildNumerologyOutputSuffix()}`;
+            const retryPromptSuffix =
+                '\n\n【重試】上次 JSON 無法解析。請輸出完整合法 JSON（含 coreNumber、luckySet、wealthSet、score、interpretation），interpretation 可適度精簡以確保 JSON 完整閉合。';
 
-                await userRef.collection('history').add({
-                    type: 'numerology', summary: `今日核心能量：${aiData.coreNumber}`, aiText: aiData.interpretation, result_card: aiData.coreNumber.toString(),
-                    points_change: -cost, cost: cost, fortune_score: fortuneScore, timestamp: FieldValue.serverTimestamp()
-                });
+            let aiData = null;
+            let aiResponse;
+            let lastRaw = '';
+            for (let attempt = 1; attempt <= 2; attempt++) {
+                const finalPrompt =
+                    attempt === 1 ? finalPromptBase : `${finalPromptBase}${retryPromptSuffix}`;
+                aiResponse = await model.generateContent(finalPrompt);
+                lastRaw = aiResponse.response.text();
+                aiData = parseNumerologyFromAi(lastRaw);
+                if (aiData) break;
 
-                const decodedAt = formatTaipeiDateTimeLine(new Date());
-                const shareHead = buildNumerologyShareHead(aiData, fortuneScore, decodedAt);
-                const shareBody = String(aiData.interpretation || '').trim();
-                const shareToken = await createShareSnapshot(db, {
-                    type: 'numerology',
-                    head: shareHead,
-                    body: shareBody,
-                    userId,
-                });
-                const shareUri = buildShareLiffUri(shareToken);
-                const flexMessage = generateNumerologyFlexMessage(
-                    userName,
-                    aiData,
-                    fortuneScore,
-                    cost,
-                    newBalance,
-                    decodedAt,
-                    shareUri
-                );
-                await lineClient.pushMessage(userId, flexMessage);
-
-            } catch (error) {
-                isDone = true;
-                clearTimeout(timer1); clearTimeout(timer3);
-                await rollbackPoints();
-                const lineDetail =
-                    error && error.originalError && error.originalError.response && error.originalError.response.data
-                        ? error.originalError.response.data
-                        : error && error.response && error.response.data
-                          ? error.response.data
-                          : null;
+                const finishReason =
+                    aiResponse.response.candidates &&
+                    aiResponse.response.candidates[0] &&
+                    aiResponse.response.candidates[0].finishReason;
                 console.error(
-                    '數字學背景運算異常:',
-                    error && error.message ? error.message : error,
-                    lineDetail != null ? JSON.stringify(lineDetail) : ''
+                    `數字學 JSON 解析失敗 (第 ${attempt} 次, finishReason=${finishReason || 'unknown'}):`,
+                    String(lastRaw).slice(0, 800)
                 );
-                await lineClient.pushMessage(userId, { type: 'text', text: '⚠️ 宇宙訊號受到干擾，解碼中斷。本次不會扣除您的靈力。' });
             }
-        })();
+
+            isDone = true;
+            clearTimeout(timer1);
+            clearTimeout(timer3);
+
+            if (!aiData) {
+                await rollbackPoints();
+                await lineClient.pushMessage(userId, {
+                    type: 'text',
+                    text: '⚠️ 律動能量解碼未能完成（AI 回覆格式異常）。本次不會扣除您的靈力，請稍後再試。',
+                });
+                return res.status(500).json({ status: 'error', message: 'AI 回覆格式異常' });
+            }
+
+            const fortuneScore = aiData.score;
+            const aiLatency = Date.now() - aiStartTime;
+            const usage = (aiResponse && aiResponse.response.usageMetadata) || {};
+            const newBalance = newBalanceAfterDeduct;
+
+            await recordDivinationLog({
+                userId: userId, userName: userName, type: 'numerology', summary: `數字能量：核心數[${aiData.coreNumber}]`,
+                points_change: -cost, cost: cost, aiText: aiData.interpretation, fortune_score: fortuneScore,
+                metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: aiConfig.model }
+            });
+
+            await userRef.collection('history').add({
+                type: 'numerology', summary: `今日核心能量：${aiData.coreNumber}`, aiText: aiData.interpretation, result_card: aiData.coreNumber.toString(),
+                points_change: -cost, cost: cost, fortune_score: fortuneScore, timestamp: FieldValue.serverTimestamp()
+            });
+
+            const decodedAt = formatTaipeiDateTimeLine(new Date());
+            const shareHead = buildNumerologyShareHead(aiData, fortuneScore, decodedAt);
+            const shareBody = String(aiData.interpretation || '').trim();
+            const shareToken = await createShareSnapshot(db, {
+                type: 'numerology',
+                head: shareHead,
+                body: shareBody,
+                userId,
+            });
+            const shareUri = buildShareLiffUri(shareToken);
+            const flexMessage = generateNumerologyFlexMessage(
+                userName,
+                aiData,
+                fortuneScore,
+                cost,
+                newBalance,
+                decodedAt,
+                shareUri
+            );
+            await lineClient.pushMessage(userId, flexMessage);
+
+            return res.json({ status: 'success', message: '命盤已送交大師，請回聊天室查看' });
+
+        } catch (error) {
+            isDone = true;
+            clearTimeout(timer1); clearTimeout(timer3);
+            await rollbackPoints();
+            const lineDetail =
+                error && error.originalError && error.originalError.response && error.originalError.response.data
+                    ? error.originalError.response.data
+                    : error && error.response && error.response.data
+                      ? error.response.data
+                      : null;
+            console.error(
+                '數字學背景運算異常:',
+                error && error.message ? error.message : error,
+                lineDetail != null ? JSON.stringify(lineDetail) : ''
+            );
+            await lineClient.pushMessage(userId, { type: 'text', text: '⚠️ 宇宙訊號受到干擾，解碼中斷。本次不會扣除您的靈力。' });
+            return res.status(500).json({ status: 'error', message: error.message });
+        }
 
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
