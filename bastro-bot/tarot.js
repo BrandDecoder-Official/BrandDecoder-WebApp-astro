@@ -257,8 +257,181 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             );
             if (tarotConfig) {
                 await userRef.update({ points: FieldValue.increment(tarotConfig.cost) });
-            }
-            await client.pushMessage(userId, { type: 'text', text: '🌌 宇宙能量暫時受到干擾，解碼已取消並退還點數，請稍後再試。' });
+};
+
+// 4. 同步版塔羅牌主邏輯處理函數
+exports.processTarotDrawSync = async function(req, res, db, client, genAI, FieldValue, recordDivinationLog) {
+    const userId = req.user.userId;
+    const { topic, cards } = req.body;
+    if (!topic || !cards || cards.length !== 3) {
+        return res.status(400).json({ success: false, message: "宇宙訊號不完整" });
+    }
+
+    const configDoc = await db.collection('system_config').doc('ai_settings').get();
+    const tarotConfig = mergeModuleKey('tarot', configDoc);
+
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    const userName = userDoc.exists ? (userDoc.data().displayName || userDoc.data().name || '神祕旅人') : '神祕旅人';
+
+    let balanceAfterDeduct;
+    try {
+        // 直接進行扣點交易，不再產生/刪除 pendingDraw 票根
+        balanceAfterDeduct = await deductPointsTransaction(db, userRef, tarotConfig.cost, {});
+    } catch (e) {
+        const { InsufficientPointsError } = require('./pointsLedger');
+        if (e instanceof InsufficientPointsError) {
+            return res.status(403).json({ success: false, message: `靈力不足 (需 ${tarotConfig.cost} 點)` });
         }
-    })();
+        throw e;
+    }
+
+    const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
+        startLineChatLoading(userId, seconds);
+
+    let isDone = false;
+    let timer1, timer2, timer3;
+    let pointsRefunded = false;
+    const rollbackPoints = async () => {
+        if (pointsRefunded) return;
+        pointsRefunded = true;
+        await refundPoints(userRef, tarotConfig.cost);
+    };
+
+    try {
+        // LIFF 同步 API 模式下改用 pushMessage 推送前導訊息
+        await client.pushMessage(userId, { 
+            type: 'text', 
+            text: `🔮 已接收到您的靈能訊號，大師正在為您解碼【${topic}】領域的星辰軌跡...` 
+        });
+        await showLoading(); 
+
+        const aiStartTime = Date.now();
+
+        timer1 = setTimeout(async () => {
+            if (!isDone) {
+                await client.pushMessage(userId, { type: 'text', text: '✨ 正在透過牌陣連結您的潛意識能量場...' });
+                if (!isDone) await showLoading();
+            }
+        }, 3000);
+
+        timer2 = setTimeout(async () => {
+            if (!isDone) {
+                await client.pushMessage(userId, { type: 'text', text: '🌌 靈感湧現！正在將宇宙指引轉化為文字報告，請稍候...' });
+                if (!isDone) await showLoading();
+            }
+        }, 7000);
+
+        timer3 = setTimeout(async () => {
+            if (!isDone) {
+                await client.pushMessage(userId, { type: 'text', text: '🧘‍♂️ 宇宙訊息量龐大，大師正在為您進行最後的統整與收斂...' });
+                if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
+            }
+        }, LINE_LOADING_FINAL_AT_MS);
+
+        const remainPoints = balanceAfterDeduct;
+
+        const systemPrompt = tarotConfig.prompt || "你是一位充滿溫度的神祕塔羅解碼師。";
+        const prompt = `${systemPrompt}\n\n【本次使用者占卜資訊】\n- 探詢領域：【${topic}】\n- 抽出的牌陣：1.過去【${cards[0]}】 2.現在【${cards[1]}】 3.未來【${cards[2]}】${buildTarotZiweiOutputSuffix(topic)}`;
+
+        const dynamicModel = genAI.getGenerativeModel({
+            model: tarotConfig.model,
+            generationConfig: { temperature: 0.7, maxOutputTokens: MAX_AI_OUTPUT_TOKENS },
+        });
+        const result = await dynamicModel.generateContent(prompt);
+        const rawAiText = result.response.text().trim();
+        const usage = result.response.usageMetadata || {};
+        const aiLatency = Date.now() - aiStartTime;
+
+        isDone = true; 
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+
+        let aiData = { score: 50, text: "宇宙訊號解析中..." };
+        const scoreMatch = rawAiText.match(/【分數】[：:]\s*(\d+)/);
+        const textMatch = rawAiText.match(/【解析】[：:]\s*([\s\S]*)/);
+        if (scoreMatch) aiData.score = parseInt(scoreMatch[1], 10);
+        if (textMatch) aiData.text = textMatch[1].trim(); else aiData.text = rawAiText.replace(/【分數】[：:]\s*\d+/g, '').trim();
+        aiData.text = clampTextChars(formatFlexBodyParagraphs(aiData.text), MAX_TAROT_ZIWEI_BODY_CHARS);
+
+        await recordDivinationLog({
+            userId, userName, type: 'tarot', topic, cards, summary: `塔羅解碼：領域【${topic}】`,
+            points_change: -tarotConfig.cost, cost: tarotConfig.cost, aiText: aiData.text, fortune_score: aiData.score,
+            metrics: {
+                latency_ms: aiLatency,
+                tokens_in: usage.promptTokenCount || 0,
+                tokens_out: usage.candidatesTokenCount || 0,
+                model: tarotConfig.model,
+            },
+        });
+
+        // 寫入歷史歷史紀錄
+        await userRef.collection('history').add({
+            type: 'tarot', summary: `今日塔羅：${cards.join(' → ')}`, aiText: aiData.text, result_card: cards[0],
+            points_change: -tarotConfig.cost, cost: tarotConfig.cost, fortune_score: aiData.score, timestamp: FieldValue.serverTimestamp()
+        });
+
+        const decodedAt = formatTaipeiDateTimeLine(new Date());
+        const shareHead = buildTarotShareHead(cards, topic, aiData.score, decodedAt);
+        const shareToken = await createShareSnapshot(db, {
+            type: 'tarot',
+            head: shareHead,
+            body: aiData.text,
+            userId,
+        });
+        const shareUri = buildShareLiffUri(shareToken);
+        let flexMessage = generateTarotFlexMessage(
+            cards,
+            remainPoints,
+            aiData.text,
+            topic,
+            aiData.score,
+            tarotConfig.cost,
+            decodedAt,
+            shareUri
+        );
+
+        try {
+            await client.pushMessage(userId, flexMessage);
+        } catch (pushErr) {
+            await rollbackPoints();
+            const lineDetail =
+                pushErr && pushErr.originalError && pushErr.originalError.response && pushErr.originalError.response.data
+                    ? pushErr.originalError.response.data
+                    : pushErr && pushErr.response && pushErr.response.data
+                      ? pushErr.response.data
+                      : null;
+            console.error(
+                '塔羅 Flex 推播失敗:',
+                pushErr && pushErr.message ? pushErr.message : pushErr,
+                lineDetail != null ? JSON.stringify(lineDetail) : ''
+            );
+            await client.pushMessage(userId, {
+                type: 'text',
+                text: '⚠️ 解盤已完成，但字卡無法送達 LINE。已退還本次靈力，請稍後再試。',
+            });
+            return res.status(500).json({ success: false, message: '訊息送達 LINE 失敗' });
+        }
+
+        return res.status(200).json({ success: true });
+
+    } catch (aiError) {
+        isDone = true;
+        clearTimeout(timer1); clearTimeout(timer2); clearTimeout(timer3);
+        await rollbackPoints();
+        const lineDetail =
+            aiError && aiError.originalError && aiError.originalError.response && aiError.originalError.response.data
+                ? aiError.originalError.response.data
+                : aiError && aiError.response && aiError.response.data
+                  ? aiError.response.data
+                  : null;
+        console.error(
+            '塔羅解盤發生錯誤:',
+            aiError && aiError.message ? aiError.message : aiError,
+            lineDetail != null ? JSON.stringify(lineDetail) : ''
+        );
+        await client.pushMessage(userId, { type: 'text', text: '⚠️ 宇宙訊號受到干擾，解碼中斷。本次不會扣除您的靈力。' });
+        return res.status(500).json({ success: false, message: aiError.message });
+    }
 };

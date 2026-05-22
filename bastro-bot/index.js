@@ -536,6 +536,13 @@ app.post('/api/divination/ziwei', express.json(), verifyLineToken, aiDecodeLimit
 });
 
 // ==========================================
+// 🔮 塔羅牌：專屬同步解碼 API (模組化路由)
+// ==========================================
+app.post('/api/divination/tarot', express.json(), verifyLineToken, aiDecodeLimiter, async (req, res) => {
+    return await tarotHandler.processTarotDrawSync(req, res, db, client, genAI, FieldValue, recordDivinationLog);
+});
+
+// ==========================================
 // ⚙️ 系統設定與定價 API（admin 完整設定見 admin_ai.js，須 Admin token）
 // ==========================================
 app.get('/api/public/config/ai', publicConfigLimiter, async (req, res) => {

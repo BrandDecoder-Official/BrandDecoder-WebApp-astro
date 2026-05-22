@@ -593,14 +593,13 @@
 
                     const cardNames = selectedCards.map(c => c.name);
 
-                    const response = await fetch(`${ENV.API_BASE}/api/tarot/ticket`, {
+                    const response = await fetch(`${ENV.API_BASE}/api/divination/tarot`, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${accessToken}` 
                         },
                         body: JSON.stringify({
-                            userId: userId,
                             topic: currentTopic,
                             cards: cardNames
                         })
@@ -609,11 +608,9 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        const spell = `🔮 祈求宇宙指引：[${currentTopic}] 領域`;
-                        await liff.sendMessages([{ type: 'text', text: spell }]);
                         liff.closeWindow(); 
                     } else {
-                        throw new Error(data.message || "結界異常，票根核發失敗");
+                        throw new Error(data.message || "結界異常，靈能解碼失敗");
                     }
 
                 } catch (error) {
