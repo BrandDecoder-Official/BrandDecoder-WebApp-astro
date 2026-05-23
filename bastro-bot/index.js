@@ -668,17 +668,38 @@ function buildDailyStreakProgressHint(userData, todayKey) {
 
 function getDailyQuickReply(lastDrawDate, todayKey) {
     const last = normalizeDateKey(lastDrawDate);
-    if (last === todayKey) return undefined;
-    return {
-        items: [{
+    const items = [];
+
+    if (last !== todayKey) {
+        items.push({
             type: "action",
             action: {
                 type: "message",
-                label: "✨ 每日免費一算(簽到送靈力+1)",
+                label: "✨ 每日免費一算 (簽到+1 靈力)",
                 text: "每日一抽",
             },
-        }],
-    };
+        });
+    } else {
+        items.push({
+            type: "action",
+            action: {
+                type: "message",
+                label: "🔮 靈魂儀表板 (會員中心)",
+                text: "會員中心",
+            },
+        });
+    }
+
+    items.push({
+        type: "action",
+        action: {
+            type: "message",
+            label: "📖 服務方案與說明",
+            text: "服務說明",
+        },
+    });
+
+    return { items };
 }
 
 app.post('/webhook', middleware(config), async (req, res) => {
@@ -818,7 +839,7 @@ async function handleEvent(event) {
 
             const { line: pointsLine } = buildDailyPointsDisplay(currentPoints, dailyReward);
             const liteOracleNote =
-                "\n\n──────────────\n✧ 此則為天幕隙縫泄下的一縷微光，由輕靈先知代筆速繪；若欲循星軌、披沙見金，細究因果之推演，請輕觸圖文選單，召喚命運解碼室之正式儀式。✧";
+                "\n\n免費一抽使用輕量化計算，如需更詳細的分析，請開啟選單服務進行操作。";
             const displayMsg = `【今日指引：${randomCard}】\n\n${aiData.text}\n\n──────────────\n✨ 今日能量指數：${aiData.score} 分\n${pointsLine}${liteOracleNote}`;
 
             return client.replyMessage(event.replyToken, { type: 'text', text: displayMsg });
@@ -830,6 +851,26 @@ async function handleEvent(event) {
                 text: `【今日指引：${randomCard}】\n\n請順應直覺，保持平靜。\n\n──────────────\n${pointsLine}`,
             });
         }
+    }
+
+    // 🔮 會員中心指令
+    else if (userMessage === "會員中心" || userMessage === "靈魂儀表板") {
+        return client.replyMessage(event.replyToken, {
+            type: 'text',
+            text: `🔮 您的專屬「靈魂儀表板」已備妥，請點擊連結開啟：\n${memberProfileUrl}`,
+            quickReply: quickReplyObj
+        });
+    }
+
+    // 📖 服務說明指令
+    else if (userMessage === "服務說明" || userMessage === "服務方案") {
+        const serviceUrl = process.env.PUBLIC_BASE_URL ? `${process.env.PUBLIC_BASE_URL.replace(/\/$/, '')}/index.html` : 'https://astro.branddecoderai.com/index.html';
+        return client.replyMessage(event.replyToken, {
+            type: 'text',
+            text: `📖 命運解碼室「服務方案與說明」如下，請點擊連結開啟：\n${serviceUrl}`,
+            quickReply: quickReplyObj
+        });
+    }
     } else {
         const streakLine = buildDailyStreakProgressHint(userData, today);
         return client.replyMessage(event.replyToken, {
