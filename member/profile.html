@@ -461,7 +461,7 @@
                     rawHistoryData = data.logs || [];
 
                     // 👤 渲染會員卡片
-                    renderProfile(profile, data.points, data.birthData);
+                    renderProfile(profile, data.points, data.birthData, rawHistoryData);
                     
                     // 📜 命運回顧清單：吃 profile 有限的資料 (保持畫面輕量)
                     renderHistory(rawHistoryData);
@@ -493,15 +493,27 @@
         }
 
         // 👤 渲染頂部名片與點數
-        function renderProfile(liffProfile, points, birthData) {
+        function renderProfile(liffProfile, points, birthData, historyArray) {
             document.getElementById('ui-avatar').src = liffProfile.pictureUrl || "https://static.line-scdn.net/liff/edge/2/images/logo.svg";
             document.getElementById('ui-name').innerText = liffProfile.displayName || "神祕旅人";
             document.getElementById('ui-points').innerText = points || 0;
             
-            let rank = "靈能學徒";
-            if (points >= 500) rank = "高階祭司";
-            else if (points >= 200) rank = "覺醒者";
-            else if (points < 20) rank = "靈能枯竭";
+            const history = historyArray || [];
+            const paidDivinationsCount = history.filter(function (item) {
+                return item.type === "tarot" || 
+                       item.type === "ziwei" || 
+                       item.serviceType === "ziwei" || 
+                       item.type === "numerology" ||
+                       item.type === "face";
+            }).length;
+
+            let rank = "初踏結界";
+            if (paidDivinationsCount >= 100) rank = "宇宙大祭司";
+            else if (paidDivinationsCount >= 61) rank = "命數解析師";
+            else if (paidDivinationsCount >= 31) rank = "生命尋航員";
+            else if (paidDivinationsCount >= 11) rank = "命運探索者";
+            else if (paidDivinationsCount >= 1) rank = "靈魂探索者";
+            
             document.getElementById('ui-rank').innerText = rank;
 
             // 顯示最新的一筆生辰座標
