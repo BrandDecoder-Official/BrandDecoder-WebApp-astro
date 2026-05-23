@@ -63,6 +63,31 @@
         const rawText = options.rawText || '';
         const flexMessage = options.flexMessage;
 
+        // 🌟 1. 如果在 LINE App 內，進行「背景自動傳送 + 傳送成功直接關閉網頁」
+        if (global.liff && typeof liff.isInClient === 'function' && liff.isInClient() && flexMessage) {
+            let success = false;
+            let retryCount = 0;
+            const maxRetries = 3;
+
+            while (!success && retryCount < maxRetries) {
+                try {
+                    await liff.sendMessages([flexMessage]);
+                    success = true;
+                    console.log("🔥 [自動傳送] 成功，直接關閉 LIFF 網頁");
+                    liff.closeWindow();
+                    return; // 🚀 傳送成功直接關閉並結束，不顯示毛玻璃畫面
+                } catch (err) {
+                    retryCount++;
+                    console.warn(`🔥 [自動傳送] 失敗 (第 ${retryCount} 次重試):`, err);
+                    if (retryCount < maxRetries) {
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待 1 秒後重試
+                    }
+                }
+            }
+            console.error("🔥 [自動傳送] 失敗且已達最大重試次數，將開啟毛玻璃頁面供用戶閱讀與手動重傳");
+        }
+
+        // 🌟 2. 兜底流程 (若自動傳送失敗，或在一般瀏覽器中) ➡️ 建立並顯示毛玻璃畫面
         // Create container
         const container = document.createElement('div');
         container.id = 'liff-result-report-overlay';
@@ -85,7 +110,7 @@
             transition: opacity 0.5s ease;
         `;
 
-        // HTML Structure
+        // HTML Structure (已修正反斜線 \ 逸出字元 Bug)
         container.innerHTML = `
             <div style="width: 100%; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px;">
                 <!-- Header -->
@@ -96,27 +121,27 @@
 
                 <!-- Score / Summary Card -->
                 <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(212,175,55,0.25); border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; gap: 10px;">
-                    \${subtitle ? \`<div style="color: #ccc; font-size: 14px; font-style: italic;">\${subtitle}</div>\` : ''}
-                    \${detailsHtml ? \`<div style="margin: 5px 0; font-size: 15px; color: #fff;">\${detailsHtml}</div>\` : ''}
+                    ${subtitle ? `<div style="color: #ccc; font-size: 14px; font-style: italic;">${subtitle}</div>` : ''}
+                    ${detailsHtml ? `<div style="margin: 5px 0; font-size: 15px; color: #fff;">${detailsHtml}</div>` : ''}
                     <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 5px;">
                         <span style="color: #aaa; font-size: 15px; letter-spacing: 1px;">綜合運勢指數：</span>
-                        <span style="color: #F9E498; font-size: 32px; font-weight: 900; font-family: 'Times New Roman', serif; text-shadow: 0 0 10px rgba(249,228,152,0.6);">\${score} 分</span>
+                        <span style="color: #F9E498; font-size: 32px; font-weight: 900; font-family: 'Times New Roman', serif; text-shadow: 0 0 10px rgba(249,228,152,0.6);">${score} 分</span>
                     </div>
                 </div>
 
                 <!-- AI Details Text -->
                 <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 22px 18px; box-shadow: inset 0 0 20px rgba(255,255,255,0.02); display: flex; flex-direction: column; gap: 16px;">
                     <div style="color: #D4AF37; font-size: 15px; font-weight: bold; letter-spacing: 2px; border-bottom: 1px dashed rgba(212,175,55,0.2); padding-bottom: 8px; margin-bottom: 4px;">✨ 大師天命指引</div>
-                    <div style="color: #dfdfe5; font-size: 15px; line-height: 1.8; letter-spacing: 0.5px; white-space: pre-wrap; text-align: justify; height: 260px; overflow-y: auto; padding-right: 8px;" class="report-content-scroll">\${rawText}</div>
+                    <div style="color: #dfdfe5; font-size: 15px; line-height: 1.8; letter-spacing: 0.5px; white-space: pre-wrap; text-align: justify; height: 260px; overflow-y: auto; padding-right: 8px;" class="report-content-scroll">${rawText}</div>
                 </div>
 
                 <!-- Action Buttons -->
                 <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
                     <button id="btn-report-share" style="width: 100%; padding: 16px; border: none; border-radius: 50px; background: linear-gradient(135deg, #4CAF50, #2E7D32); color: #fff; font-size: 16px; font-weight: bold; letter-spacing: 2px; cursor: pointer; box-shadow: 0 4px 15px rgba(76,175,80,0.3); transition: transform 0.2s;">
-                        💬 分享報告到 LINE 聊天室
+                        回聊天室看結果
                     </button>
                     <button id="btn-report-close" style="width: 100%; padding: 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 50px; background: rgba(255,255,255,0.05); color: #ccc; font-size: 16px; font-weight: bold; letter-spacing: 2px; cursor: pointer; transition: transform 0.2s;">
-                        返回聊天室
+                        分享給好友
                     </button>
                 </div>
             </div>
@@ -136,17 +161,39 @@
         `;
         document.head.appendChild(styleEl);
 
-        // Close button logic
+        // Share to friends button logic (原 closeBtn，現在是黑色按鈕「分享給好友」)
         const closeBtn = container.querySelector('#btn-report-close');
-        closeBtn.addEventListener('click', () => {
-            if (global.liff && typeof liff.closeWindow === 'function') {
-                liff.closeWindow();
+        closeBtn.addEventListener('click', async () => {
+            if (global.liff && typeof liff.isApiAvailable === 'function' && liff.isApiAvailable('shareTargetPicker')) {
+                try {
+                    closeBtn.disabled = true;
+                    closeBtn.innerText = '請選擇分享對象...';
+                    const res = await liff.shareTargetPicker([flexMessage]);
+                    if (res) {
+                        closeBtn.innerText = '✓ 已分享給好友';
+                        closeBtn.style.color = '#7dcea0';
+                        setTimeout(() => {
+                            closeBtn.disabled = false;
+                            closeBtn.innerText = '分享給好友';
+                            closeBtn.style.color = '#ccc';
+                        }, 2000);
+                    } else {
+                        // 使用者取消分享
+                        closeBtn.disabled = false;
+                        closeBtn.innerText = '分享給好友';
+                    }
+                } catch (err) {
+                    console.error("liff.shareTargetPicker 失敗:", err);
+                    alert("無法開啟分享視窗，請確認 LINE 授權");
+                    closeBtn.disabled = false;
+                    closeBtn.innerText = '分享給好友';
+                }
             } else {
-                container.remove();
+                alert("此環境不支援分享給好友，或請在 LINE 內開啟");
             }
         });
 
-        // Share button logic
+        // Share button logic (原 shareBtn，現在是綠色按鈕「回聊天室看結果」的兜底發送 + 關閉)
         const shareBtn = container.querySelector('#btn-report-share');
         if (global.liff && typeof liff.isInClient === 'function' && liff.isInClient()) {
             shareBtn.addEventListener('click', async () => {
@@ -154,20 +201,16 @@
                 shareBtn.innerText = '傳送中...';
                 try {
                     await liff.sendMessages([flexMessage]);
-                    shareBtn.innerText = '✓ 已傳送到 LINE 聊天室';
+                    shareBtn.innerText = '✓ 傳送成功，即將關閉...';
                     shareBtn.style.background = '#2E7D32';
                     setTimeout(() => {
                         liff.closeWindow();
                     }, 1000);
                 } catch (err) {
                     console.error("liff.sendMessages 失敗:", err);
-                    shareBtn.innerText = '傳送失敗，請確認 LINE 授權';
+                    shareBtn.disabled = false;
+                    shareBtn.innerText = '傳送失敗，再試一次';
                     shareBtn.style.background = '#d32f2f';
-                    setTimeout(() => {
-                        shareBtn.disabled = false;
-                        shareBtn.innerText = '💬 分享報告到 LINE 聊天室';
-                        shareBtn.style.background = 'linear-gradient(135deg, #4CAF50, #2E7D32)';
-                    }, 3000);
                 }
             });
         } else {
