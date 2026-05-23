@@ -41,9 +41,9 @@
             position: absolute; top: 50%; left: 50%; width: 90%; max-width: 400px; text-align: center; z-index: 10;
             transform: translate(-50%, -30%); opacity: 0; pointer-events: none;
             transition: all 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
-            background: rgba(10, 11, 16, 0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-            padding: 30px 20px; border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.15);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background: rgba(10, 11, 16, 0.18); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+            padding: 30px 20px; border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.2);
+            box-shadow: 0 10px 35px rgba(0,0,0,0.4);
         }
         .step-section.active { transform: translate(-50%, -50%); opacity: 1; pointer-events: auto; }
         .step-section.exit-up { transform: translate(-50%, -70%); opacity: 0; pointer-events: none; }
@@ -486,12 +486,23 @@
                     }
                 });
 
-                // 🌟 隨機金色微流星劃過星空
+                // 🌟 隨機金色微流星劃過星空 (仿真漸層流星效果)
                 if (!isCalculating && Math.random() < 0.015) {
                     const ss = new PIXI.Graphics();
-                    ss.lineStyle(1.5, 0xD4AF37, 0.8);
+                    // 頭部：最亮白且最粗
+                    ss.lineStyle(2.5, 0xFFFFFF, 0.95);
                     ss.moveTo(0, 0);
-                    ss.lineTo(-35, -15);
+                    ss.lineTo(-8, -3.6);
+                    // 中前段：淡金色、略細
+                    ss.lineStyle(1.8, 0xF9E498, 0.65);
+                    ss.lineTo(-20, -9);
+                    // 中後段：金黃色、更細
+                    ss.lineStyle(1.2, 0xD4AF37, 0.35);
+                    ss.lineTo(-32, -14.4);
+                    // 尾部：極細淡金
+                    ss.lineStyle(0.6, 0xD4AF37, 0.15);
+                    ss.lineTo(-45, -20.25);
+
                     ss.x = Math.random() * pixiApp.screen.width;
                     ss.y = Math.random() * (pixiApp.screen.height * 0.5);
                     ss.vx = Math.random() * 5 + 5;

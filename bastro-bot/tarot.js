@@ -257,6 +257,9 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
             );
             if (tarotConfig) {
                 await userRef.update({ points: FieldValue.increment(tarotConfig.cost) });
+            }
+        }
+    })();
 };
 
 // 4. 同步版塔羅牌主邏輯處理函數
