@@ -671,7 +671,15 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        liff.closeWindow(); 
+                        loader.classList.remove('active');
+                        BdLiff.showResultReport({
+                            title: '🔮 塔羅星陣解碼報告',
+                            score: data.aiData.score,
+                            subtitle: `占卜領域：【${currentTopic}】`,
+                            detailsHtml: `卡牌組合：${cardNames.join(' → ')}`,
+                            rawText: data.aiData.text,
+                            flexMessage: data.flexMessage
+                        });
                     } else {
                         throw new Error(data.message || "結界異常，靈能解碼失敗");
                     }

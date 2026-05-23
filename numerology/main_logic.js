@@ -139,29 +139,24 @@ async function onActivateClick(e) {
         const result = await response.json();
 
         if (result.status === "success") {
-            // C. 成功接單：按鈕變成綠色成功狀態
-            btnActivate.innerHTML = "✨ 訊號已送達大師手中！<br><span style='font-size:12px; color:#fff;'>(請準備回 LINE 查看)</span>";
+            stopPixiBlast();
+            btnActivate.innerHTML = "✨ 能量矩陣已解碼！";
             btnActivate.style.color = "#000";
             btnActivate.style.background = "linear-gradient(135deg, #4CAF50, #2E7D32)"; 
             btnActivate.style.boxShadow = "0 0 40px #4CAF50";
             btnActivate.style.border = "none";
-            
-            // 🌟 D. 終極三重保險：強制關閉 LIFF
-            setTimeout(() => {
-                try {
-                    // 方法 1：標準關閉
-                    liff.closeWindow(); 
-                } catch(err) {
-                    console.log("liff.closeWindow 失敗", err);
-                }
-                
-                // 方法 2 & 3：如果方法 1 裝死，用原生視窗關閉與 URL 導向強制送客
-                setTimeout(() => {
-                    window.close();
-                    window.location.href = "line://"; 
-                }, 500);
 
-            }, 1800); 
+            const luckyStr = (result.aiData.luckySet || ['--','--','--']).join(' · ');
+            const wealthStr = (result.aiData.wealthSet || ['--','--']).join(' · ');
+            
+            BdLiff.showResultReport({
+                title: '🔢 律動能量解碼報告',
+                score: result.aiData.score,
+                subtitle: `核心能量數：【${result.aiData.coreNumber}】`,
+                detailsHtml: `幸運共振：${luckyStr} <br> 財富金鑰：${wealthStr}`,
+                rawText: result.aiData.interpretation,
+                flexMessage: result.flexMessage
+            });
 
         } else {
             throw new Error(result.message || "靈力共振失敗");

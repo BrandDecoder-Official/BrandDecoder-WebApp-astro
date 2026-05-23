@@ -751,15 +751,17 @@
                     const result = await response.json();
 
                     if (result.success) {
-                        // 🌟 CTO AGUI 終極版：收到後端確認接單後，立刻關閉網頁！
-                        msgEl.innerText = "命盤已送達大師手中！";
-                        msgEl.style.color = "#4CAF50"; // 變成成功綠色
-                        
-                        // 停頓 1.5 秒讓使用者看清楚成功訊息，然後強制關閉 LIFF！
-                        setTimeout(() => {
-                            liff.closeWindow(); 
-                        }, 1500);
-                        
+                        document.getElementById('loading-overlay').classList.remove('show');
+                        const genderStr = userAstrolabeData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
+                        const calStr = userAstrolabeData.calendar === 'solar' ? '國曆' : '農曆';
+                        BdLiff.showResultReport({
+                            title: '🏮 紫微斗數解碼報告',
+                            score: result.aiData.score,
+                            subtitle: `占卜領域：【${userAstrolabeData.topic || '本命格局'}】`,
+                            detailsHtml: `降生命造：${genderStr} · ${calStr} ${userAstrolabeData.date} ${userAstrolabeData.time}時`,
+                            rawText: result.aiData.text,
+                            flexMessage: result.flexMessage
+                        });
                     } else {
                         throw new Error(result.msg || "解碼失敗，請稍後再試。");
                     }

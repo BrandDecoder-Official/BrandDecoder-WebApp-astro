@@ -293,11 +293,6 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
         throw e;
     }
 
-    const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
-        startLineChatLoading(userId, seconds);
-
-    let isDone = false;
-    let timer1, timer2, timer3;
     let pointsRefunded = false;
     const rollbackPoints = async () => {
         if (pointsRefunded) return;
@@ -306,36 +301,7 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
     };
 
     try {
-        // LIFF 同步 API 模式下改用 pushMessage 推送前導訊息
-        await client.pushMessage(userId, { 
-            type: 'text', 
-            text: `🔮 已接收到您的靈能訊號，大師正在為您解碼【${topic}】領域的星辰軌跡...` 
-        });
-        await showLoading(); 
-
         const aiStartTime = Date.now();
-
-        timer1 = setTimeout(async () => {
-            if (!isDone) {
-                await client.pushMessage(userId, { type: 'text', text: '✨ 正在透過牌陣連結您的潛意識能量場...' });
-                if (!isDone) await showLoading();
-            }
-        }, 3000);
-
-        timer2 = setTimeout(async () => {
-            if (!isDone) {
-                await client.pushMessage(userId, { type: 'text', text: '🌌 靈感湧現！正在將宇宙指引轉化為文字報告，請稍候...' });
-                if (!isDone) await showLoading();
-            }
-        }, 7000);
-
-        timer3 = setTimeout(async () => {
-            if (!isDone) {
-                await client.pushMessage(userId, { type: 'text', text: '🧘‍♂️ 宇宙訊息量龐大，大師正在為您進行最後的統整與收斂...' });
-                if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
-            }
-        }, LINE_LOADING_FINAL_AT_MS);
-
         const remainPoints = balanceAfterDeduct;
 
         const systemPrompt = tarotConfig.prompt || "你是一位充滿溫度的神祕塔羅解碼師。";
@@ -399,33 +365,13 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
             shareUri
         );
 
-        try {
-            await client.pushMessage(userId, flexMessage);
-        } catch (pushErr) {
-            await rollbackPoints();
-            const lineDetail =
-                pushErr && pushErr.originalError && pushErr.originalError.response && pushErr.originalError.response.data
-                    ? pushErr.originalError.response.data
-                    : pushErr && pushErr.response && pushErr.response.data
-                      ? pushErr.response.data
-                      : null;
-            console.error(
-                '塔羅 Flex 推播失敗:',
-                pushErr && pushErr.message ? pushErr.message : pushErr,
-                lineDetail != null ? JSON.stringify(lineDetail) : ''
-            );
-            await client.pushMessage(userId, {
-                type: 'text',
-                text: '⚠️ 解盤已完成，但字卡無法送達 LINE。已退還本次靈力，請稍後再試。',
-            });
-            return res.status(500).json({ success: false, message: '訊息送達 LINE 失敗' });
-        }
-
-        return res.status(200).json({ success: true });
+        return res.status(200).json({
+            success: true,
+            aiData: aiData,
+            flexMessage: flexMessage
+        });
 
     } catch (aiError) {
-        isDone = true;
-        clearTimeout(timer1); clearTimeout(timer2); clearTimeout(timer3);
         await rollbackPoints();
         const lineDetail =
             aiError && aiError.originalError && aiError.originalError.response && aiError.originalError.response.data
@@ -438,7 +384,6 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
             aiError && aiError.message ? aiError.message : aiError,
             lineDetail != null ? JSON.stringify(lineDetail) : ''
         );
-        await client.pushMessage(userId, { type: 'text', text: '⚠️ 宇宙訊號受到干擾，解碼中斷。本次不會扣除您的靈力。' });
         return res.status(500).json({ success: false, message: aiError.message });
     }
 };

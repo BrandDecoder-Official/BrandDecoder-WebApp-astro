@@ -55,5 +55,137 @@
         return out;
     }
 
-    global.BdLiff = { bootstrapLiff, requireLiffSession };
+    async function showResultReport(options) {
+        const title = options.title || '解碼報告';
+        const score = options.score || '--';
+        const subtitle = options.subtitle || '';
+        const detailsHtml = options.detailsHtml || '';
+        const rawText = options.rawText || '';
+        const flexMessage = options.flexMessage;
+
+        // Create container
+        const container = document.createElement('div');
+        container.id = 'liff-result-report-overlay';
+        container.style.cssText = `
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: rgba(7, 8, 13, 0.96);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 24px 20px;
+            font-family: 'PingFang TC', 'Noto Serif TC', serif;
+            color: #ececf0;
+            overflow-y: auto;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        `;
+
+        // HTML Structure
+        container.innerHTML = `
+            <div style="width: 100%; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; padding-bottom: 40px;">
+                <!-- Header -->
+                <div style="text-align: center; margin-top: 10px;">
+                    <div style="color: #D4AF37; font-size: 14px; letter-spacing: 3px; font-weight: bold; margin-bottom: 6px;">命運解碼室</div>
+                    <h1 style="color: #fff; font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 0; text-shadow: 0 0 15px rgba(212,175,55,0.3);">${title}</h1>
+                </div>
+
+                <!-- Score / Summary Card -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(212,175,55,0.25); border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                    \${subtitle ? \`<div style="color: #ccc; font-size: 14px; font-style: italic;">\${subtitle}</div>\` : ''}
+                    \${detailsHtml ? \`<div style="margin: 5px 0; font-size: 15px; color: #fff;">\${detailsHtml}</div>\` : ''}
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-top: 5px;">
+                        <span style="color: #aaa; font-size: 15px; letter-spacing: 1px;">綜合運勢指數：</span>
+                        <span style="color: #F9E498; font-size: 32px; font-weight: 900; font-family: 'Times New Roman', serif; text-shadow: 0 0 10px rgba(249,228,152,0.6);">\${score} 分</span>
+                    </div>
+                </div>
+
+                <!-- AI Details Text -->
+                <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 22px 18px; box-shadow: inset 0 0 20px rgba(255,255,255,0.02); display: flex; flex-direction: column; gap: 16px;">
+                    <div style="color: #D4AF37; font-size: 15px; font-weight: bold; letter-spacing: 2px; border-bottom: 1px dashed rgba(212,175,55,0.2); padding-bottom: 8px; margin-bottom: 4px;">✨ 大師天命指引</div>
+                    <div style="color: #dfdfe5; font-size: 15px; line-height: 1.8; letter-spacing: 0.5px; white-space: pre-wrap; text-align: justify; height: 260px; overflow-y: auto; padding-right: 8px;" class="report-content-scroll">\${rawText}</div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                    <button id="btn-report-share" style="width: 100%; padding: 16px; border: none; border-radius: 50px; background: linear-gradient(135deg, #4CAF50, #2E7D32); color: #fff; font-size: 16px; font-weight: bold; letter-spacing: 2px; cursor: pointer; box-shadow: 0 4px 15px rgba(76,175,80,0.3); transition: transform 0.2s;">
+                        💬 分享報告到 LINE 聊天室
+                    </button>
+                    <button id="btn-report-close" style="width: 100%; padding: 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 50px; background: rgba(255,255,255,0.05); color: #ccc; font-size: 16px; font-weight: bold; letter-spacing: 2px; cursor: pointer; transition: transform 0.2s;">
+                        返回聊天室
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Append to body
+        document.body.appendChild(container);
+        // Trigger transition
+        setTimeout(() => { container.style.opacity = '1'; }, 50);
+
+        // Styling scrollbar for report-content-scroll
+        const styleEl = document.createElement('style');
+        styleEl.innerText = `
+            .report-content-scroll::-webkit-scrollbar { width: 4px; }
+            .report-content-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+            .report-content-scroll::-webkit-scrollbar-thumb { background: rgba(212,175,55,0.3); border-radius: 2px; }
+        `;
+        document.head.appendChild(styleEl);
+
+        // Close button logic
+        const closeBtn = container.querySelector('#btn-report-close');
+        closeBtn.addEventListener('click', () => {
+            if (global.liff && typeof liff.closeWindow === 'function') {
+                liff.closeWindow();
+            } else {
+                container.remove();
+            }
+        });
+
+        // Share button logic
+        const shareBtn = container.querySelector('#btn-report-share');
+        if (global.liff && typeof liff.isInClient === 'function' && liff.isInClient()) {
+            shareBtn.addEventListener('click', async () => {
+                shareBtn.disabled = true;
+                shareBtn.innerText = '傳送中...';
+                try {
+                    await liff.sendMessages([flexMessage]);
+                    shareBtn.innerText = '✓ 已傳送到 LINE 聊天室';
+                    shareBtn.style.background = '#2E7D32';
+                    setTimeout(() => {
+                        liff.closeWindow();
+                    }, 1000);
+                } catch (err) {
+                    console.error("liff.sendMessages 失敗:", err);
+                    shareBtn.innerText = '傳送失敗，請確認 LINE 授權';
+                    shareBtn.style.background = '#d32f2f';
+                    setTimeout(() => {
+                        shareBtn.disabled = false;
+                        shareBtn.innerText = '💬 分享報告到 LINE 聊天室';
+                        shareBtn.style.background = 'linear-gradient(135deg, #4CAF50, #2E7D32)';
+                    }, 3000);
+                }
+            });
+        } else {
+            // Outside LINE app (e.g. standard browser test)
+            shareBtn.innerText = '複製解碼報告';
+            shareBtn.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(rawText);
+                    shareBtn.innerText = '✓ 報告已複製到剪貼簿';
+                    setTimeout(() => {
+                        shareBtn.innerText = '複製解碼報告';
+                    }, 2000);
+                } catch (e) {
+                    alert("請自行選取內容複製！");
+                }
+            });
+        }
+    }
+
+    global.BdLiff = { bootstrapLiff, requireLiffSession, showResultReport };
 })(typeof window !== 'undefined' ? window : this);

@@ -87,30 +87,8 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
             pointsRefunded = true;
             await refundPoints(userRef, cost);
         };
-        let isDone = false;
-        let timer1, timer3;
-
-        const showLoading = (seconds = LINE_LOADING_EARLY_SECONDS) =>
-            startLineChatLoading(userId, seconds);
 
         try {
-            await lineClient.pushMessage(userId, { type: 'text', text: `✨ 收到 ${userName} 的請求，大師正在為您連結宇宙高維度頻率...` });
-            await showLoading();
-
-            timer1 = setTimeout(async () => {
-                if (!isDone) {
-                    await lineClient.pushMessage(userId, { type: 'text', text: `🌌 正在解碼您的專屬幸運共振與財富金鑰...` });
-                    if (!isDone) await showLoading();
-                }
-            }, 4000);
-
-            timer3 = setTimeout(async () => {
-                if (!isDone) {
-                    await lineClient.pushMessage(userId, { type: 'text', text: `💫 數字頻率正在共振，大師為您提取最終的高維度指引...` });
-                    if (!isDone) await showLoading(LINE_LOADING_FINAL_SECONDS);
-                }
-            }, LINE_LOADING_FINAL_AT_MS);
-
             const aiStartTime = Date.now();
             const model = genAI.getGenerativeModel({
                 model: aiConfig.model,
@@ -146,16 +124,8 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
                 );
             }
 
-            isDone = true;
-            clearTimeout(timer1);
-            clearTimeout(timer3);
-
             if (!aiData) {
                 await rollbackPoints();
-                await lineClient.pushMessage(userId, {
-                    type: 'text',
-                    text: '⚠️ 律動能量解碼未能完成（AI 回覆格式異常）。本次不會扣除您的靈力，請稍後再試。',
-                });
                 return res.status(500).json({ status: 'error', message: 'AI 回覆格式異常' });
             }
 
@@ -194,13 +164,15 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
                 decodedAt,
                 shareUri
             );
-            await lineClient.pushMessage(userId, flexMessage);
 
-            return res.json({ status: 'success', message: '命盤已送交大師，請回聊天室查看' });
+            return res.json({
+                status: 'success',
+                aiData: aiData,
+                flexMessage: flexMessage,
+                message: '能量矩陣已解碼完成'
+            });
 
         } catch (error) {
-            isDone = true;
-            clearTimeout(timer1); clearTimeout(timer3);
             await rollbackPoints();
             const lineDetail =
                 error && error.originalError && error.originalError.response && error.originalError.response.data
@@ -213,7 +185,6 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
                 error && error.message ? error.message : error,
                 lineDetail != null ? JSON.stringify(lineDetail) : ''
             );
-            await lineClient.pushMessage(userId, { type: 'text', text: '⚠️ 宇宙訊號受到干擾，解碼中斷。本次不會扣除您的靈力。' });
             return res.status(500).json({ status: 'error', message: error.message });
         }
 
