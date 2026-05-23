@@ -24,8 +24,8 @@ function loadLegalManifest() {
         cache = {
             version: 'fallback',
             templates: {
-                productName: '線上占卜服務點數（靈力 {{points}} 點） 命運解碼室',
-                tradeDesc: '線上占卜服務點數（靈力{{points}}點）命運解碼室',
+                productName: '線上占卜服務方案（靈力額度 {{points}} 額度） 命運解碼室',
+                tradeDesc: '線上占卜服務方案（靈力額度 {{points}} 額度） 命運解碼室',
             },
         };
     }

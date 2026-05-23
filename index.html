@@ -669,7 +669,7 @@
                 <tbody id="mj-deduction-tbody"></tbody>
             </table></div>
             <h3>首購加碼方案</h3>
-            <p>會員中心儲值若顯示「首購加碼」，通常為指定期間內<strong>首次選購服務方案</strong>加發之服務額度；條件以方案選擇頁即時顯示為準。</p>
+            <p>會員中心方案選購若顯示「首購加碼」，通常為指定期間內<strong>首次選購服務方案</strong>加發之服務額度；條件以方案選擇頁即時顯示為準。</p>
         </article>
 
         <article class="panel" id="recharge">
@@ -784,12 +784,12 @@
             {
                 src: 'images/001.jpg',
                 cap: '律動能量｜LINE 官方帳號解碼結果',
-                sub: '於聊天室收到解碼結果：今日能量矩陣、核心／幸運／財富數字、大師指引，以及本次消耗與剩餘靈力（10 點／次）。',
+                sub: '於聊天室收到解碼結果：今日能量矩陣、核心／幸運／財富數字、大師指引，以及本次消耗與剩餘靈力（10 額度／次）。',
             },
             {
                 src: 'images/002.jpg',
                 cap: '紫微斗數｜LINE 官方帳號解碼結果',
-                sub: '於聊天室收到命盤解碼：綜合運勢指數、天命解碼精華、靈力消耗與餘額（50 點／次）。',
+                sub: '於聊天室收到命盤解碼：綜合運勢指數、天命解碼精華、靈力消耗與餘額（50 額度／次）。',
             },
             {
                 src: 'images/003.jpg',
@@ -799,17 +799,17 @@
             {
                 src: 'images/004.jpg',
                 cap: '塔羅星陣｜選擇探詢領域',
-                sub: '於網頁選擇感情與糾葛、事業與財富或綜合與指引，完成抽牌後由官方帳號回覆解碼（15 點／次）。',
+                sub: '於網頁選擇感情與糾葛、事業與財富或綜合與指引，完成抽牌後由官方帳號回覆解碼（15 額度／次）。',
             },
             {
                 src: 'images/005.jpg',
                 cap: '律動能量｜啟動解碼',
-                sub: '於網頁確認啟動當日數字矩陣；解碼完成後，完整結果於 LINE 聊天室呈現（10 點／次）。',
+                sub: '於網頁確認啟動當日數字矩陣；解碼完成後，完整結果於 LINE 聊天室呈現（10 額度／次）。',
             },
             {
                 src: 'images/006.jpg',
                 cap: '紫微斗數｜選擇探詢領域',
-                sub: '於網頁選擇本命格局、事業財富、感情姻緣或流年運勢等方向，並送出命盤資料（50 點／次）。',
+                sub: '於網頁選擇本命格局、事業財富、感情姻緣或流年運勢等方向，並送出命盤資料（50 額度／次）。',
             },
             {
                 src: 'images/007.jpg',
@@ -820,10 +820,10 @@
         const PROFILE_SHOTS = [
             { src: 'images/1001.jpg', cap: '會員中心總覽' },
             { src: 'images/1001-1.jpg', cap: '靈力與個人資訊' },
-            { src: 'images/1002.jpg', cap: '儲值方案選擇' },
-            { src: 'images/1003.jpg', cap: '儲值確認與條款' },
+            { src: 'images/1002.jpg', cap: '服務方案選擇' },
+            { src: 'images/1003.jpg', cap: '方案確認與條款' },
             { src: 'images/1004.jpg', cap: '付款流程示意' },
-            { src: 'images/1005.jpg', cap: '儲值完成提示' },
+            { src: 'images/1005.jpg', cap: '方案選購完成提示' },
         ];
 
         function apiBase() {
@@ -918,7 +918,7 @@
                             '<span class="video-card-icon" aria-hidden="true">' + item.icon + '</span>' +
                             '<div>' +
                                 '<h3>' + esc(item.title) + '</h3>' +
-                                '<p class="video-card-cost" data-cost-key="' + esc(item.costKey) + '">參考扣點：' + esc(costText) + '</p>' +
+                                '<p class="video-card-cost" data-cost-key="' + esc(item.costKey) + '">參考消耗：' + esc(costText) + '</p>' +
                             '</div>' +
                         '</header>' +
                         '<p class="video-card-desc">' + esc(item.desc) + '</p>' +
@@ -1106,7 +1106,7 @@
                     face: d.face && d.face.cost != null ? d.face.cost : null,
                 };
             } catch (e) {
-                console.warn('[index] 後台扣點讀取失敗，使用 manifest 預設', e);
+                console.warn('[index] 後台額度讀取失敗，使用 manifest 預設', e);
                 return null;
             }
         }

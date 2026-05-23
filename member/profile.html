@@ -242,8 +242,8 @@
 
     <div id="recharge-terms-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="recharge-terms-title">
         <div class="modal-content">
-            <h3 id="recharge-terms-title" style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">儲值前請閱讀</h3>
-            <p id="recharge-terms-subtitle" style="text-align: center; font-size: 12px; color: #888; margin: 8px 0 0;">服務條款、點數性質與扣點說明</p>
+            <h3 id="recharge-terms-title" style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">方案選購前請閱讀</h3>
+            <p id="recharge-terms-subtitle" style="text-align: center; font-size: 12px; color: #888; margin: 8px 0 0;">服務條款、額度性質與扣除說明</p>
             <div class="terms-scroll" id="terms-scroll-container">
                 <div id="terms-gate-paragraphs"></div>
             </div>
@@ -251,7 +251,7 @@
                 <input type="checkbox" id="terms-agree-checkbox" autocomplete="off">
                 <span id="terms-checkbox-text"></span>
             </label>
-            <button type="button" class="terms-primary-btn" onclick="confirmRechargeTermsAndOpen()">同意並選擇儲值方案</button>
+            <button type="button" class="terms-primary-btn" onclick="confirmRechargeTermsAndOpen()">同意並選擇服務方案</button>
             <button type="button" class="modal-close-btn" onclick="closeModal('recharge-terms-modal')">稍後再說</button>
         </div>
     </div>
@@ -351,14 +351,14 @@
         function embeddedTermsGateFallback() {
             return {
                 termsGate: {
-                    title: '儲值前請閱讀',
-                    subtitle: '服務條款、點數性質與扣點說明',
+                    title: '方案選購前請閱讀',
+                    subtitle: '服務條款、額度性質與扣除說明',
                     paragraphs: [
-                        '目前無法載入條款字典檔（網路或設定問題）。請稍後重新整理、檢查連線，或先開啟下方「完整說明頁」閱讀《服務條款》與扣點說明；載入成功後將自動顯示完整摘要。',
+                        '目前無法載入條款字典檔（網路或設定問題）。請稍後重新整理、檢查連線，或先開啟下方「完整說明頁」閱讀《服務條款》與額度扣除說明；載入成功後將自動顯示完整摘要。',
                     ],
                     fullPageLinkLabel: '開啟完整說明頁',
                     fullPagePath: '/index.html',
-                    checkboxLabel: '本人已自行開啟並閱讀下方「完整說明頁」所示之《服務條款》及《扣點機制與點數說明》，並了解點數於成功使用服務後可能無法退還之情形。',
+                    checkboxLabel: '本人已自行開啟並閱讀下方「完整說明頁」所示之《服務條款》及《額度扣除機制與靈力說明》，並了解額度於成功使用服務後可能無法退還之情形。',
                     linkHint: '若無法開啟新分頁，請長按連結複製網址於瀏覽器開啟。',
                 },
             };
@@ -368,7 +368,7 @@
             const g = (m && m.termsGate) || {};
             const titleEl = document.getElementById('recharge-terms-title');
             const subEl = document.getElementById('recharge-terms-subtitle');
-            if (titleEl) titleEl.textContent = g.title || '儲值前請閱讀';
+            if (titleEl) titleEl.textContent = g.title || '方案選購前請閱讀';
             if (subEl) subEl.textContent = g.subtitle || '';
             const sc = document.getElementById('terms-gate-paragraphs');
             if (sc) {
@@ -818,7 +818,7 @@
             document.getElementById(modalId).classList.remove('active');
         }
 
-        // --- 💰 靈力儲值與金流邏輯 ---
+        // --- 💰 服務方案選購與金流邏輯 ---
         function openRechargeTermsGate() {
             const cb = document.getElementById('terms-agree-checkbox');
             if (cb) cb.checked = false;
@@ -828,7 +828,7 @@
         function confirmRechargeTermsAndOpen() {
             const cb = document.getElementById('terms-agree-checkbox');
             if (!cb || !cb.checked) {
-                alert('請先勾選：已閱讀並同意服務條款及扣點說明，再進行儲值。');
+                alert('請先勾選：已閱讀並同意服務條款及額度扣除說明，再進行方案選購。');
                 return;
             }
             closeModal('recharge-terms-modal');
