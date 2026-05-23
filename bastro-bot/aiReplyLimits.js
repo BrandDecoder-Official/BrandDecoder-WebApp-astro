@@ -7,7 +7,7 @@
  */
 
 /** 塔羅／紫微「【解析】」正文上限 */
-const MAX_TAROT_ZIWEI_BODY_CHARS = 1200;
+const MAX_TAROT_ZIWEI_BODY_CHARS = 1500;
 
 /** 律動能量 JSON 內 interpretation 上限 */
 const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 800;
