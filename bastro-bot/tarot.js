@@ -316,11 +316,6 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
         const usage = result.response.usageMetadata || {};
         const aiLatency = Date.now() - aiStartTime;
 
-        isDone = true; 
-        clearTimeout(timer1);
-        clearTimeout(timer2);
-        clearTimeout(timer3);
-
         let aiData = { score: 50, text: "宇宙訊號解析中..." };
         const scoreMatch = rawAiText.match(/【分數】[：:]\s*(\d+)/);
         const textMatch = rawAiText.match(/【解析】[：:]\s*([\s\S]*)/);
