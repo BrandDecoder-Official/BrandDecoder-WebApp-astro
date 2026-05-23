@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https: wss: blob:; worker-src 'self' blob:; frame-src https://liff.line.me https://access.line.me; font-src 'self' data:; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw https://*.ecpay.com.tw;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>儲值成功｜命運解碼室</title>
+    <title>選購服務成功｜命運解碼室</title>
     <script src="/env.js?v=8"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="/liff-mobile-only.js?v=1"></script>
@@ -36,7 +36,7 @@
     <div class="card">
         <div class="icon" id="state-icon">✨</div>
         <h1 id="title">確認入帳中</h1>
-        <p class="sub" id="subtitle">已收到付款通知，靈力將於數秒內入帳。請稍候…</p>
+        <p class="sub" id="subtitle">已收到付款通知，服務額度將於數秒內取得。請稍候…</p>
         <div class="detail" id="detail"><div class="spinner"></div></div>
         <a class="btn btn-primary" id="btn-profile" href="#" style="display:none;">返回會員中心</a>
         <a class="btn btn-ghost" href="/index.html" style="margin-top:8px;">查看服務說明</a>
@@ -71,7 +71,7 @@
             const p3 = document.createElement('p');
             p3.style.fontSize = '13px';
             p3.style.color = '#888';
-            p3.textContent = '靈力 · NT$ ' + amount;
+            p3.textContent = '服務額度 · NT$ ' + amount;
             detail.appendChild(p3);
         }
 
@@ -123,7 +123,7 @@
                 if (data.status === 'success') {
                     clearInterval(pollTimer);
                     sessionStorage.removeItem('bd_pending_order');
-                    setState('success', '儲值成功', '靈力已入帳，感謝您的支持。', 'none');
+                    setState('success', '方案選購成功', '服務額度已發放，感謝您的支持。', 'none');
                     setDetailSuccess(data.pointsGiven, data.amount);
                     return;
                 }
@@ -132,21 +132,21 @@
                     setState(
                         'timeout',
                         '入帳處理中',
-                        '若已扣款，靈力通常會在數分鐘內入帳。可返回會員中心查看餘額，或聯絡客服。',
+                        '若已扣款，服務額度通常會在數分鐘內入帳。可返回會員中心查看餘額，或聯絡客服。',
                         'order'
                     );
                 }
             } catch (e) {
                 if (pollCount >= MAX_POLL) {
                     clearInterval(pollTimer);
-                    setState('error', '無法確認狀態', '請返回會員中心查看靈力餘額，或稍後再試。', 'none');
+                    setState('error', '無法確認狀態', '請返回會員中心查看服務額度，或稍後再試。', 'none');
                 }
             }
         }
 
         async function main() {
             if (!orderId) {
-                setState('error', '缺少訂單資訊', '請從會員中心重新儲值。', 'none');
+                setState('error', '缺少訂單資訊', '請從會員中心重新選購服務。', 'none');
                 document.getElementById('btn-profile').style.display = 'block';
                 return;
             }
@@ -159,8 +159,8 @@
             } catch (e) {
                 setState(
                     'timeout',
-                    '儲值完成',
-                    '若您已完成付款，請在 LINE 內開啟會員中心確認靈力餘額。',
+                    '選購完成',
+                    '若您已完成付款，請在 LINE 內開啟會員中心確認服務額度。',
                     'order'
                 );
                 document.getElementById('btn-profile').style.display = 'block';
