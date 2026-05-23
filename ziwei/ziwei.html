@@ -305,6 +305,13 @@
         let astrolabeGrid, astrolabeCore;
         let isCalculating = false; 
         const particles = [];
+        
+        // 🌟 特效額外變數
+        let shakeAmount = 0;
+        let shockwave = null;
+        let spinSpeed = 0.001;
+        const shootingStars = [];
+        const orbitDust = [];
 
         // --- 🔮 動態時辰選單資料 ---
         const preciseTimes = [
@@ -391,14 +398,20 @@
 
             const starContainer = new PIXI.Container();
             pixiApp.stage.addChild(starContainer);
-            for(let i=0; i<150; i++) {
+            
+            // 🌟 繁星背景：賦予個別的閃爍速度與相位
+            for(let i=0; i<160; i++) {
                 let star = new PIXI.Graphics();
-                star.beginFill(0xFFFFFF, Math.random() * 0.8 + 0.2);
-                star.drawCircle(0, 0, Math.random() * 1.5);
+                star.beginFill(0xFFFFFF, 1.0);
+                star.drawCircle(0, 0, Math.random() * 1.5 + 0.3);
                 star.endFill();
                 star.x = Math.random() * pixiApp.screen.width;
                 star.y = Math.random() * pixiApp.screen.height;
-                star.vy = (Math.random() - 0.5) * 0.2;
+                star.vy = (Math.random() - 0.5) * 0.15;
+                star.twinkleSpeed = 0.01 + Math.random() * 0.03;
+                star.twinklePhase = Math.random() * Math.PI * 2;
+                star.baseAlpha = Math.random() * 0.6 + 0.3;
+                star.alpha = star.baseAlpha;
                 starContainer.addChild(star);
             }
 
@@ -420,11 +433,26 @@
             astrolabeGrid.alpha = 0.2; 
             center.addChild(astrolabeGrid);
 
+            // 🌟 軌道黃金星砂 (Golden Orbit Dust)：圍繞著星盤旋轉
+            const dustContainer = new PIXI.Container();
+            center.addChild(dustContainer);
+            for(let i=0; i<40; i++) {
+                const dust = new PIXI.Graphics();
+                dust.beginFill(0xD4AF37, Math.random() * 0.7 + 0.3);
+                dust.drawCircle(0, 0, Math.random() * 1.5 + 0.5);
+                dust.endFill();
+                dust.orbitAngle = Math.random() * Math.PI * 2;
+                dust.orbitRadius = 110 + Math.random() * 70; // 落在星盤同心圓內
+                dust.orbitSpeed = (Math.random() * 0.003 + 0.001) * (Math.random() > 0.5 ? 1 : -1);
+                dustContainer.addChild(dust);
+                orbitDust.push(dust);
+            }
+
             astrolabeCore = new PIXI.Graphics();
-            astrolabeCore.beginFill(0x4A148C, 0.8); 
+            astrolabeCore.beginFill(0x4A148C, 0.85); 
             astrolabeCore.drawCircle(0, 0, 35);
             astrolabeCore.endFill();
-            astrolabeCore.lineStyle(2, 0xD8B4E2, 0.5);
+            astrolabeCore.lineStyle(2.5, 0xD8B4E2, 0.6);
             astrolabeCore.drawCircle(0, 0, 45);
             astrolabeCore.alpha = 0.3; 
             center.addChild(astrolabeCore);
@@ -435,36 +463,111 @@
             pixiApp.ticker.add((delta) => {
                 tick += delta;
                 
-                // 強制將星盤中心置中，適應螢幕 resize 與轉向
-                if (pixiApp) {
+                // 🌟 特效：星盤震動 (Screen Shake)
+                if (shakeAmount > 0.1) {
+                    center.x = pixiApp.screen.width / 2 + (Math.random() - 0.5) * shakeAmount;
+                    center.y = pixiApp.screen.height / 2 + (Math.random() - 0.5) * shakeAmount;
+                    shakeAmount *= 0.92; // 阻尼衰減
+                } else {
                     center.x = pixiApp.screen.width / 2;
                     center.y = pixiApp.screen.height / 2;
                 }
 
+                // 🌟 背景繁星閃爍與飄移
                 starContainer.children.forEach(star => {
-                    star.y += star.vy * delta;
-                    if(star.y < 0) star.y = pixiApp.screen.height;
-                    if(star.y > pixiApp.screen.height) star.y = 0;
+                    if (star.twinkleSpeed) {
+                        star.y += star.vy * delta;
+                        star.alpha = star.baseAlpha + Math.sin(tick * star.twinkleSpeed + star.twinklePhase) * 0.25;
+                        if (star.alpha < 0.15) star.alpha = 0.15;
+                        if (star.alpha > 0.95) star.alpha = 0.95;
+                        
+                        if(star.y < 0) star.y = pixiApp.screen.height;
+                        if(star.y > pixiApp.screen.height) star.y = 0;
+                    }
+                });
+
+                // 🌟 隨機金色微流星劃過星空
+                if (!isCalculating && Math.random() < 0.015) {
+                    const ss = new PIXI.Graphics();
+                    ss.lineStyle(1.5, 0xD4AF37, 0.8);
+                    ss.moveTo(0, 0);
+                    ss.lineTo(-35, -15);
+                    ss.x = Math.random() * pixiApp.screen.width;
+                    ss.y = Math.random() * (pixiApp.screen.height * 0.5);
+                    ss.vx = Math.random() * 5 + 5;
+                    ss.vy = ss.vx * 0.45;
+                    ss.life = 1.0;
+                    starContainer.addChild(ss);
+                    shootingStars.push(ss);
+                }
+
+                for (let i = shootingStars.length - 1; i >= 0; i--) {
+                    const ss = shootingStars[i];
+                    ss.x += ss.vx * delta;
+                    ss.y += ss.vy * delta;
+                    ss.life -= 0.018 * delta;
+                    ss.alpha = ss.life;
+                    if (ss.life <= 0 || ss.x > pixiApp.screen.width || ss.y > pixiApp.screen.height) {
+                        starContainer.removeChild(ss);
+                        shootingStars.splice(i, 1);
+                    }
+                }
+
+                // 🌟 軌道黃金星砂運轉
+                orbitDust.forEach(dust => {
+                    dust.orbitAngle += dust.orbitSpeed * delta;
+                    dust.x = Math.cos(dust.orbitAngle) * dust.orbitRadius;
+                    dust.y = Math.sin(dust.orbitAngle) * dust.orbitRadius;
+                    dust.alpha = 0.4 + Math.sin(tick * 0.03 + dust.orbitRadius) * 0.35;
                 });
 
                 if (!isCalculating) {
-                    astrolabeGrid.rotation += 0.001 * delta;
+                    // 平時：極度慢速旋轉 + 網格透明度微弱呼吸起伏
+                    spinSpeed = 0.001;
+                    astrolabeGrid.rotation += spinSpeed * delta;
+                    astrolabeGrid.alpha = 0.2 + Math.sin(tick * 0.03) * 0.06;
+                    
                     astrolabeCore.scale.set(1 + Math.sin(tick * 0.05) * 0.05);
+                    astrolabeCore.alpha = 0.3 + Math.sin(tick * 0.05) * 0.08;
                 } else {
-                    astrolabeGrid.alpha = Math.min(1, astrolabeGrid.alpha + 0.05);
-                    astrolabeCore.alpha = Math.min(1, astrolabeCore.alpha + 0.05);
-                    astrolabeGrid.rotation += 0.01 * delta; 
-                    astrolabeCore.scale.set(1 + Math.sin(tick * 0.2) * 0.15); 
+                    // 🌟 啟動時：加速旋轉與聚能爆發
+                    spinSpeed = Math.min(0.06, spinSpeed + 0.0025 * delta);
+                    astrolabeGrid.rotation += spinSpeed * delta;
+                    
+                    astrolabeGrid.alpha = Math.min(1.0, astrolabeGrid.alpha + 0.05);
+                    astrolabeCore.alpha = Math.min(1.0, astrolabeCore.alpha + 0.05);
+                    astrolabeCore.scale.set(1 + Math.sin(tick * 0.25) * 0.18); 
 
-                    if (Math.random() < 0.2) {
+                    // 🌟 啟動金色衝擊波 (Shockwave ring)
+                    if (!shockwave) {
+                        shockwave = new PIXI.Graphics();
+                        center.addChild(shockwave);
+                        shockwave.radius = 45;
+                        shockwave.maxRadius = Math.max(pixiApp.screen.width, pixiApp.screen.height) * 0.7;
+                        shockwave.waveAlpha = 1.0;
+                    }
+                    
+                    if (shockwave && shockwave.radius < shockwave.maxRadius) {
+                        shockwave.clear();
+                        shockwave.lineStyle(2.5, 0xD4AF37, shockwave.waveAlpha);
+                        shockwave.drawCircle(0, 0, shockwave.radius);
+                        shockwave.radius += 8.5 * delta;
+                        shockwave.waveAlpha = 1.0 - (shockwave.radius / shockwave.maxRadius);
+                    } else if (shockwave) {
+                        center.removeChild(shockwave);
+                        shockwave = null;
+                    }
+
+                    // 匯聚五行星光粒子
+                    if (Math.random() < 0.25) {
                         const p = new PIXI.Graphics();
-                        p.beginFill(elementColors[Math.floor(Math.random() * elementColors.length)], 0.9);
-                        p.drawCircle(0, 0, 5);
+                        p.beginFill(elementColors[Math.floor(Math.random() * elementColors.length)], 0.95);
+                        p.drawCircle(0, 0, 4.5);
                         p.endFill();
                         const spawnAngle = Math.random() * Math.PI * 2;
-                        p.x = Math.cos(spawnAngle) * (pixiApp.screen.width / 2 + 100);
-                        p.y = Math.sin(spawnAngle) * (pixiApp.screen.height / 2 + 100);
-                        p.speed = 6 + Math.random() * 4;
+                        p.x = Math.cos(spawnAngle) * (pixiApp.screen.width / 2 + 120);
+                        p.y = Math.sin(spawnAngle) * (pixiApp.screen.height / 2 + 120);
+                        p.speed = 6.5 + Math.random() * 4.5;
                         center.addChild(p);
                         particles.push(p);
                     }
@@ -474,8 +577,8 @@
                         const dist = Math.sqrt(p.x * p.x + p.y * p.y);
                         if (dist < 40) {
                             center.removeChild(p); particles.splice(i, 1);
-                            astrolabeCore.scale.set(1.5); 
-                            astrolabeGrid.rotation -= 0.05; 
+                            astrolabeCore.scale.set(1.6); 
+                            astrolabeGrid.rotation -= 0.06; 
                         } else {
                             p.x -= (p.x / dist) * p.speed * delta; p.y -= (p.y / dist) * p.speed * delta;
                         }
@@ -619,6 +722,7 @@
                 document.getElementById('step-4').classList.replace('active', 'exit-up');
                 document.getElementById('loading-overlay').classList.add('show');
                 isCalculating = true; 
+                shakeAmount = 18; // 觸發震撼的羅盤震動
 
                 const msgEl = document.getElementById('loading-msg');
                 msgEl.innerText = isFuzzy ? "啟動靈能區間定盤..." : "構築 12 宮位星辰網格...";
