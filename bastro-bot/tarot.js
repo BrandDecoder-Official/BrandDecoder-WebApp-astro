@@ -31,6 +31,11 @@ const {
     LINE_LOADING_FINAL_AT_MS,
 } = require('./lineLoading');
 const { formatFlexBodyParagraphs } = require('./lineFlexTextFormat');
+const {
+    InsufficientPointsError,
+    deductPointsTransaction,
+    refundPoints,
+} = require('./pointsLedger');
 
 function buildTarotShareHead(cards, topic, score, decodedAt) {
     const c0 = cards && cards[0] != null ? cards[0] : '—';
@@ -282,7 +287,6 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
         // 直接進行扣點交易，不再產生/刪除 pendingDraw 票根
         balanceAfterDeduct = await deductPointsTransaction(db, userRef, tarotConfig.cost, {});
     } catch (e) {
-        const { InsufficientPointsError } = require('./pointsLedger');
         if (e instanceof InsufficientPointsError) {
             return res.status(403).json({ success: false, message: `靈力不足 (需 ${tarotConfig.cost} 點)` });
         }
