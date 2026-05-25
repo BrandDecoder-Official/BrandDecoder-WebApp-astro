@@ -870,7 +870,6 @@ async function handleEvent(event) {
             text: `📖 命運解碼室「服務方案與說明」如下，請點擊連結開啟：\n${serviceUrl}`,
             quickReply: quickReplyObj
         });
-    }
     } else {
         const streakLine = buildDailyStreakProgressHint(userData, today);
         return client.replyMessage(event.replyToken, {
