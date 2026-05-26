@@ -31,6 +31,7 @@ const {
 } = require('./lineLoading');
 const {
     InsufficientPointsError,
+    getCampaignDiscountedCost,
     deductPointsTransaction,
     refundPoints,
 } = require('./pointsLedger');
@@ -121,6 +122,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const aiConfig = mergeModuleKey('ziwei', configDoc);
+        const actualCost = await getCampaignDiscountedCost(db, aiConfig.cost);
 
         const userRef = db.collection('users').doc(userId);
         const userDoc = await userRef.get();
@@ -128,7 +130,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
 
         let balanceAfterDeduct;
         try {
-            balanceAfterDeduct = await deductPointsTransaction(db, userRef, aiConfig.cost, {
+            balanceAfterDeduct = await deductPointsTransaction(db, userRef, actualCost, {
                 lastDivination: FieldValue.serverTimestamp(),
             });
         } catch (e) {
@@ -161,7 +163,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
         const rollbackPoints = async () => {
             if (pointsRefunded) return;
             pointsRefunded = true;
-            await refundPoints(userRef, aiConfig.cost);
+            await refundPoints(userRef, actualCost);
         };
 
         try {
@@ -189,7 +191,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
             const remainPoints = balanceAfterDeduct;
 
             await recordDivinationLog({
-                userId, userName, type: 'ziwei', summary: `紫微解碼[${topicStr}]：${genderStr}, ${birthData.date} ${birthData.time}時`, points_change: -aiConfig.cost, cost: aiConfig.cost,
+                userId, userName, type: 'ziwei', summary: `紫微解碼[${topicStr}]：${genderStr}, ${birthData.date} ${birthData.time}時`, points_change: -actualCost, cost: actualCost,
                 aiText: aiData.text, fortune_score: aiData.score,
                 metrics: {
                     latency_ms: aiLatency,
@@ -213,7 +215,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                 birthData,
                 aiData.text,
                 aiData.score,
-                aiConfig.cost,
+                actualCost,
                 remainPoints,
                 decodedAt,
                 shareUri

@@ -40,6 +40,7 @@ const { verifyLineToken } = require('./lineAuth');
 const { aiDecodeLimiter } = require('./rateLimit');
 const {
     InsufficientPointsError,
+    getCampaignDiscountedCost,
     deductPointsTransaction,
     refundPoints,
 } = require('./pointsLedger');
@@ -68,15 +69,16 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const aiConfig = mergeModuleKey('numerology', configDoc);
         const cost = aiConfig.cost;
+        const actualCost = await getCampaignDiscountedCost(db, cost);
 
         let newBalanceAfterDeduct;
         try {
-            newBalanceAfterDeduct = await deductPointsTransaction(db, userRef, cost, {
+            newBalanceAfterDeduct = await deductPointsTransaction(db, userRef, actualCost, {
                 lastDivination: FieldValue.serverTimestamp(),
             });
         } catch (e) {
             if (e instanceof InsufficientPointsError) {
-                return res.status(400).json({ status: 'error', message: `靈力值不足，需 ${cost} 點` });
+                return res.status(400).json({ status: 'error', message: `靈力值不足，需 ${actualCost} 點` });
             }
             throw e;
         }
@@ -85,7 +87,7 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
         const rollbackPoints = async () => {
             if (pointsRefunded) return;
             pointsRefunded = true;
-            await refundPoints(userRef, cost);
+            await refundPoints(userRef, actualCost);
         };
 
         try {
@@ -136,13 +138,13 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
 
             await recordDivinationLog({
                 userId: userId, userName: userName, type: 'numerology', summary: `數字能量：核心數[${aiData.coreNumber}]`,
-                points_change: -cost, cost: cost, aiText: aiData.interpretation, fortune_score: fortuneScore,
+                points_change: -actualCost, cost: actualCost, aiText: aiData.interpretation, fortune_score: fortuneScore,
                 metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: aiConfig.model }
             });
 
             await userRef.collection('history').add({
                 type: 'numerology', summary: `今日核心能量：${aiData.coreNumber}`, aiText: aiData.interpretation, result_card: aiData.coreNumber.toString(),
-                points_change: -cost, cost: cost, fortune_score: fortuneScore, timestamp: FieldValue.serverTimestamp()
+                points_change: -actualCost, cost: actualCost, fortune_score: fortuneScore, timestamp: FieldValue.serverTimestamp()
             });
 
             const decodedAt = formatTaipeiDateTimeLine(new Date());
@@ -159,7 +161,7 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
                 userName,
                 aiData,
                 fortuneScore,
-                cost,
+                actualCost,
                 newBalance,
                 decodedAt,
                 shareUri

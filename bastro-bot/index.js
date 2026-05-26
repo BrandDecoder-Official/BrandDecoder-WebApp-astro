@@ -15,6 +15,7 @@ const {
 } = require('./rateLimit');
 const {
     InsufficientPointsError,
+    getCampaignDiscountedCost,
     deductPointsTransaction,
     refundPoints,
 } = require('./pointsLedger');
@@ -496,13 +497,14 @@ app.post('/api/tarot/ticket', express.json(), verifyLineToken, aiDecodeLimiter, 
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const tarotConfig = mergeModuleKey('tarot', configDoc);
+        const actualCost = await getCampaignDiscountedCost(db, tarotConfig.cost);
 
         try {
             await db.runTransaction(async (t) => {
                 const doc = await t.get(userRef);
                 const pts = doc.exists ? Math.floor(Number(doc.data().points)) || 0 : 100;
-                if (pts < tarotConfig.cost) {
-                    throw new InsufficientPointsError(tarotConfig.cost, pts);
+                if (pts < actualCost) {
+                    throw new InsufficientPointsError(actualCost, pts);
                 }
                 t.update(userRef, {
                     pendingDraw: { topic, cards, timestamp: FieldValue.serverTimestamp() },
@@ -512,7 +514,7 @@ app.post('/api/tarot/ticket', express.json(), verifyLineToken, aiDecodeLimiter, 
             if (e instanceof InsufficientPointsError) {
                 return res.status(403).json({
                     success: false,
-                    message: `靈力不足 (需 ${tarotConfig.cost} 點)，請先儲值`,
+                    message: `靈力不足 (需 ${actualCost} 點)，請先儲值`,
                 });
             }
             throw e;
@@ -547,9 +549,16 @@ app.post('/api/divination/tarot', express.json(), verifyLineToken, aiDecodeLimit
 // ==========================================
 app.get('/api/public/config/ai', publicConfigLimiter, async (req, res) => {
     try {
-        const docRef = db.collection('system_config').doc('ai_settings');
-        const doc = await docRef.get();
-        res.json({ success: true, data: toPublicAiConfig(mergeAiSettingsFromDoc(doc)) });
+        const { AI_SETTINGS } = require('./aiConfig');
+        const out = {};
+        for (const key of Object.keys(AI_SETTINGS)) {
+            const originalCost = AI_SETTINGS[key].cost;
+            if (originalCost != null) {
+                const discountedCost = await getCampaignDiscountedCost(db, originalCost);
+                out[key] = { cost: discountedCost };
+            }
+        }
+        res.json({ success: true, data: out });
     } catch (error) { res.status(500).json({ success: false, msg: "讀取公開定價資料失敗" }); }
 });
 
@@ -761,17 +770,18 @@ async function handleEvent(event) {
 
         const configDoc = await db.collection('system_config').doc('ai_settings').get();
         const tarotConfig = mergeModuleKey('tarot', configDoc);
+        const actualCost = await getCampaignDiscountedCost(db, tarotConfig.cost);
 
         let balanceAfterDeduct;
         try {
-            balanceAfterDeduct = await deductPointsTransaction(db, userRef, tarotConfig.cost, {
+            balanceAfterDeduct = await deductPointsTransaction(db, userRef, actualCost, {
                 pendingDraw: FieldValue.delete(),
             });
         } catch (e) {
             if (e instanceof InsufficientPointsError) {
                 return client.replyMessage(event.replyToken, {
                     type: 'text',
-                    text: `🔋 靈力不足 (需 ${tarotConfig.cost} 點)，請前往會員中心補充靈力：\nhttps://astro.branddecoderai.com/member/profile.html`,
+                    text: `🔋 靈力不足 (需 ${actualCost} 點)，請前往會員中心補充靈力：\nhttps://astro.branddecoderai.com/member/profile.html`,
                 });
             }
             throw e;

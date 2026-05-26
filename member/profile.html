@@ -324,11 +324,9 @@
         /** 計費檔位後備：與 legal-service-manifest.json 一致；fetch 失敗時沿用。條款內文以 manifest 為單一來源，見 embeddedTermsGateFallback 註解。 */
         const DEFAULT_PRICING_TIERS = [
             { price: 5, points: 50, isPopular: false, testPack: true },
+            { price: 49, points: 490, isPopular: false },
             { price: 99, points: 990, isPopular: false },
-            { price: 199, points: 2000, isPopular: true },
-            { price: 299, points: 3100, isPopular: true },
-            { price: 599, points: 6300, isPopular: false },
-            { price: 999, points: 10600, isPopular: false }
+            { price: 199, points: 2000, isPopular: true }
         ];
         let pricingTiers = [];
 
@@ -889,58 +887,37 @@
                 if (tier.price === 5) {
                     planName = "靈魂初探體驗包";
                     features = [
-                        "體驗最新 Gemini AI 智能分析",
-                        `包含 ${finalPoints} 點靈力額度 (可用於折抵解碼服務)`,
-                        "歷史紀錄儲存 (保留 3 天)"
+                        "🚀 <b>雙子星高速智能</b> AI 大腦優先體驗",
+                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度 (折抵解碼)`,
+                        "📜 個人解碼報告儲存記錄 (保留最近 10 筆)"
+                    ];
+                } else if (tier.price === 49) {
+                    planName = "初階學徒方案";
+                    features = [
+                        "🚀 <b>雙子星高速智能</b> AI 大腦精準解析",
+                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度 (折抵解碼)`,
+                        "📜 個人解碼報告儲存記錄 (顯示最近 <b>50 筆</b>)",
+                        "🎁 每日免費一抽簽到，累積修行靈力",
+                        "🎖️ 尊享「見習解碼學徒」專屬頭銜"
                     ];
                 } else if (tier.price === 99) {
-                    planName = "微光探索方案";
+                    planName = "中階導師方案";
                     features = [
-                        "搭載最先進 Gemini AI 智能大腦",
-                        "個人解碼報告儲存記錄 (最多 50 筆)",
-                        "每日免費一抽 (簽到) 權限",
-                        `包含 ${finalPoints} 點靈力額度 (可用於折抵解碼服務)`
+                        "🚀 <b>雙子星高速智能</b> AI 大腦深度解析",
+                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度 (折抵解碼)`,
+                        "📜 個人解碼報告儲存記錄 (顯示最近 <b>100 筆</b>)",
+                        "🎁 每日免費一抽簽到，累積修行靈力",
+                        "🎖️ 尊享「命運天命導師」專屬頭銜"
                     ];
                 } else if (tier.price === 199) {
-                    planName = "小資解碼方案";
+                    planName = "尊爵大師方案";
                     features = [
-                        "搭載最先進 Gemini AI 智能大腦",
-                        "個人解碼報告儲存記錄 (無限制)",
-                        "每日免費一抽 (簽到) 權限",
-                        `包含 ${finalPoints} 點靈力額度 (可用於折抵解碼服務)`,
-                        bonusHtml ? `首購限時加發 10% 靈力` : "超值靈魂大師精選方案"
-                    ];
-                } else if (tier.price === 299) {
-                    planName = "命運星軌方案";
-                    features = [
-                        "搭載最先進 Gemini AI 智能大腦",
-                        "個人解碼報告儲存記錄 (無限制)",
-                        "每日免費一抽 (簽到) 權限",
-                        `包含 ${finalPoints} 點靈力額度 (可用於折抵解碼服務)`,
-                        "優先順序 AI 計算通道",
-                        bonusHtml ? `首購限時加發 10% 靈力` : "經典命運追尋必備"
-                    ];
-                } else if (tier.price === 599) {
-                    planName = "尊榮天命方案";
-                    features = [
-                        "搭載最先進 Gemini AI 智能大腦",
-                        "個人解碼報告儲存記錄 (無限制)",
-                        "每日免費一抽 (簽到) 權限",
-                        `包含 ${finalPoints} 點靈力額度 (可用於折抵解碼服務)`,
-                        "優先順序 AI 計算通道",
-                        "專屬靈魂大師報告排程",
-                        bonusHtml ? `首購限時加發 10% 靈力` : "尊享天命指引大成"
-                    ];
-                } else if (tier.price === 999) {
-                    planName = "旗艦大祭司方案";
-                    features = [
-                        "搭載最先進 Gemini AI 智能大腦",
-                        "個人解碼報告儲存記錄 (無限制)",
-                        "每日免費一抽 (簽到) 權限",
-                        `包含 ${finalPoints} 點靈力額度 (可用於折抵解碼服務)`,
-                        "優先順序 AI 計算通道",
-                        "專屬靈魂大師報告排程與飛星解析",
-                        bonusHtml ? `首購限時加發 10% 靈力` : "宇宙祭司終極天命解碼"
+                        "🧠 <b>雙子星旗艦智能</b> 深度推理最強大腦",
+                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度 (折抵解碼)`,
+                        "📜 個人解碼報告儲存記錄 (顯示最近 <b>150 筆</b>)",
+                        "🎁 每日免費一抽簽到，累積修行靈力",
+                        "👑 尊享 <b>VIP流光頭像邊框</b> 與 <b>紫金星空流星雨皮膚</b>",
+                        "🎖️ 尊享「宇宙命運大師」尊貴頭銜"
                     ];
                 }
 
@@ -953,7 +930,10 @@
                 const html = `
                     <div class="tier-card ${popularClass}${testClass}" onclick="requestEcpayCheckout(${tier.price}, ${finalPoints}, '${periodForCheckout}')">
                         <div class="tier-header-row">
-                            <span class="tier-points">✨ ${planName}</span>
+                            <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
+                                <span class="tier-points">✨ ${planName}</span>
+                                ${bonusHtml}
+                            </div>
                             <div class="tier-price">NT$ ${tier.price}</div>
                         </div>
                         <ul class="tier-features-list">

@@ -33,6 +33,7 @@ const {
 const { formatFlexBodyParagraphs } = require('./lineFlexTextFormat');
 const {
     InsufficientPointsError,
+    getCampaignDiscountedCost,
     deductPointsTransaction,
     refundPoints,
 } = require('./pointsLedger');
@@ -164,6 +165,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
 
             const configDoc = await db.collection('system_config').doc('ai_settings').get();
             tarotConfig = mergeModuleKey('tarot', configDoc);
+            const actualCost = await getCampaignDiscountedCost(db, tarotConfig.cost);
 
             const { topic, cards } = userData.pendingDraw;
             const remainPoints = Math.max(0, Math.floor(Number(userData.points)) || 0);
@@ -194,7 +196,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
 
             await recordDivinationLog({
                 userId, userName: userData.displayName, type: 'tarot', topic, cards, summary: `塔羅解碼：領域【${topic}】`,
-                points_change: -tarotConfig.cost, cost: tarotConfig.cost, aiText: aiData.text, fortune_score: aiData.score,
+                points_change: -actualCost, cost: actualCost, aiText: aiData.text, fortune_score: aiData.score,
                 metrics: {
                     latency_ms: aiLatency,
                     tokens_in: usage.promptTokenCount || 0,
@@ -218,7 +220,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
                 aiData.text,
                 topic,
                 aiData.score,
-                tarotConfig.cost,
+                actualCost,
                 decodedAt,
                 shareUri
             );
@@ -237,7 +239,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
                     lineDetail != null ? JSON.stringify(lineDetail) : ''
                 );
                 if (tarotConfig) {
-                    await userRef.update({ points: FieldValue.increment(tarotConfig.cost) });
+                    await userRef.update({ points: FieldValue.increment(actualCost) });
                 }
                 await client.pushMessage(userId, {
                     type: 'text',
@@ -261,7 +263,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
                 lineDetail != null ? JSON.stringify(lineDetail) : ''
             );
             if (tarotConfig) {
-                await userRef.update({ points: FieldValue.increment(tarotConfig.cost) });
+                await userRef.update({ points: FieldValue.increment(actualCost) });
             }
         }
     })();
@@ -277,6 +279,7 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
 
     const configDoc = await db.collection('system_config').doc('ai_settings').get();
     const tarotConfig = mergeModuleKey('tarot', configDoc);
+    const actualCost = await getCampaignDiscountedCost(db, tarotConfig.cost);
 
     const userRef = db.collection('users').doc(userId);
     const userDoc = await userRef.get();
@@ -285,10 +288,10 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
     let balanceAfterDeduct;
     try {
         // 直接進行扣點交易，不再產生/刪除 pendingDraw 票根
-        balanceAfterDeduct = await deductPointsTransaction(db, userRef, tarotConfig.cost, {});
+        balanceAfterDeduct = await deductPointsTransaction(db, userRef, actualCost, {});
     } catch (e) {
         if (e instanceof InsufficientPointsError) {
-            return res.status(403).json({ success: false, message: `靈力不足 (需 ${tarotConfig.cost} 點)` });
+            return res.status(403).json({ success: false, message: `靈力不足 (需 ${actualCost} 點)` });
         }
         throw e;
     }
@@ -297,7 +300,7 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
     const rollbackPoints = async () => {
         if (pointsRefunded) return;
         pointsRefunded = true;
-        await refundPoints(userRef, tarotConfig.cost);
+        await refundPoints(userRef, actualCost);
     };
 
     try {
@@ -325,7 +328,7 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
 
         await recordDivinationLog({
             userId, userName, type: 'tarot', topic, cards, summary: `塔羅解碼：領域【${topic}】`,
-            points_change: -tarotConfig.cost, cost: tarotConfig.cost, aiText: aiData.text, fortune_score: aiData.score,
+            points_change: -actualCost, cost: actualCost, aiText: aiData.text, fortune_score: aiData.score,
             metrics: {
                 latency_ms: aiLatency,
                 tokens_in: usage.promptTokenCount || 0,
@@ -337,7 +340,7 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
         // 寫入歷史歷史紀錄
         await userRef.collection('history').add({
             type: 'tarot', summary: `今日塔羅：${cards.join(' → ')}`, aiText: aiData.text, result_card: cards[0],
-            points_change: -tarotConfig.cost, cost: tarotConfig.cost, fortune_score: aiData.score, timestamp: FieldValue.serverTimestamp()
+            points_change: -actualCost, cost: actualCost, fortune_score: aiData.score, timestamp: FieldValue.serverTimestamp()
         });
 
         const decodedAt = formatTaipeiDateTimeLine(new Date());

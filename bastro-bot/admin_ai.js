@@ -17,8 +17,11 @@
 //
 const express = require('express');
 const router = express.Router();
+const { getFirestore } = require('firebase-admin/firestore');
 const { mergeAiSettingsFromDoc } = require('./aiSettingsDefaults');
 const { verifyAdminToken } = require('./adminAuth');
+
+const db = getFirestore('astro-bot-db');
 
 router.use(verifyAdminToken);
 
@@ -39,6 +42,50 @@ router.post('/config/ai', async (req, res) => {
             success: false, 
             msg: "🔒 安全設定模式已開啟：本系統已啟用『本地代碼配置 (aiConfig.js)』以提升安全性。不允許線上動態修改。如需調整各功能之 AI 大腦模型、Prompt 人設或定價價格，請直接修改程式碼並重新部署 (GCR)。" 
         });
+    } catch (error) {
+        res.status(500).json({ success: false, msg: error.message });
+    }
+});
+
+// ==========================================
+// 🎉 節慶/限時扣點折扣活動動態設定 (campaign)
+// ==========================================
+
+// 讀取活動設定
+router.get('/config/campaign', async (req, res) => {
+    try {
+        const doc = await db.collection('system_config').doc('campaign').get();
+        if (doc.exists) {
+            res.json({ success: true, data: doc.data() });
+        } else {
+            res.json({ success: true, data: { active: false, title: '', discountRate: 1, startTime: '', endTime: '' } });
+        }
+    } catch (error) {
+        res.status(500).json({ success: false, msg: error.message });
+    }
+});
+
+// 儲存活動設定
+router.post('/config/campaign', async (req, res) => {
+    try {
+        const { active, title, discountRate, startTime, endTime } = req.body;
+        const rate = parseFloat(discountRate);
+        if (active && (Number.isNaN(rate) || rate <= 0 || rate > 1)) {
+            return res.status(400).json({ success: false, msg: '折扣率必須是介於 0 到 1 之間的數字（例如 6 折輸入 0.6）' });
+        }
+
+        const updateData = {
+            active: !!active,
+            title: title || '',
+            discountRate: rate || 1,
+            startTime: startTime || '',
+            endTime: endTime || '',
+            updatedAt: new Date().toISOString(),
+            updatedBy: req.admin ? req.admin.email : 'system'
+        };
+
+        await db.collection('system_config').doc('campaign').set(updateData, { merge: true });
+        res.json({ success: true, msg: "🎉 限時折扣活動設定已動態更新！" });
     } catch (error) {
         res.status(500).json({ success: false, msg: error.message });
     }

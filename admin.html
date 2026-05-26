@@ -341,9 +341,44 @@
                     <textarea id="numerology-prompt" rows="3" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;" placeholder="輸入律動能量提示詞..."></textarea>
                 </div>
 
-                <button onclick="saveAISettings()" class="btn-primary" style="width: 100%; padding: 15px; font-size: 16px;">
+                <button onclick="saveAISettings()" class="btn-primary" style="width: 100%; padding: 15px; font-size: 16px; margin-bottom: 20px;">
                     💾 儲存所有動態設定
                 </button>
+
+                <!-- 🎉 限時扣點折扣活動 (Campaign) -->
+                <div style="background: #eafbee; padding: 20px; border-radius: 8px; border: 1px solid #c8ebd1; margin-bottom: 20px; margin-top: 20px;">
+                    <h4 style="margin-top: 0; color: #2e7d32; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">🎉 限時扣點折扣活動</h4>
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">活動開關</label>
+                            <select id="campaign-active" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: white;">
+                                <option value="false">🔴 關閉活動</option>
+                                <option value="true">🟢 開啟活動</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 150px;">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">折扣率 (例如 6 折填 0.6)</label>
+                            <input type="number" id="campaign-rate" step="0.01" min="0.01" max="1" value="0.6" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                        </div>
+                        <div style="flex: 2; min-width: 250px;">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">活動標題</label>
+                            <input type="text" id="campaign-title" placeholder="例如：端午慶典限時 6 折優惠" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">開始時間</label>
+                            <input type="datetime-local" id="campaign-start" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="font-size: 12px; color: #666; display: block; margin-bottom: 5px;">結束時間</label>
+                            <input type="datetime-local" id="campaign-end" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                        </div>
+                    </div>
+                    <button onclick="saveCampaignSettings()" class="btn-primary" style="width: 100%; padding: 12px; font-size: 14px; background: #2e7d32; border-color: #2e7d32;">
+                        💾 儲存折扣活動設定
+                    </button>
+                </div>
             </div>
 
         </div>
@@ -759,6 +794,7 @@
                     }
                     
                 }
+                await loadCampaignSettings();
             } catch (e) { 
                 console.error("❌ 讀取 AI 設定失敗：", e); 
             }
@@ -815,6 +851,71 @@
                 alert("❌ 連線錯誤：" + e.message); 
             } finally { 
                 btn.innerText = originalText; btn.disabled = false; 
+            }
+        };
+
+        window.loadCampaignSettings = async function() {
+            if (!currentIdToken) return;
+            if (!API_URL) return;
+            try {
+                const response = await fetch(`${API_URL}/api/admin/config/campaign`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+                const result = await response.json();
+                if (result.success && result.data) {
+                    const data = result.data;
+                    document.getElementById('campaign-active').value = String(!!data.active);
+                    document.getElementById('campaign-rate').value = data.discountRate != null ? data.discountRate : 0.6;
+                    document.getElementById('campaign-title').value = data.title || '';
+                    document.getElementById('campaign-start').value = data.startTime || '';
+                    document.getElementById('campaign-end').value = data.endTime || '';
+                }
+            } catch (e) {
+                console.error("❌ 讀取活動設定失敗：", e);
+            }
+        };
+
+        window.saveCampaignSettings = async function() {
+            if (!currentIdToken) return;
+            if (!API_URL) {
+                alert('後端網址未設定：請確認已載入 /env.js 且內含 ENV.API_BASE。');
+                return;
+            }
+            const btn = document.querySelector('button[onclick="saveCampaignSettings()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "💾 儲存中..."; btn.disabled = true;
+
+            try {
+                const active = document.getElementById('campaign-active').value === 'true';
+                const discountRate = parseFloat(document.getElementById('campaign-rate').value);
+                const title = document.getElementById('campaign-title').value;
+                const startTime = document.getElementById('campaign-start').value;
+                const endTime = document.getElementById('campaign-end').value;
+
+                if (active && (isNaN(discountRate) || discountRate <= 0 || discountRate > 1)) {
+                    alert('❌ 折扣率必須是介於 0 到 1 之間的數字（例如 6 折輸入 0.6）');
+                    return;
+                }
+
+                const payload = { active, discountRate, title, startTime, endTime };
+
+                const response = await fetch(`${API_URL}/api/admin/config/campaign`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${currentIdToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    alert("✅ 折扣活動設定更新成功！");
+                    await loadCampaignSettings();
+                } else {
+                    alert("❌ 儲存失敗：" + result.msg);
+                }
+            } catch (e) {
+                alert("❌ 連線錯誤：" + e.message);
+            } finally {
+                btn.innerText = originalText; btn.disabled = false;
             }
         };
 
