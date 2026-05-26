@@ -36,7 +36,7 @@
     <div class="card">
         <div class="icon" id="state-icon">✨</div>
         <h1 id="title">確認入帳中</h1>
-        <p class="sub" id="subtitle">已收到付款通知，服務額度將於數秒內取得。請稍候…</p>
+        <p class="sub" id="subtitle">已收到付款通知，服務方案次數將於數秒內取得。請稍候…</p>
         <div class="detail" id="detail"><div class="spinner"></div></div>
         <a class="btn btn-primary" id="btn-profile" href="#" style="display:none;">返回會員中心</a>
         <a class="btn btn-ghost" href="/index.html" style="margin-top:8px;">查看服務說明</a>
@@ -71,7 +71,7 @@
             const p3 = document.createElement('p');
             p3.style.fontSize = '13px';
             p3.style.color = '#888';
-            p3.textContent = '服務額度 · NT$ ' + amount;
+            p3.textContent = '解碼方案 · NT$ ' + amount;
             detail.appendChild(p3);
         }
 
@@ -123,7 +123,7 @@
                 if (data.status === 'success') {
                     clearInterval(pollTimer);
                     sessionStorage.removeItem('bd_pending_order');
-                    setState('success', '方案選購成功', '服務額度已發放，感謝您的支持。', 'none');
+                    setState('success', '方案選購成功', '解碼服務次數已發放，感謝您的支持。', 'none');
                     setDetailSuccess(data.pointsGiven, data.amount);
                     return;
                 }
@@ -132,14 +132,14 @@
                     setState(
                         'timeout',
                         '入帳處理中',
-                        '若已扣款，服務額度通常會在數分鐘內入帳。可返回會員中心查看餘額，或聯絡客服。',
+                        '若已扣款，解碼次數通常會在數分鐘內入帳。可返回會員中心查看服務狀態，或聯絡客服。',
                         'order'
                     );
                 }
             } catch (e) {
                 if (pollCount >= MAX_POLL) {
                     clearInterval(pollTimer);
-                    setState('error', '無法確認狀態', '請返回會員中心查看服務額度，或稍後再試。', 'none');
+                    setState('error', '無法確認狀態', '請返回會員中心查看服務狀態，或稍後再試。', 'none');
                 }
             }
         }
@@ -160,7 +160,7 @@
                 setState(
                     'timeout',
                     '選購完成',
-                    '若您已完成付款，請在 LINE 內開啟會員中心確認服務額度。',
+                    '若您已完成付款，請在 LINE 內開啟會員中心確認服務次數。',
                     'order'
                 );
                 document.getElementById('btn-profile').style.display = 'block';

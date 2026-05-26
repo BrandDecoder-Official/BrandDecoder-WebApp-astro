@@ -654,36 +654,36 @@
 
         <article class="panel" id="deduction" style="display: none !important;">
             <h2>服務次數扣除說明</h2>
-            <p class="panel-intro">各服務額度扣除時機與參考額度。</p>
-            <p>標示<span class="live-badge">最新</span>者為目前公告數值；實際額度扣除以 LINE 使用當下畫面為準。</p>
+            <p class="panel-intro">各服務次數扣除時機與參考次數。</p>
+            <p>標示<span class="live-badge">最新</span>者為目前公告數值；實際次數扣除以 LINE 使用當下畫面為準。</p>
             <div class="table-scroll"><table>
                 <thead>
                     <tr>
                         <th>服務項目</th>
-                        <th>額度扣除時機（摘要）</th>
-                        <th>參考額度</th>
+                        <th>次數扣除時機（摘要）</th>
+                        <th>參考次數</th>
                     </tr>
                 </thead>
                 <tbody id="mj-deduction-tbody"></tbody>
             </table></div>
             <h3>首購加碼方案</h3>
-            <p>會員中心方案選購若顯示「首購加碼」，通常為指定期間內<strong>首次選購服務方案</strong>加發之服務額度；條件以方案選擇頁即時顯示為準。</p>
+            <p>會員中心方案選購若顯示「首購加碼」，通常為指定期間內<strong>首次選購服務方案</strong>加發之服務次數；條件以方案選擇頁即時顯示為準。</p>
         </article>
 
         <article class="panel" id="recharge" style="display: none !important;">
             <h2>命理服務方案</h2>
-            <p class="panel-intro">與會員中心相同方案，僅供查閱；請於 LINE 會員中心獲取額度並選擇方案。</p>
+            <p class="panel-intro">與會員中心相同方案，僅供查閱；請於 LINE 會員中心獲取服務次數並選擇方案。</p>
             <div class="tier-showcase" id="mj-tier-showcase"></div>
             <div class="table-scroll"><table>
                 <thead>
                     <tr>
                         <th>方案金額（NT$）</th>
-                        <th>服務額度</th>
+                        <th>服務次數</th>
                     </tr>
                 </thead>
                 <tbody id="mj-pricing-tbody"></tbody>
             </table></div>
-            <p class="note">※ 正式選購以會員中心可選方案為準。含首購加碼時，獲得額度以結帳前確認畫面為準。</p>
+            <p class="note">※ 正式選購以會員中心可選方案為準。含首購加碼時，獲得服務次數以結帳前確認畫面為準。</p>
         </article>
 
         <!-- 會員中心與方案選購截圖已為金流合規隱藏 -->
@@ -694,7 +694,7 @@
             <ul>
                 <li><strong>圖文選單</strong>：可從選單開啟本服務說明頁。</li>
                 <li><strong>選購方案前</strong>：於會員中心選擇方案前，須勾選同意條款；完整說明可開啟本頁查閱。</li>
-                <li><strong>歡迎訊息／常見問題</strong>：亦可附上本頁連結，方便隨時查閱額度扣除與服務方案說明。</li>
+                <li><strong>歡迎訊息／常見問題</strong>：亦可附上本頁連結，方便隨時查閱次數扣除與服務方案說明。</li>
             </ul>
         </article>
 
@@ -787,7 +787,7 @@
             {
                 src: 'images/002.jpg',
                 cap: '紫微斗數｜LINE 官方帳號解碼結果',
-                sub: '於聊天室收到命盤解碼：綜合運勢指數、天命解碼精華與深度導師指引。',
+                sub: '於聊天室收到命盤解碼：包含綜合運勢指數、天命解碼精華與深度導師指引。',
             },
             {
                 src: 'images/003.jpg',
@@ -817,7 +817,7 @@
         ];
         const PROFILE_SHOTS = [
             { src: 'images/1001.jpg', cap: '會員中心總覽' },
-            { src: 'images/1001-1.jpg', cap: '帳戶服務與個人資訊' },
+            { src: 'images/1001-1.jpg', cap: '服務次數與個人資訊' },
             { src: 'images/1002.jpg', cap: '服務方案選擇' },
             { src: 'images/1003.jpg', cap: '方案確認與條款' },
             { src: 'images/1004.jpg', cap: '付款流程示意' },
@@ -881,7 +881,7 @@
             if (liveCosts && liveCosts[costKey] != null && !Number.isNaN(Number(liveCosts[costKey]))) {
                 n = Math.round(Number(liveCosts[costKey]));
             }
-            return n + ' 額度／次';
+            return n + ' 次';
         }
 
         function renderServiceCards(el, liveCosts) {
@@ -890,11 +890,11 @@
                 { icon: '🔮', name: '塔羅星陣', key: 'tarot', def: 15, hint: '抽牌解碼指引' },
                 { icon: '🏮', name: '紫微斗數', key: 'ziwei', def: 50, hint: '深度命盤解讀' },
                 { icon: '🔢', name: '律動能量', key: 'numerology', def: 10, hint: '數字矩陣解碼' },
-                { icon: '✨', name: '每日一抽', key: 'daily', def: 0, hint: '簽到贈額度' },
+                { icon: '✨', name: '每日一抽', key: 'daily', def: 0, hint: '簽到送次數' },
             ];
             el.innerHTML = items.map(function (item) {
                 var cost = demoCostLabel(item.key, liveCosts, item.def);
-                if (item.key === 'daily') cost = '0 額度 · 簽到贈 +1';
+                if (item.key === 'daily') cost = '0 次 · 簽到贈 +1';
                 return (
                     '<a class="service-card" href="#features">' +
                         '<span class="icon" aria-hidden="true">' + item.icon + '</span>' +
@@ -996,19 +996,19 @@
                 var key = el.getAttribute('data-cost-key');
                 var item = FEATURE_DEMOS.find(function (d) { return d.costKey === key; });
                 var def = item ? item.defaultCost : 0;
-                el.textContent = '參考額度：' + demoCostLabel(key, liveCosts, def);
+                el.textContent = '參考消耗：' + demoCostLabel(key, liveCosts, def);
             });
         }
 
         function formatCostLabel(serviceKey, cost, fromLive) {
             if (serviceKey === 'daily') {
-                if (cost === 0) return '0 額度（現行；簽到贈 +1 額度）' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
-                return cost + ' 額度／次' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
+                if (cost === 0) return '0 次（現行；簽到贈 +1 次）' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
+                return cost + ' 次' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
             }
             if (cost == null || Number.isNaN(Number(cost))) return null;
             var n = Math.round(Number(cost));
             if (serviceKey === 'face' && n <= 0) return null;
-            return n + ' 額度／次' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
+            return n + ' 次' + (fromLive ? ' <span class="live-badge">最新</span>' : '');
         }
 
         function fillDeductionRows(tbody, rows, liveCosts) {
@@ -1056,7 +1056,7 @@
                 var div = document.createElement('div');
                 div.className = 'tier-card-show' + (t.isPopular ? ' popular' : '');
                 div.innerHTML =
-                    '<span class="tier-points">✨ 服務額度 ' + Number(t.points).toLocaleString() + '</span>' +
+                    '<span class="tier-points">✨ 服務次數 ' + Number(t.points).toLocaleString() + '</span>' +
                     '<div class="tier-price">NT$ ' + esc(t.price) + '</div>';
                 el.appendChild(div);
             });
@@ -1104,7 +1104,7 @@
                     face: d.face && d.face.cost != null ? d.face.cost : null,
                 };
             } catch (e) {
-                console.warn('[index] 後台額度讀取失敗，使用 manifest 預設', e);
+                console.warn('[index] 後台次數讀取失敗，使用 manifest 預設', e);
                 return null;
             }
         }
