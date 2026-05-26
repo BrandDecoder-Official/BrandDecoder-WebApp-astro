@@ -6,8 +6,8 @@
  * 分享按鈕 action.uri 另限 1000（見 lineOaShare.js），與主文上限無關。
  */
 
-/** 塔羅／紫微「【解析】」正文上限 */
-const MAX_TAROT_ZIWEI_BODY_CHARS = 3000;
+/** 塔羅／紫微「【解析】」正文上限（寫入日誌與網頁顯示，設為10000以實質達到完全不截斷，防止客訴） */
+const MAX_TAROT_ZIWEI_BODY_CHARS = 10000;
 
 /** 律動能量 JSON 內 interpretation 上限 */
 const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 800;
