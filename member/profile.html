@@ -427,6 +427,61 @@
         </div>
     </div>
 
+    <!-- 🌌 生辰座標定位編輯 Modal -->
+    <div id="birthdata-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 340px;">
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">🌌 定位個人星軌座標</h3>
+            <p style="text-align: center; font-size: 11px; color: #888; margin-bottom: 20px;">儲存後，未來進行紫微斗數占卜將會自動帶入此生辰座標。</p>
+            
+            <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+                <label class="form-label" style="display: block; font-size: 12px; color: #ccc; margin-bottom: 6px;">生理性別</label>
+                <div style="display: flex; gap: 10px;">
+                    <label style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 10px; cursor: pointer; color: var(--gold-light); font-size: 14px;">
+                        <input type="radio" name="edit-gender" value="M" checked style="margin-right: 6px; accent-color: var(--gold);"> 乾造 (男)
+                    </label>
+                    <label style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 10px; cursor: pointer; color: var(--gold-light); font-size: 14px;">
+                        <input type="radio" name="edit-gender" value="F" style="margin-right: 6px; accent-color: var(--gold);"> 坤造 (女)
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+                <label class="form-label" style="display: block; font-size: 12px; color: #ccc; margin-bottom: 6px;">星辰曆法</label>
+                <div style="display: flex; gap: 10px;">
+                    <label style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 10px; cursor: pointer; color: var(--gold-light); font-size: 14px;">
+                        <input type="radio" name="edit-calendar" value="solar" checked style="margin-right: 6px; accent-color: var(--gold);"> 國曆
+                    </label>
+                    <label style="flex: 1; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(212,175,55,0.3); border-radius: 8px; padding: 10px; cursor: pointer; color: var(--gold-light); font-size: 14px;">
+                        <input type="radio" name="edit-calendar" value="lunar" style="margin-right: 6px; accent-color: var(--gold);"> 農曆
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 15px; text-align: left;">
+                <label class="form-label" style="display: block; font-size: 12px; color: #ccc; margin-bottom: 6px;">降生之日</label>
+                <div class="date-group" style="display: flex; gap: 6px;">
+                    <select id="edit-year" style="flex: 1.2; font-size: 14px; padding: 10px;"></select>
+                    <select id="edit-month" style="flex: 0.9; font-size: 14px; padding: 10px;"></select>
+                    <select id="edit-day" style="flex: 0.9; font-size: 14px; padding: 10px;"></select>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 20px; text-align: left;">
+                <label class="form-label" style="display: block; font-size: 12px; color: #ccc; margin-bottom: 6px;">降生時辰</label>
+                <select id="edit-time" style="font-size: 14px; padding: 10px;"></select>
+                <div class="checkbox-wrapper" style="margin-top: 10px;">
+                    <label class="checkbox-label" style="display: flex; align-items: center; color: #aaa; font-size: 12px; cursor: pointer;">
+                        <input type="checkbox" id="edit-fuzzy-time" style="margin-right: 8px; accent-color: var(--gold);">
+                        不知確切時辰，申請區間定盤
+                    </label>
+                </div>
+            </div>
+            
+            <button class="terms-primary-btn" type="button" onclick="saveBirthData()" style="margin-top: 10px;">確定定位星軌</button>
+            <button class="modal-close-btn" onclick="closeModal('birthdata-modal')" style="margin-top: 10px;">取消</button>
+        </div>
+    </div>
+
     <div id="recharge-terms-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="recharge-terms-title">
         <div class="modal-content">
             <h3 id="recharge-terms-title" style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">方案選購前請閱讀</h3>
@@ -819,12 +874,28 @@
             
             document.getElementById('ui-rank').innerText = rank;
 
-            // 顯示最新的一筆生辰座標
-            if (birthData) {
-                const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
-                document.getElementById('ui-date').innerText = `🌌 星軌定位：${calStr} ${birthData.date}`;
-            } else {
-                document.getElementById('ui-date').innerText = `🌌 命運星軌感應中...`;
+            // 🌟 顯示最新的一筆生辰座標與管理按鈕
+            const dateEl = document.getElementById('ui-date');
+            if (dateEl) {
+                if (birthData) {
+                    const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
+                    dateEl.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px;">
+                            <span>🌌 星軌定位：${calStr} ${birthData.date} ${birthData.time || ''}時</span>
+                            <span style="display: inline-flex; gap: 5px;">
+                                <button type="button" style="background: rgba(212,175,55,0.15); border: 1px solid rgba(212,175,55,0.4); color: var(--gold-light); border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer;" onclick="openBirthDataEditor()">✏️ 編輯</button>
+                                <button type="button" style="background: rgba(255,107,107,0.15); border: 1px solid rgba(255,107,107,0.4); color: #FF8B8B; border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer;" onclick="clearBirthData()">🗑️ 清除</button>
+                            </span>
+                        </div>
+                    `;
+                } else {
+                    dateEl.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px;">
+                            <span>🌌 命運星軌感應中...</span>
+                            <button type="button" style="background: rgba(212,175,55,0.15); border: 1px solid rgba(212,175,55,0.4); color: var(--gold-light); border-radius: 4px; padding: 2px 8px; font-size: 10px; cursor: pointer;" onclick="openBirthDataEditor()">✏️ 定位星軌</button>
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -1131,6 +1202,196 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
+        }
+
+        // 🌌 生辰座標手動填寫與編輯控制器
+        let editDatePickerInitialized = false;
+        function initEditDatePicker() {
+            if (editDatePickerInitialized) return;
+            editDatePickerInitialized = true;
+            
+            const ySelect = document.getElementById('edit-year');
+            const mSelect = document.getElementById('edit-month');
+            const dSelect = document.getElementById('edit-day');
+            
+            ySelect.innerHTML = '';
+            mSelect.innerHTML = '';
+
+            for(let i = 2015; i >= 1940; i--) {
+                let opt = new Option(i + ' 年', i);
+                if(i === 1990) opt.selected = true;
+                ySelect.add(opt);
+            }
+            for(let i = 1; i <= 12; i++) {
+                let val = i < 10 ? '0'+i : i;
+                mSelect.add(new Option(val + ' 月', val));
+            }
+            
+            function updateEditDays() {
+                const y = parseInt(ySelect.value), m = parseInt(mSelect.value);
+                const days = new Date(y, m, 0).getDate();
+                const current = dSelect.value;
+                dSelect.innerHTML = ''; 
+                for(let i = 1; i <= days; i++) {
+                    let val = i < 10 ? '0'+i : i;
+                    dSelect.add(new Option(val + ' 日', val));
+                }
+                if(current && current <= days) dSelect.value = current;
+            }
+            ySelect.onchange = mSelect.onchange = updateEditDays;
+            updateEditDays();
+            
+            document.getElementById('edit-fuzzy-time').addEventListener('change', (e) => {
+                populateEditTimeOptions(e.target.checked);
+            });
+            populateEditTimeOptions(false);
+        }
+
+        function populateEditTimeOptions(isFuzzy) {
+            const timeSelect = document.getElementById('edit-time');
+            if (!timeSelect) return;
+            timeSelect.innerHTML = '';
+            
+            const preciseTimes = [
+                {v: '子', t: '子時 (23:00 - 00:59)'}, {v: '丑', t: '丑時 (01:00 - 02:59)'},
+                {v: '寅', t: '寅時 (03:00 - 04:59)'}, {v: '卯', t: '卯時 (05:00 - 06:59)'},
+                {v: '辰', t: '辰時 (07:00 - 08:59)'}, {v: '巳', t: '巳時 (09:00 - 10:59)'},
+                {v: '午', t: '午時 (11:00 - 12:59)'}, {v: '未', t: '未時 (13:00 - 14:59)'},
+                {v: '申', t: '申時 (15:00 - 16:59)'}, {v: '酉', t: '酉時 (17:00 - 18:59)'},
+                {v: '戌', t: '戌時 (19:00 - 20:59)'}, {v: '亥', t: '亥時 (21:00 - 22:59)'}
+            ];
+            const fuzzyTimes = [
+                {v: '清晨', t: '清晨破曉 (約 05:00 - 11:00)'},
+                {v: '午後', t: '午後日輪 (約 11:00 - 17:00)'},
+                {v: '傍晚', t: '傍晚暮色 (約 17:00 - 23:00)'},
+                {v: '深夜', t: '深夜星辰 (約 23:00 - 05:00)'}
+            ];
+
+            const options = isFuzzy ? fuzzyTimes : preciseTimes;
+            options.forEach(opt => { timeSelect.add(new Option(opt.t, opt.v)); });
+        }
+
+        function openBirthDataEditor() {
+            initEditDatePicker();
+            
+            const bd = userProfileData && userProfileData.birthData;
+            
+            if (bd) {
+                // 性別
+                const genderInputs = document.getElementsByName('edit-gender');
+                genderInputs.forEach(input => {
+                    input.checked = (input.value === bd.gender);
+                });
+                
+                // 曆法
+                const calInputs = document.getElementsByName('edit-calendar');
+                calInputs.forEach(input => {
+                    input.checked = (input.value === bd.calendar);
+                });
+                
+                // 日期
+                if (bd.date) {
+                    const [y, m, d] = bd.date.split('-');
+                    const ySelect = document.getElementById('edit-year');
+                    const mSelect = document.getElementById('edit-month');
+                    const dSelect = document.getElementById('edit-day');
+                    
+                    if (ySelect) ySelect.value = parseInt(y);
+                    if (mSelect) mSelect.value = m;
+                    if (ySelect && typeof ySelect.onchange === 'function') {
+                        ySelect.onchange();
+                    }
+                    if (dSelect) dSelect.value = d;
+                }
+                
+                // 時辰
+                const timeSelect = document.getElementById('edit-time');
+                if (timeSelect) {
+                    const isFuzzy = ['清晨', '午後', '傍晚', '深夜'].includes(bd.time);
+                    document.getElementById('edit-fuzzy-time').checked = isFuzzy;
+                    populateEditTimeOptions(isFuzzy);
+                    timeSelect.value = bd.time;
+                }
+            }
+            
+            document.getElementById('birthdata-modal').classList.add('active');
+        }
+
+        async function saveBirthData() {
+            const genderInputs = document.getElementsByName('edit-gender');
+            let gender = 'M';
+            genderInputs.forEach(input => { if (input.checked) gender = input.value; });
+            
+            const calInputs = document.getElementsByName('edit-calendar');
+            let calendar = 'solar';
+            calInputs.forEach(input => { if (input.checked) calendar = input.value; });
+            
+            const y = document.getElementById('edit-year').value;
+            const m = document.getElementById('edit-month').value;
+            const d = document.getElementById('edit-day').value;
+            const time = document.getElementById('edit-time').value;
+            
+            const birthData = {
+                gender,
+                calendar,
+                date: `${y}-${m}-${d}`,
+                time
+            };
+            
+            document.getElementById('loader').style.display = 'flex';
+            document.getElementById('loader').style.opacity = '1';
+            closeModal('birthdata-modal');
+            
+            try {
+                const response = await fetch(`${ENV.API_BASE}/api/user/save-birthdata`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentAccessToken}`
+                    },
+                    body: JSON.stringify({ birthData })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('🌌 星軌定位設定成功！');
+                    // 重新載入儀表板
+                    await initDashboard();
+                } else {
+                    throw new Error(result.msg || '定位設定失敗');
+                }
+            } catch (err) {
+                alert('🚨 星軌定位異常：' + err.message);
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 500);
+            }
+        }
+
+        async function clearBirthData() {
+            if (!confirm('🌌 確定要清除您的星軌定位生辰座標嗎？\n清除後，下次占卜需重新輸入生辰，且個人檔案將不再保留生辰資訊。')) return;
+            
+            document.getElementById('loader').style.display = 'flex';
+            document.getElementById('loader').style.opacity = '1';
+            
+            try {
+                const response = await fetch(`${ENV.API_BASE}/api/user/clear-birthdata`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${currentAccessToken}`
+                    }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('🌌 星軌定位已安全清除！');
+                    // 重新載入儀表板
+                    await initDashboard();
+                } else {
+                    throw new Error(result.msg || '清除失敗');
+                }
+            } catch (err) {
+                alert('🚨 移除星軌異常：' + err.message);
+                document.getElementById('loader').style.opacity = '0';
+                setTimeout(() => { document.getElementById('loader').style.display = 'none'; }, 500);
+            }
         }
 
         // --- 💰 服務方案選購與金流邏輯 ---

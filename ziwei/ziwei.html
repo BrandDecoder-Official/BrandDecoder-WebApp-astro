@@ -223,19 +223,24 @@
     <div id="step-2" class="step-section">
         <h2>命運的齒輪<br>從陰陽開始轉動</h2>
         <div class="subtitle">請選擇您的生理性別</div>
-        <button class="btn-choice" onclick="makeChoice(2, 'gender', 'M', this)">乾造 (男命)</button>
-        <button class="btn-choice" onclick="makeChoice(2, 'gender', 'F', this)">坤造 (女命)</button>
+        <button id="gender-M" class="btn-choice" onclick="makeChoice(2, 'gender', 'M', this)">乾造 (男命)</button>
+        <button id="gender-F" class="btn-choice" onclick="makeChoice(2, 'gender', 'F', this)">坤造 (女命)</button>
     </div>
 
     <div id="step-3" class="step-section">
         <h2>您習慣仰望太陽<br>還是追隨月亮的軌跡？</h2>
         <div class="subtitle">請選擇星辰曆法</div>
-        <button class="btn-choice" onclick="makeChoice(3, 'calendar', 'solar', this)">太陽曆 (國曆)</button>
-        <button class="btn-choice" onclick="makeChoice(3, 'calendar', 'lunar', this)">太陰曆 (農曆)</button>
+        <button id="calendar-solar" class="btn-choice" onclick="makeChoice(3, 'calendar', 'solar', this)">太陽曆 (國曆)</button>
+        <button id="calendar-lunar" class="btn-choice" onclick="makeChoice(3, 'calendar', 'lunar', this)">太陰曆 (農曆)</button>
     </div>
 
     <div id="step-4" class="step-section">
         <h2>鎖定您的時空座標</h2>
+        <div id="preload-hint" style="display: none; font-size: 12px; color: var(--gold-light); margin-bottom: 15px; background: rgba(212, 175, 55, 0.15); padding: 10px; border-radius: 8px; border: 1px dashed rgba(212, 175, 55, 0.4); text-align: center; line-height: 1.5;">
+            🌌 已自動帶入您的星軌座標<br>
+            <span style="color: #aaa;">若要幫他人占卜，可 </span>
+            <span style="color: var(--gold); text-decoration: underline; cursor: pointer; font-weight: bold; text-shadow: 0 0 5px rgba(212,175,55,0.3);" onclick="resetToManualBirthData()">重新設定性別與曆法</span>
+        </div>
         <div class="form-group">
             <label class="form-label">降生之日</label>
             <div class="date-group">
@@ -274,6 +279,10 @@
         <div class="confirm-box">
             <div class="confirm-title" id="confirm-title">【🏮 紫微天命羅盤】</div>
             <div class="confirm-desc" id="confirm-desc"></div>
+            <div style="display: flex; align-items: flex-start; gap: 8px; text-align: left; margin: 12px 10px; font-size: 11px; color: #aaa; line-height: 1.4;">
+                <input type="checkbox" id="agree-save-birth" checked style="margin-top: 3px; flex-shrink: 0; cursor: pointer;">
+                <label for="agree-save-birth" style="cursor: pointer; user-select: none;">同意將生辰座標安全儲存至個人儀表板，以便於未來占卜自動帶入（可隨時於個人儀表板中清除）</label>
+            </div>
             <div class="confirm-actions">
                 <button class="btn-confirm-cancel" onclick="closeCustomConfirm()">取消</button>
                 <button class="btn-confirm-ok" onclick="executeCustomConfirm()">確認啟動</button>
@@ -642,6 +651,61 @@
                 if (session.profile) lineUserIdForTracking = session.profile.userId;
                 liffReady = true;
                 sendTrackingLog("Stage 1: Page View");
+
+                // 🌟 載入個人已儲存的生辰資料進行自動帶入
+                try {
+                    const resp = await fetch(`${ENV.API_BASE}/api/user/profile`, {
+                        headers: { 'Authorization': `Bearer ${currentAccessToken}` }
+                    });
+                    const profileResult = await resp.json();
+                    if (profileResult.success && profileResult.data && profileResult.data.birthData) {
+                        const bd = profileResult.data.birthData;
+                        userAstrolabeData.gender = bd.gender;
+                        userAstrolabeData.calendar = bd.calendar;
+                        userAstrolabeData.date = bd.date;
+                        userAstrolabeData.time = bd.time;
+                        window.__hasPreloadedBirthData = true;
+                        
+                        const genderBtn = document.getElementById(`gender-${bd.gender}`);
+                        if (genderBtn) {
+                            // 先清空同層其他按鈕的選取狀態
+                            genderBtn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
+                            genderBtn.classList.add('selected');
+                        }
+                        
+                        const calendarBtn = document.getElementById(`calendar-${bd.calendar}`);
+                        if (calendarBtn) {
+                            calendarBtn.parentElement.querySelectorAll('.btn-choice').forEach(b => b.classList.remove('selected'));
+                            calendarBtn.classList.add('selected');
+                        }
+                        
+                        if (bd.date) {
+                            const [y, m, d] = bd.date.split('-');
+                            const ySelect = document.getElementById('input-year');
+                            const mSelect = document.getElementById('input-month');
+                            const dSelect = document.getElementById('input-day');
+                            
+                            if (ySelect) ySelect.value = parseInt(y);
+                            if (mSelect) mSelect.value = m;
+                            if (ySelect && typeof ySelect.onchange === 'function') {
+                                ySelect.onchange(); 
+                            }
+                            if (dSelect) dSelect.value = d;
+                        }
+                        
+                        const timeSelect = document.getElementById('input-time');
+                        if (timeSelect) {
+                            const isFuzzy = ['清晨', '午後', '傍晚', '深夜'].includes(bd.time);
+                            document.getElementById('toggle-fuzzy-time').checked = isFuzzy;
+                            populateTimeOptions(isFuzzy);
+                            timeSelect.value = bd.time;
+                        }
+                        console.log("🌌 [CTO 雷達] 成功自動帶入星軌座標:", bd);
+                    }
+                } catch (preloadErr) {
+                    console.warn("無法預先讀取生辰座標進行自動帶入:", preloadErr);
+                }
+
             } catch (err) {
                 if (err && (err.code === 'LIFF_LOGIN_REDIRECT' || err.code === 'LIFF_MOBILE_ONLY')) return;
                 console.error('initLIFF', err);
@@ -719,8 +783,39 @@
             
             setTimeout(() => {
                 document.getElementById(`step-${currentStep}`).classList.replace('active', 'exit-up');
-                document.getElementById(`step-${currentStep + 1}`).classList.add('active');
+                
+                // 🌟 預載入生辰的自動跳轉邏輯
+                if (currentStep === 1 && window.__hasPreloadedBirthData) {
+                    document.getElementById('step-4').classList.add('active');
+                    const hintEl = document.getElementById('preload-hint');
+                    if (hintEl) hintEl.style.display = 'block';
+                } else {
+                    document.getElementById(`step-${currentStep + 1}`).classList.add('active');
+                }
             }, 300);
+        }
+
+        // 🌟 幫他人占卜：清除預填，並手動設定生理性別與曆法
+        function resetToManualBirthData() {
+            window.__hasPreloadedBirthData = false;
+            const hintEl = document.getElementById('preload-hint');
+            if (hintEl) hintEl.style.display = 'none';
+            
+            // 清除已選取的按鈕狀態
+            const selectedBtns = document.querySelectorAll('#step-2 .btn-choice, #step-3 .btn-choice');
+            selectedBtns.forEach(btn => btn.classList.remove('selected'));
+            
+            // 重置暫存的生理性別與曆法數據
+            userAstrolabeData.gender = '';
+            userAstrolabeData.calendar = '';
+            
+            // 回退到 Step 2 進行點選
+            document.getElementById('step-4').classList.remove('active');
+            document.getElementById('step-2').classList.add('active');
+            
+            // 移除 Step 2 與 Step 3 的向上退場狀態，使其回到初始狀態
+            document.getElementById('step-2').classList.remove('exit-up');
+            document.getElementById('step-3').classList.remove('exit-up');
         }
 
         // 🚀 最終提交流程 (結合沉浸式彈窗與主題)
@@ -766,11 +861,17 @@
                 try {
                     setTimeout(() => { msgEl.innerText = "五行能量注入，解析阿卡西紀錄..."; }, 3500);
 
+                    // 🌟 讀取隱私勾選框狀態
+                    const agreeSaveBirth = document.getElementById('agree-save-birth').checked;
+
                     // 呼叫後端 API
                     const response = await fetch(`${ENV.API_BASE}/api/divination/ziwei`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentAccessToken}` },
-                        body: JSON.stringify({ birthData: userAstrolabeData })
+                        body: JSON.stringify({ 
+                            birthData: userAstrolabeData,
+                            agreeSaveBirth: agreeSaveBirth
+                        })
                     });
 
                     const result = await response.json();

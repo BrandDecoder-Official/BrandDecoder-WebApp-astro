@@ -140,7 +140,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
             throw e;
         }
 
-        const { birthData } = req.body;
+        const { birthData, agreeSaveBirth } = req.body;
         const topicStr = birthData.topic || '本命格局';
         const genderStr = birthData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
         const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
@@ -190,9 +190,19 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
 
             const remainPoints = balanceAfterDeduct;
 
+            // 🌟 隱私與體驗優化：如果用戶勾選同意儲存生辰座標，則寫入用戶個人文檔
+            if (agreeSaveBirth) {
+                try {
+                    await userRef.set({ birthData: birthData }, { merge: true });
+                } catch (saveBirthErr) {
+                    console.warn('儲存用戶生辰座標失敗:', saveBirthErr.message);
+                }
+            }
+
             await recordDivinationLog({
                 userId, userName, type: 'ziwei', summary: `紫微解碼[${topicStr}]：${genderStr}, ${birthData.date} ${birthData.time}時`, points_change: -actualCost, cost: actualCost,
                 aiText: aiData.text, fortune_score: aiData.score,
+                birthData: birthData, // 🌟 修復 Bug：寫入 divination_logs 供 profile.html 撈取
                 metrics: {
                     latency_ms: aiLatency,
                     tokens_in: usage.promptTokenCount || 0,

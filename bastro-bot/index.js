@@ -217,6 +217,7 @@ app.get('/api/user/profile', verifyLineToken, async (req, res) => {
         let createdAt = null;
         let lastDrawDate = null;
         let lastFirstRechargePeriod = null;
+        let birthData = null;
         if (userDoc.exists) {
             const data = userDoc.data();
             displayName = data.displayName || displayName;
@@ -225,9 +226,13 @@ app.get('/api/user/profile', verifyLineToken, async (req, res) => {
             createdAt = data.createdAt ? data.createdAt.toDate().toISOString() : null;
             lastDrawDate = data.lastDrawDate;
             lastFirstRechargePeriod = data.lastFirstRechargePeriod || null;
+            birthData = data.birthData || null; // 優先使用 userDoc 儲存的生辰資料
         }
         const dailyStreak = userDoc.exists ? (userDoc.data().dailyStreak || 0) : 0;
-        const { logs, latestBirthData } = await loadDivinationLogsForDashboard(userId);
+        const { logs } = await loadDivinationLogsForDashboard(userId);
+        
+        const finalBirthData = birthData;
+
         res.status(200).json({
             success: true,
             data: {
@@ -238,13 +243,44 @@ app.get('/api/user/profile', verifyLineToken, async (req, res) => {
                 lastDrawDate,
                 dailyStreak,
                 lastFirstRechargePeriod,
-                birthData: latestBirthData,
+                birthData: finalBirthData,
                 logs,
             },
         });
     } catch (error) {
         console.error('GET /api/user/profile:', error.message);
         res.status(500).json({ success: false });
+    }
+});
+
+// 🗑️ 隱私權保護：清除生辰座標
+app.post('/api/user/clear-birthdata', verifyLineToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { FieldValue } = require('firebase-admin/firestore');
+        await db.collection('users').doc(userId).update({
+            birthData: FieldValue.delete()
+        });
+        res.json({ success: true, msg: "星辰座標已安全清除" });
+    } catch (error) {
+        console.error('POST /api/user/clear-birthdata:', error.message);
+        res.status(500).json({ success: false, msg: error.message });
+    }
+});
+
+// 💾 隱私權保護：儲存或更新生辰座標
+app.post('/api/user/save-birthdata', verifyLineToken, express.json(), async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { birthData } = req.body;
+        if (!birthData) return res.status(400).json({ success: false, msg: "缺少生辰座標數據" });
+        await db.collection('users').doc(userId).set({
+            birthData: birthData
+        }, { merge: true });
+        res.json({ success: true, msg: "星辰座標已成功定位" });
+    } catch (error) {
+        console.error('POST /api/user/save-birthdata:', error.message);
+        res.status(500).json({ success: false, msg: error.message });
     }
 });
 
