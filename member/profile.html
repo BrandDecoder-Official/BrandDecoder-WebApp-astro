@@ -210,9 +210,9 @@
         </div>
 
         <div class="glass-card energy-section">
-            <div class="energy-title">當前可用服務額度 (Points)</div>
+            <div class="energy-title">可用解碼服務次數 (Points)</div>
             <div class="energy-points" id="ui-points">--</div>
-            <button class="recharge-btn" type="button" onclick="openRechargeTermsGate()">獲取服務額度</button>
+            <button class="recharge-btn" type="button" onclick="openRechargeTermsGate()">選購服務方案</button>
         </div>
 
         <div class="glass-card chart-section">
@@ -243,7 +243,7 @@
     <div id="recharge-terms-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="recharge-terms-title">
         <div class="modal-content">
             <h3 id="recharge-terms-title" style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">方案選購前請閱讀</h3>
-            <p id="recharge-terms-subtitle" style="text-align: center; font-size: 12px; color: #888; margin: 8px 0 0;">服務條款、額度性質與扣除說明</p>
+            <p id="recharge-terms-subtitle" style="text-align: center; font-size: 12px; color: #888; margin: 8px 0 0;">服務條款與方案說明</p>
             <div class="terms-scroll" id="terms-scroll-container">
                 <div id="terms-gate-paragraphs"></div>
             </div>
@@ -258,11 +258,11 @@
 
     <div id="recharge-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">獲取服務額度方案</h3>
-            <p style="text-align: center; font-size: 12px; color: #888; margin-top: 10px;">請選擇您要獲取的服務方案</p>
+            <h3 style="color: var(--gold); margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; text-align: center;">解碼服務方案選購</h3>
+            <p style="text-align: center; font-size: 12px; color: #888; margin-top: 10px;">請選擇您要選購的服務方案</p>
             
             <div class="tier-grid" id="tier-grid"></div>
-            <a class="recharge-legal-link" id="recharge-legal-fullpage-link" href="/index.html" target="_blank" rel="noopener noreferrer">服務條款與扣除額度說明（完整頁）</a>
+            <a class="recharge-legal-link" id="recharge-legal-fullpage-link" href="/index.html" target="_blank" rel="noopener noreferrer">服務條款與說明（完整頁）</a>
             
             <button class="modal-close-btn" onclick="closeModal('recharge-modal')">關閉方案選擇</button>
         </div>
@@ -352,13 +352,13 @@
             return {
                 termsGate: {
                     title: '方案選購前請閱讀',
-                    subtitle: '服務條款、額度性質與扣除說明',
+                    subtitle: '服務條款與方案說明',
                     paragraphs: [
-                        '目前無法載入條款字典檔（網路或設定問題）。請稍後重新整理、檢查連線，或先開啟下方「完整說明頁」閱讀《服務條款》與額度扣除說明；載入成功後將自動顯示完整摘要。',
+                        '目前無法載入條款字典檔（網路或設定問題）。請稍後重新整理、檢查連線，或先開啟下方「完整說明頁」閱讀《服務條款》與方案說明；載入成功後將自動顯示完整摘要。',
                     ],
                     fullPageLinkLabel: '開啟完整說明頁',
                     fullPagePath: '/index.html',
-                    checkboxLabel: '本人已自行開啟並閱讀下方「完整說明頁」所示之《服務條款》及《額度扣除機制與服務額度說明》，並了解額度於成功使用服務後可能無法退還之情形。',
+                    checkboxLabel: '本人已自行開啟並閱讀下方「完整說明頁」所示之《服務條款》及《額度扣除機制與服務說明》，並了解購買後服務即生效之情形。',
                     linkHint: '若無法開啟新分頁，請長按連結複製網址於瀏覽器開啟。',
                 },
             };
@@ -547,7 +547,7 @@
                 
                 // 🌟 分流判斷 1：儲值
                 if (item.type === "recharge") {
-                    typeText = "💎 獲取服務額度";
+                    typeText = "💎 選購解碼方案";
                     topicText = `💸 成功支付 NT$ ${item.amount_paid || 0}`;
                     extraHtml = `<span style="font-size: 10px; color: #4CAF50; border: 1px solid rgba(76,175,80,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">🎉 方案開通</span>`;
                 }  
@@ -840,7 +840,7 @@
         function confirmRechargeTermsAndOpen() {
             const cb = document.getElementById('terms-agree-checkbox');
             if (!cb || !cb.checked) {
-                alert('請先勾選：已閱讀並同意服務條款及額度扣除說明，再進行方案選購。');
+                alert('請先勾選：已閱讀並同意服務條款與方案說明，再進行方案選購。');
                 return;
             }
             closeModal('recharge-terms-modal');
@@ -870,7 +870,7 @@
                 if (applyFirstBonus) {
                     const bonusPoints = Math.floor(tier.points * 0.1); 
                     finalPoints += bonusPoints;
-                    bonusHtml = `<span class="tier-bonus" style="display:inline;">首購加碼 +${bonusPoints} 額度</span>`;
+                    bonusHtml = `<span class="tier-bonus" style="display:inline;">首購加發 +${bonusPoints} 次</span>`;
                 }
 
                 const popularClass = tier.isPopular ? "popular" : "";
@@ -879,7 +879,7 @@
                 const html = `
                     <div class="tier-card ${popularClass}${testClass}" onclick="requestEcpayCheckout(${tier.price}, ${finalPoints}, '${periodForCheckout}')">
                         <div class="tier-info">
-                            <span class="tier-points">✨ 服務額度 ${finalPoints}</span>
+                            <span class="tier-points">✨ 解碼服務 ${finalPoints} 次</span>
                             ${bonusHtml}
                         </div>
                         <div class="tier-price">NT$ ${tier.price}</div>

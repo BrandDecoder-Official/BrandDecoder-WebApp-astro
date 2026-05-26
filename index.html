@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://static.line-scdn.net https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https://bastro-bot-217800246535.asia-east1.run.app https://api.line.me https://liff.line.me https://access.line.me https://static.line-scdn.net https://profile.line-scdn.net https://*.googleapis.com https://*.google.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com; frame-src https://liff.line.me https://access.line.me; font-src 'self' data:; base-uri 'self'; form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw https://*.ecpay.com.tw;">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>命運解碼室｜BrandDecoder 塔羅 · 紫微 · 律動能量</title>
-    <meta name="description" content="BrandDecoder 命運解碼室：塔羅、紫微斗數、律動能量、每日一抽；服務條款、服務方案與服務額度扣除說明。">
+    <meta name="description" content="BrandDecoder 命運解碼室：提供塔羅、紫微斗數、律動能量等線上占卜與解碼服務之服務條款與說明。">
     <link rel="icon" href="images/640x640_icon.jpg" type="image/jpeg">
     <link rel="apple-touch-icon" href="images/640x640_icon.jpg">
     <script src="/env.js"></script>
@@ -618,10 +618,8 @@
                 </a>
                 <nav class="site-nav" aria-label="頁面導覽">
                     <a href="#services">服務</a>
-                    
-                    <a href="#deduction">額度扣除</a>
-                    <a href="#recharge">方案</a>
                     <a href="#terms">條款</a>
+                    <a href="#refund">退費</a>
                     <a href="#contact">聯絡</a>
                 </nav>
             </div>
@@ -648,14 +646,14 @@
         <article class="panel" id="purpose">
             <h2>關於本頁</h2>
             <p class="panel-intro">服務條款、操作說明與服務方案對照，供您查閱與選擇前確認。</p>
-            <p>所列服務額度與服務方案金額為<strong>目前公告參考</strong>；實際金額與額度扣除，以您於 <strong>LINE 官方帳號或會員中心</strong>操作當下畫面為準。</p>
+            <p>所列服務次數與方案金額為<strong>目前公告參考</strong>；實際金額與次數消耗，以您於 <strong>LINE 官方帳號或會員中心</strong>操作當下畫面為準。</p>
             <p class="note">最後更新：<span id="mj-page-updated-date">2026年05月17日</span></p>
         </article>
 
         <!-- 探索服務體驗已為金流合規隱藏 -->
 
-        <article class="panel" id="deduction">
-            <h2>服務額度扣除說明</h2>
+        <article class="panel" id="deduction" style="display: none !important;">
+            <h2>服務次數扣除說明</h2>
             <p class="panel-intro">各服務額度扣除時機與參考額度。</p>
             <p>標示<span class="live-badge">最新</span>者為目前公告數值；實際額度扣除以 LINE 使用當下畫面為準。</p>
             <div class="table-scroll"><table>
@@ -672,7 +670,7 @@
             <p>會員中心方案選購若顯示「首購加碼」，通常為指定期間內<strong>首次選購服務方案</strong>加發之服務額度；條件以方案選擇頁即時顯示為準。</p>
         </article>
 
-        <article class="panel" id="recharge">
+        <article class="panel" id="recharge" style="display: none !important;">
             <h2>命理服務方案</h2>
             <p class="panel-intro">與會員中心相同方案，僅供查閱；請於 LINE 會員中心獲取額度並選擇方案。</p>
             <div class="tier-showcase" id="mj-tier-showcase"></div>
@@ -704,10 +702,10 @@
             <h2>服務條款</h2>
             <p class="panel-intro">以下為條款摘要，以站內最新公告為準。</p>
             <ol class="articles">
-                <li><strong>定義</strong>：本服務由 <span data-mj-bind="contact.entityName" class="placeholder">服務提供者</span> 透過 LINE 及相關網頁提供線上命理／占卜內容。「服務額度」為預付計價之服務單位，非虛擬貨幣。</li>
+                <li><strong>定義</strong>：本服務由 <span data-mj-bind="contact.entityName" class="placeholder">服務提供者</span> 透過 LINE 及相關網頁提供線上命理／占卜內容。「服務使用次數」為使用服務之計算單位，非虛擬貨幣。</li>
                 <li><strong>契約與內容性質</strong>：數位內容／娛樂參考，不構成專業意見。</li>
-                <li><strong>服務額度與扣除</strong>：依公告機制扣抵；不足時須選購服務方案。</li>
-                <li><strong>退費</strong>：已消耗之服務額度原則不予退還；詳見下方「退費與客服」。</li>
+                <li><strong>服務次數與扣除</strong>：依公告機制抵扣；次數不足時須選購服務方案。</li>
+                <li><strong>退費</strong>：已消耗之服務次數原則不予退還；詳見下方「退費與客服」。</li>
                 <li><strong>條款修訂</strong>：依法令或營運需求修訂並公告。</li>
             </ol>
             <p class="note">疑義請洽客服信箱 <a href="mailto:brand.decoderai@gmail.com">brand.decoderai@gmail.com</a>，或來電 <a href="tel:+886983826576">0983-826-576</a>。</p>
@@ -716,8 +714,8 @@
         <article class="panel" id="refund">
             <h2>退費與客服</h2>
             <ul>
-                <li><strong>未使用之服務額度方案</strong>：依消費者保護法及公告政策辦理：<span data-mj-bind="draftPlaceholders.refundPolicy" class="placeholder">請見正式公告</span>。</li>
-                <li><strong>已消耗之服務額度</strong>：原則不予退還。</li>
+                <li><strong>未使用之服務方案</strong>：依消費者保護法及公告政策辦理：<span data-mj-bind="draftPlaceholders.refundPolicy" class="placeholder">請見正式公告</span>。</li>
+                <li><strong>已使用之服務次數</strong>：原則不予退還。</li>
                 <li><strong>客服信箱</strong>：<a href="mailto:brand.decoderai@gmail.com" data-mj-contact-email>brand.decoderai@gmail.com</a></li>
                 <li><strong>客服電話</strong>：<a href="tel:+886983826576">0983-826-576</a></li>
             </ul>
@@ -733,7 +731,7 @@
         <article class="panel" id="legal-note">
             <h2>法律聲明</h2>
             <div class="legal-box">
-                <p>本頁供使用者、LINE 與金流合作方查驗服務內容、服務額度與服務方案說明。若法令或合作規範另有要求，將依法令或公告補充更新。</p>
+                <p>本頁供使用者、LINE 與金流合作方查驗服務內容與服務方案說明。若法令或合作規範另有要求，將依法令或公告補充更新。</p>
             </div>
         </article>
         </div>
@@ -784,12 +782,12 @@
             {
                 src: 'images/001.jpg',
                 cap: '律動能量｜LINE 官方帳號解碼結果',
-                sub: '於聊天室收到解碼結果：今日能量矩陣、核心／幸運／財富數字、大師指引，以及本次消耗與剩餘額度（10 額度／次）。',
+                sub: '於聊天室收到解碼結果：今日能量矩陣、核心／幸運／財富數字、大師指引與專屬解析。',
             },
             {
                 src: 'images/002.jpg',
                 cap: '紫微斗數｜LINE 官方帳號解碼結果',
-                sub: '於聊天室收到命盤解碼：綜合運勢指數、天命解碼精華、服務額度消耗與餘額（50 額度／次）。',
+                sub: '於聊天室收到命盤解碼：綜合運勢指數、天命解碼精華與深度導師指引。',
             },
             {
                 src: 'images/003.jpg',
@@ -799,17 +797,17 @@
             {
                 src: 'images/004.jpg',
                 cap: '塔羅星陣｜選擇探詢領域',
-                sub: '於網頁選擇感情與糾葛、事業與財富或綜合與指引，完成抽牌後由官方帳號回覆解碼（15 額度／次）。',
+                sub: '於網頁選擇感情與糾葛、事業與財富或綜合與指引，完成抽牌後由官方帳號回覆專屬天命報告。',
             },
             {
                 src: 'images/005.jpg',
                 cap: '律動能量｜啟動解碼',
-                sub: '於網頁確認啟動當日數字矩陣；解碼完成後，完整結果於 LINE 聊天室呈現（10 額度／次）。',
+                sub: '於網頁確認啟動當日數字矩陣；解碼完成後，完整解析結果將於 LINE 聊天室自動呈現。',
             },
             {
                 src: 'images/006.jpg',
                 cap: '紫微斗數｜選擇探詢領域',
-                sub: '於網頁選擇本命格局、事業財富、感情姻緣或流年運勢等方向，並送出命盤資料（50 額度／次）。',
+                sub: '於網頁選擇本命格局、事業財富、感情姻緣或流年運勢等方向，並送出起盤資料。',
             },
             {
                 src: 'images/007.jpg',
@@ -819,7 +817,7 @@
         ];
         const PROFILE_SHOTS = [
             { src: 'images/1001.jpg', cap: '會員中心總覽' },
-            { src: 'images/1001-1.jpg', cap: '服務額度與個人資訊' },
+            { src: 'images/1001-1.jpg', cap: '帳戶服務與個人資訊' },
             { src: 'images/1002.jpg', cap: '服務方案選擇' },
             { src: 'images/1003.jpg', cap: '方案確認與條款' },
             { src: 'images/1004.jpg', cap: '付款流程示意' },
