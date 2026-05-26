@@ -365,17 +365,17 @@
                 <div class="avatar-badge" id="ui-avatar-badge" style="display:none;"></div>
             </div>
             <div class="profile-info">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <h2 id="ui-name">讀取中...</h2>
+                <h2 id="ui-name" style="margin: 0 0 5px 0; font-size: 18px; letter-spacing: 1px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">讀取中...</h2>
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 5px;">
+                    <div class="soul-rank" id="ui-rank">靈能感應中</div>
                     <span id="ui-title-badge" class="title-badge" style="display:none;"></span>
                 </div>
-                <div class="soul-rank" id="ui-rank">靈能感應中</div>
                 <div class="join-date" id="ui-date">時空座標定位中...</div>
             </div>
         </div>
 
         <div class="glass-card energy-section">
-            <div class="energy-title">可用解碼服務次數 (Points)</div>
+            <div class="energy-title">當前靈力存量 (Points)</div>
             <div class="energy-points" id="ui-points">--</div>
             <button class="recharge-btn" type="button" onclick="openRechargeTermsGate()">選購服務方案</button>
         </div>
@@ -772,7 +772,7 @@
                     if (titleBadge) {
                         titleBadge.style.display = 'inline-block';
                         titleBadge.classList.add('master');
-                        titleBadge.innerText = '宇宙命運大師';
+                        titleBadge.innerText = '銀河傳奇';
                     }
                     window.enablePurpleGoldShower = true; // 開啟 VIP 紫金流星雨
                 } else if (maxRecharge === 99) {
@@ -785,7 +785,7 @@
                     if (titleBadge) {
                         titleBadge.style.display = 'inline-block';
                         titleBadge.classList.add('mentor');
-                        titleBadge.innerText = '命運天命導師';
+                        titleBadge.innerText = '恆星光芒';
                     }
                 } else if (maxRecharge === 49) {
                     avatarContainer.classList.add('gold-shimmer');
@@ -797,7 +797,7 @@
                     if (titleBadge) {
                         titleBadge.style.display = 'inline-block';
                         titleBadge.classList.add('apprentice');
-                        titleBadge.innerText = '見習解碼學徒';
+                        titleBadge.innerText = '行星動能';
                     }
                 }
             }
@@ -822,9 +822,9 @@
             // 顯示最新的一筆生辰座標
             if (birthData) {
                 const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
-                document.getElementById('ui-date').innerText = `座標：${calStr} ${birthData.date}`;
+                document.getElementById('ui-date').innerText = `🌌 星軌定位：${calStr} ${birthData.date}`;
             } else {
-                document.getElementById('ui-date').innerText = `尚未解鎖星辰座標`;
+                document.getElementById('ui-date').innerText = `🌌 命運星軌感應中...`;
             }
         }
 
@@ -1186,32 +1186,32 @@
                         "📜 個人解碼報告儲存記錄 (保留最近 10 筆)"
                     ];
                 } else if (tier.price === 49) {
-                    planName = "初階學徒方案";
+                    planName = "行星動能方案";
                     features = [
                         "🚀 <b>雙子星高速智能</b> AI 大腦精準解析",
-                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度 (折抵解碼)`,
+                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度`,
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>50 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
-                        "🎖️ 尊享「見習解碼學徒」專屬頭銜"
+                        "🎖️ 尊享「行星動能」專屬頭銜與金色微光邊框"
                     ];
                 } else if (tier.price === 99) {
-                    planName = "中階導師方案";
+                    planName = "恆星光芒方案";
                     features = [
                         "🚀 <b>雙子星高速智能</b> AI 大腦深度解析",
-                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度 (折抵解碼)`,
+                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度`,
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>100 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
-                        "🎖️ 尊享「命運天命導師」專屬頭銜"
+                        "🎖️ 尊享「恆星光芒」專屬頭銜與金色微光邊框"
                     ];
                 } else if (tier.price === 199) {
-                    planName = "尊爵大師方案";
+                    planName = "銀河傳奇方案";
                     features = [
                         "🧠 <b>雙子星旗艦智能</b> 深度推理最強大腦",
-                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度 (折抵解碼)`,
+                        `🔋 包含 <b>${finalPoints} 點</b>靈力額度`,
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>150 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
                         "👑 尊享 <b>VIP流光頭像邊框</b> 與 <b>紫金星空流星雨皮膚</b>",
-                        "🎖️ 尊享「宇宙命運大師」尊貴頭銜"
+                        "🎖️ 尊享「銀河傳奇」尊貴頭銜與流光邊框特權"
                     ];
                 }
 
