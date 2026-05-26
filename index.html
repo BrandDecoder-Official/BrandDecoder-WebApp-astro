@@ -649,7 +649,7 @@
         <article class="panel" id="purpose">
             <h2>關於本頁</h2>
             <p class="panel-intro">服務條款、操作說明與服務方案對照，供您查閱與選擇前確認。</p>
-            <p>所列服務靈力點數與方案金額為<strong>目前公告參考</strong>；實際金額與靈力消耗，以您於 <strong>LINE 官方帳號或會員中心</strong>操作當下畫面為準。</p>
+            <p>所列服務靈力點數與方案金額為<strong>目前公告參考</strong>；實際金額與靈力點數消耗，以您於 <strong>LINE 官方帳號或會員中心</strong>操作當下畫面為準。</p>
             <p class="note">最後更新：<span id="mj-page-updated-date">2026年05月26日</span></p>
         </article>
 
@@ -820,7 +820,7 @@
         ];
         const PROFILE_SHOTS = [
             { src: 'images/1001.jpg', cap: '會員中心總覽' },
-            { src: 'images/1001-1.jpg', cap: '服務次數與個人資訊' },
+            { src: 'images/1001-1.jpg', cap: '服務靈力與個人資訊' },
             { src: 'images/1002.jpg', cap: '服務方案選擇' },
             { src: 'images/1003.jpg', cap: '方案確認與條款' },
             { src: 'images/1004.jpg', cap: '付款流程示意' },
@@ -1067,34 +1067,34 @@
                 if (price === 49) {
                     planName = "行星動能方案";
                     features = [
-                        "🚀 雙子星高速智能 AI 大腦精準解析",
-                        "🔋 包含 " + points + " 點靈力額度 (可用於折抵解碼)",
-                        "📜 個人解碼報告儲存記錄 (顯示最近 50 筆)",
+                        "🚀 <b>雙子星高速智能</b> AI 大腦精準解析",
+                        "🔋 包含 <b>" + points + " 點</b>靈力額度",
+                        "📜 個人解碼報告儲存記錄 (顯示最近 <b>50 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
                         "🎖️ 尊享「行星動能」專屬頭銜與金色微光邊框"
                     ];
                 } else if (price === 99) {
                     planName = "恆星光芒方案";
                     features = [
-                        "🚀 雙子星高速智能 AI 大腦深度解析",
-                        "🔋 包含 " + points + " 點靈力額度 (可用於折抵解碼)",
-                        "📜 個人解碼報告儲存記錄 (顯示最近 100 筆)",
+                        "🚀 <b>雙子星高速智能</b> AI 大腦深度解析",
+                        "🔋 包含 <b>" + points + " 點</b>靈力額度",
+                        "📜 個人解碼報告儲存記錄 (顯示最近 <b>100 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
                         "🎖️ 尊享「恆星光芒」專屬頭銜與金色微光邊框"
                     ];
                 } else if (price === 199) {
                     planName = "銀河傳奇方案";
                     features = [
-                        "🧠 雙子星旗艦智能 深度推理最強大腦",
-                        "🔋 包含 " + points + " 點靈力額度 (可用於折抵解碼)",
-                        "📜 個人解碼報告儲存記錄 (顯示最近 150 筆)",
+                        "🧠 <b>雙子星旗艦智能</b> 深度推理最強大腦",
+                        "🔋 包含 <b>" + points + " 點</b>靈力額度",
+                        "📜 個人解碼報告儲存記錄 (顯示最近 <b>150 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
-                        "👑 尊享 VIP流光頭像邊框 與 紫金星空流星雨皮膚",
+                        "👑 尊享 <b>VIP流光頭像邊框</b> 與 <b>紫金星空流星雨皮膚</b>",
                         "🎖️ 尊享「銀河傳奇」尊貴頭銜與流光邊框特權"
                     ];
                 }
 
-                var featuresHtml = features.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('');
+                var featuresHtml = features.map(function(f) { return '<li>' + f + '</li>'; }).join('');
 
                 div.innerHTML =
                     '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:8px;">' +
@@ -1150,7 +1150,7 @@
                     face: d.face && d.face.cost != null ? d.face.cost : null,
                 };
             } catch (e) {
-                console.warn('[index] 後台次數讀取失敗，使用 manifest 預設', e);
+                console.warn('[index] 後台靈力讀取失敗，使用 manifest 預設', e);
                 return null;
             }
         }
