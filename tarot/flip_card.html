@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>命運解碼室-靈能調頻</title>
     
-    <script src="/env.js?v=8"></script>
+    <script src="/env.js?v=10"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="/liff-mobile-only.js?v=1"></script>
-    <script src="/js/liff-bootstrap.js?v=3"></script>
+    <script src="/liff-mobile-only.js?v=10"></script>
+    <script src="/js/liff-bootstrap.js?v=10"></script>
 
     <style>
         :root {
@@ -148,18 +148,86 @@
         .particle { position: absolute; border-radius: 50%; background: #fff; box-shadow: 0 0 10px var(--gold); }
 
         #ritual-loader {
-            position: fixed; inset: 0; z-index: 9999; background: rgba(5,5,8,0.85);
+            position: fixed; inset: 0; z-index: 9999; background: rgba(5,5,8,0.92);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            opacity: 0; pointer-events: none; transition: 0.5s ease; backdrop-filter: blur(6px);
+            opacity: 0; pointer-events: none; transition: 0.5s ease; backdrop-filter: blur(8px);
         }
         #ritual-loader.active { opacity: 1; pointer-events: auto; }
-        .loader-ring {
-            width: 80px; height: 80px; border: 3px solid transparent;
-            border-top-color: var(--gold); border-bottom-color: var(--gold);
-            border-radius: 50%; animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
-            margin-bottom: 25px; box-shadow: 0 0 20px rgba(212,175,55,0.3);
+        
+        /* 🌌 雙子星卡片雷射掃描 (Scanner) 樣式 */
+        .scanner-container {
+            position: relative;
+            width: 260px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.05) inset;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .scanner-cards {
+            display: flex;
+            gap: 15px;
+            z-index: 2;
+        }
+        .scanner-card {
+            width: 54px;
+            height: 90px;
+            background: rgba(10, 11, 16, 0.8);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .scanner-card-inner {
+            position: absolute;
+            inset: 3px;
+            border: 1px dashed rgba(212, 175, 55, 0.2);
+            border-radius: 4px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .scanner-card-pattern {
+            font-size: 20px;
+            color: rgba(212, 175, 55, 0.4);
+            animation: pulse-pattern 1.5s infinite alternate;
+        }
+        @keyframes pulse-pattern {
+            0% { opacity: 0.3; transform: scale(0.9); }
+            100% { opacity: 0.8; transform: scale(1.1); }
+        }
+        
+        /* ⚡ 雷射光束 */
+        .laser-beam {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, 
+                rgba(0, 240, 255, 0) 0%, 
+                rgba(0, 240, 255, 1) 20%, 
+                rgba(255, 255, 255, 1) 50%, 
+                rgba(0, 240, 255, 1) 80%, 
+                rgba(0, 240, 255, 0) 100%
+            );
+            box-shadow: 0 0 15px 4px rgba(0, 240, 255, 0.6), 0 0 6px 1px rgba(255, 255, 255, 0.8);
+            z-index: 3;
+            animation: scanSwipe 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+        @keyframes scanSwipe {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+
         .loader-text { color: var(--gold-light); font-size: 16px; font-weight: bold; letter-spacing: 4px; animation: pulse-text 2s infinite; }
         @keyframes pulse-text { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; text-shadow: 0 0 15px var(--gold); } }
 
@@ -247,8 +315,28 @@
     </div>
 
     <div id="ritual-loader">
-        <div class="loader-ring"></div>
-        <div class="loader-text">靈力運作中，請稍待...</div>
+        <div class="scanner-container">
+            <div class="scanner-cards">
+                <div class="scanner-card">
+                    <div class="scanner-card-inner">
+                        <div class="scanner-card-pattern">★</div>
+                    </div>
+                </div>
+                <div class="scanner-card">
+                    <div class="scanner-card-inner">
+                        <div class="scanner-card-pattern">👁</div>
+                    </div>
+                </div>
+                <div class="scanner-card">
+                    <div class="scanner-card-inner">
+                        <div class="scanner-card-pattern">★</div>
+                    </div>
+                </div>
+            </div>
+            <!-- 雷射光束線 -->
+            <div class="laser-beam"></div>
+        </div>
+        <div class="loader-text">雙子星智能解碼中，請稍待...</div>
     </div>
 
     <div id="particle-container"></div>

@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>命運解碼室 | 紫微大運</title>
     
-    <script src="/env.js?v=8"></script>
+    <script src="/env.js?v=10"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <script src="/liff-mobile-only.js?v=1"></script>
-    <script src="/js/liff-bootstrap.js?v=3"></script>
+    <script src="/liff-mobile-only.js?v=10"></script>
+    <script src="/js/liff-bootstrap.js?v=10"></script>
     <script src="/pixi.min.js"></script>
     
     <style>
@@ -140,6 +140,29 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* ⚡ 紫微雷射光束 */
+        .ritual-container .laser-beam {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                rgba(186, 104, 200, 0) 0%, 
+                rgba(186, 104, 200, 1) 20%, 
+                rgba(255, 255, 255, 1) 50%, 
+                rgba(186, 104, 200, 1) 80%, 
+                rgba(186, 104, 200, 0) 100%
+            );
+            box-shadow: 0 0 15px 4px rgba(186, 104, 200, 0.6), 0 0 6px 1px rgba(255, 255, 255, 0.8);
+            z-index: 3;
+            animation: scanSwipeZiwei 3s ease-in-out infinite;
+        }
+        @keyframes scanSwipeZiwei {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
 
         #loading-msg {
             color: var(--gold-light); font-size: 18px; letter-spacing: 4px; font-weight: bold; text-align: center;
@@ -241,6 +264,8 @@
         <div class="ritual-container">
             <div class="core-nebula"></div>
             <img src="/images/ziwei_ritual_chart.png" alt="紫微星辰陣" class="magic-chart">
+            <!-- 能量雷射掃描線 -->
+            <div class="laser-beam"></div>
         </div>
         <div id="loading-msg">構築 12 宮位星辰網格...</div>
     </div>
