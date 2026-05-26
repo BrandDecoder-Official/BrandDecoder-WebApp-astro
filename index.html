@@ -538,35 +538,38 @@
         }
         .tier-showcase {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr));
-            gap: 12px;
+            grid-template-columns: 1fr;
+            gap: 15px;
             margin-top: 14px;
         }
         @media (min-width: 640px) {
-            .tier-showcase { grid-template-columns: repeat(5, 1fr); }
+            .tier-showcase { grid-template-columns: repeat(2, 1fr); }
         }
         .tier-card-show {
             border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 14px 12px;
-            text-align: center;
+            padding: 18px 16px;
             background: rgba(212, 175, 55, 0.05);
+            transition: 0.3s;
         }
         .tier-card-show.popular {
             border-color: var(--gold);
             box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
         }
         .tier-card-show .tier-points {
-            display: block;
+            display: inline-block;
             font-size: 1.05rem;
-            color: var(--gold);
+            color: var(--gold-light);
             font-weight: 700;
-            margin-bottom: 6px;
         }
         .tier-card-show .tier-price {
             font-size: 1.2rem;
-            color: #fff;
+            color: var(--gold);
             font-weight: 600;
+            background: #222;
+            border: 1px solid var(--gold);
+            padding: 2px 12px;
+            border-radius: 16px;
         }
         .live-badge {
             display: inline-block;
@@ -670,11 +673,11 @@
             <p>會員中心方案選購若顯示「首購加碼」，通常為指定期間內<strong>首次選購服務方案</strong>加發之服務次數；條件以方案選擇頁即時顯示為準。</p>
         </article>
 
-        <article class="panel" id="recharge" style="display: none !important;">
+        <article class="panel" id="recharge">
             <h2>命理服務方案</h2>
             <p class="panel-intro">與會員中心相同方案，僅供查閱；請於 LINE 會員中心獲取服務次數並選擇方案。</p>
             <div class="tier-showcase" id="mj-tier-showcase"></div>
-            <div class="table-scroll"><table>
+            <div class="table-scroll" style="display: none !important;"><table>
                 <thead>
                     <tr>
                         <th>方案金額（NT$）</th>
@@ -1055,9 +1058,69 @@
             tiers.filter(function (t) { return !t.testPack; }).forEach(function (t) {
                 var div = document.createElement('div');
                 div.className = 'tier-card-show' + (t.isPopular ? ' popular' : '');
+                
+                var planName = "體驗方案";
+                var features = [];
+                var price = Number(t.price);
+                var points = Number(t.points);
+                
+                if (price === 99) {
+                    planName = "微光探索方案";
+                    features = [
+                        "搭載最先進 Gemini AI 智能大腦",
+                        "個人解碼報告儲存記錄 (最多 50 筆)",
+                        "每日免費一抽 (簽到) 權限",
+                        "贈送 " + points + " 點解碼靈力額度 (可用於折抵解碼)"
+                    ];
+                } else if (price === 199) {
+                    planName = "小資解碼方案";
+                    features = [
+                        "搭載最先進 Gemini AI 智能大腦",
+                        "個人解碼報告儲存記錄 (無限制)",
+                        "每日免費一抽 (簽到) 權限",
+                        "贈送 " + points + " 點解碼靈力額度 (可用於折抵解碼)"
+                    ];
+                } else if (price === 299) {
+                    planName = "命運星軌方案";
+                    features = [
+                        "搭載最先進 Gemini AI 智能大腦",
+                        "個人解碼報告儲存記錄 (無限制)",
+                        "每日免費一抽 (簽到) 權限",
+                        "贈送 " + points + " 點解碼靈力額度 (可用於折抵解碼)",
+                        "優先順序 AI 計算通道"
+                    ];
+                } else if (price === 599) {
+                    planName = "尊榮天命方案";
+                    features = [
+                        "搭載最先進 Gemini AI 智能大腦",
+                        "個人解碼報告儲存記錄 (無限制)",
+                        "每日免費一抽 (簽到) 權限",
+                        "贈送 " + points + " 點解碼靈力額度 (可用於折抵解碼)",
+                        "優先順序 AI 計算通道",
+                        "專屬靈魂大師報告排程"
+                    ];
+                } else if (price === 999) {
+                    planName = "旗艦大祭司方案";
+                    features = [
+                        "搭載最先進 Gemini AI 智能大腦",
+                        "個人解碼報告儲存記錄 (無限制)",
+                        "每日免費一抽 (簽到) 權限",
+                        "贈送 " + points + " 點解碼靈力額度 (可用於折抵解碼)",
+                        "優先順序 AI 計算通道",
+                        "專屬大師報告排程與飛星解析"
+                    ];
+                }
+
+                var featuresHtml = features.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('');
+
                 div.innerHTML =
-                    '<span class="tier-points">✨ 服務次數 ' + Number(t.points).toLocaleString() + '</span>' +
-                    '<div class="tier-price">NT$ ' + esc(t.price) + '</div>';
+                    '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:8px;">' +
+                        '<span class="tier-points">✨ ' + esc(planName) + '</span>' +
+                        '<div class="tier-price">NT$ ' + esc(t.price) + '</div>' +
+                    '</div>' +
+                    '<ul style="margin:0; padding:0 0 0 16px; font-size:12px; color:#ccc; text-align:left; line-height:1.5;">' +
+                        featuresHtml +
+                    '</ul>';
                 el.appendChild(div);
             });
         }

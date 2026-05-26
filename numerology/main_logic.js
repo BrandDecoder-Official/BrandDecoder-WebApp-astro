@@ -74,12 +74,12 @@ async function initAll() {
             if (configData.success && configData.data.numerology) {
                 dynamicCost = parseInt(configData.data.numerology.cost);
                 const costTextEl = document.querySelector('.cost-text');
-                if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 次)`;
+                if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 點靈力)`;
             }
         } catch(apiErr) { 
             console.warn("無法取得動態定價", apiErr); 
             const costTextEl = document.querySelector('.cost-text');
-            if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 次)`;
+            if(costTextEl) costTextEl.innerText = `(消耗 ${dynamicCost} 點靈力)`;
         }
 
         // 隱藏「同步中」畫面，顯示主按鈕畫面
@@ -167,7 +167,7 @@ async function onActivateClick(e) {
         // 失敗時恢復原狀，魔法陣降速回待機狀態
         stopPixiBlast();
         btnActivate.disabled = false;
-        btnActivate.innerHTML = `啟動律動能量 <br><span class="cost-text" style="color: rgba(255,255,255,0.6);">(消耗 ${dynamicCost} 次)</span>`;
+        btnActivate.innerHTML = `啟動律動能量 <br><span class="cost-text" style="color: rgba(255,255,255,0.6);">(消耗 ${dynamicCost} 點靈力)</span>`;
         btnActivate.style.background = ""; 
         btnActivate.style.boxShadow = "";
         alert("🚨 系統異常：" + error.message);

@@ -227,7 +227,7 @@
         </div>
 
         <div class="tuning-area" id="tuning-ui">
-            <div class="tuning-label" id="instruction">滑動儀表，注入能量感應號碼</div>
+            <div class="tuning-label" id="instruction">滑動儀表，注入靈力感應號碼</div>
             <input type="range" id="frequency-slider" min="1" max="78" value="39">
         </div>
         
@@ -248,7 +248,7 @@
 
     <div id="ritual-loader">
         <div class="loader-ring"></div>
-        <div class="loader-text">能量運作中，請稍待...</div>
+        <div class="loader-text">靈力運作中，請稍待...</div>
     </div>
 
     <div id="particle-container"></div>
@@ -283,7 +283,7 @@
             document.getElementById('confirm-title').innerText = title;
             document.getElementById('confirm-desc').innerHTML = `
                 ${desc}<br>
-                <div class="confirm-cost">消耗服務次數：<span id="confirm-cost-value">${cost}</span> 次</div>
+                <div class="confirm-cost">消耗靈力：<span id="confirm-cost-value">${cost}</span> 點</div>
             `;
             confirmActionCallback = callback;
             document.getElementById('custom-confirm-overlay').classList.add('show');

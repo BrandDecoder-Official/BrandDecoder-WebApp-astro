@@ -175,7 +175,7 @@
             </div>
             <div class="card-status">
                 <span class="status-text">啟動矩陣</span>
-                <span class="cost-text">消耗 3 次</span>
+                <span class="cost-text">消耗 3 點靈力</span>
             </div>
         </div>
 
@@ -189,7 +189,7 @@
             </div>
             <div class="card-status">
                 <span class="status-text">啟動矩陣</span>
-                <span class="cost-text">消耗 5 次</span>
+                <span class="cost-text">消耗 5 點靈力</span>
             </div>
         </div>
 
@@ -203,7 +203,7 @@
             </div>
             <div class="card-status">
                 <span class="status-text">啟動矩陣</span>
-                <span class="cost-text">消耗 2 次</span>
+                <span class="cost-text">消耗 2 點靈力</span>
             </div>
         </div>
     </div>
@@ -332,7 +332,7 @@
             userPoints += 1;
             dailyStatus.claimed = true;
             renderDashboard();
-            alert("✨ 宇宙補給接收成功！獲得 1 次使用權限。");
+            alert("✨ 宇宙補給接收成功！獲得 1 點靈力。");
         }
 
         // ==========================================
@@ -344,12 +344,12 @@
             document.getElementById('confirm-title').innerText = `【 ${title} 】`;
             document.getElementById('confirm-desc').innerHTML = `
                 即將連結宇宙能量，抽取今日專屬指引。<br>
-                <div class="confirm-cost">消耗服務次數：<span style="color:#fff">${cost}</span> 次</div>
+                <div class="confirm-cost">消耗靈力：<span style="color:#fff">${cost}</span> 點</div>
             `;
             
             confirmActionCallback = async () => {
                 if(userPoints < cost) {
-                    alert("🚨 服務次數不足！請前往方案選購。"); return;
+                    alert("🚨 靈力不足！請前往方案選購。"); return;
                 }
 
                 // 啟動 Loading
