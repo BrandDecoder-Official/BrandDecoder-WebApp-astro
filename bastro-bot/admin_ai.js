@@ -17,47 +17,28 @@
 //
 const express = require('express');
 const router = express.Router();
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const { DEFAULT_AI_SETTINGS, mergeAiSettingsFromDoc } = require('./aiSettingsDefaults');
+const { mergeAiSettingsFromDoc } = require('./aiSettingsDefaults');
 const { verifyAdminToken } = require('./adminAuth');
-const db = getFirestore('astro-bot-db');
 
 router.use(verifyAdminToken);
 
-// 讀取 AI 動態設定（與 aiSettingsDefaults.js 合併：DB 優先，缺欄補預設；讀取失敗不回捏造資料）
+// 讀取 AI 設定（已改成唯讀本地代碼配置 aiConfig.js，忽略 DB，安全第一）
 router.get('/config/ai', async (req, res) => {
     try {
-        const doc = await db.collection('system_config').doc('ai_settings').get();
-        res.json({ success: true, data: mergeAiSettingsFromDoc(doc) });
+        // 傳入 null，mergeAiSettingsFromDoc 內部會忽略並直接回傳本地設定
+        res.json({ success: true, data: mergeAiSettingsFromDoc(null) });
     } catch (error) {
         res.status(500).json({ success: false, msg: error.message });
     }
 });
 
-// 儲存 AI 動態設定
+// 儲存 AI 設定（已改為本地配置模式，不允許線上動態修改 DB）
 router.post('/config/ai', async (req, res) => {
     try {
-        // 接收前端傳來的各個模組設定 (🌟 加入 numerology 的解構)
-        const { daily, tarot, ziwei, face, numerology } = req.body;
-        
-        // 準備要更新進資料庫的物件
-        const updateData = {
-            updatedAt: FieldValue.serverTimestamp(),
-            updatedBy: req.admin ? req.admin.email : 'system',
-        };
-
-        // 安全賦值：確保有資料才更新
-        if (daily) updateData.daily = daily;
-        if (tarot) updateData.tarot = tarot;
-        if (ziwei) updateData.ziwei = ziwei;
-        if (numerology) updateData.numerology = numerology; // 🌟 將律動能量寫入 Firebase
-        
-        updateData.face = face ? { ...DEFAULT_AI_SETTINGS.face, ...face } : { ...DEFAULT_AI_SETTINGS.face };
-
-        // 寫入 Firestore
-        await db.collection('system_config').doc('ai_settings').set(updateData, { merge: true });
-        
-        res.json({ success: true, msg: "🧠 AI 服務定價與模型參數已動態更新！" });
+        res.json({ 
+            success: false, 
+            msg: "🔒 安全設定模式已開啟：本系統已啟用『本地代碼配置 (aiConfig.js)』以提升安全性。不允許線上動態修改。如需調整各功能之 AI 大腦模型、Prompt 人設或定價價格，請直接修改程式碼並重新部署 (GCR)。" 
+        });
     } catch (error) {
         res.status(500).json({ success: false, msg: error.message });
     }
