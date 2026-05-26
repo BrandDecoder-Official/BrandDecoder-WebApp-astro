@@ -7,13 +7,13 @@
  */
 
 /** 塔羅／紫微「【解析】」正文上限 */
-const MAX_TAROT_ZIWEI_BODY_CHARS = 1500;
+const MAX_TAROT_ZIWEI_BODY_CHARS = 3000;
 
 /** 律動能量 JSON 內 interpretation 上限 */
 const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 800;
 
-/** Flex 主文 type:text 上限（與塔羅／紫微正文對齊） */
-const MAX_FLEX_SINGLE_TEXT_CHARS = MAX_TAROT_ZIWEI_BODY_CHARS;
+/** Flex 主文 type:text 上限（安全字元數以防 LINE 渲染出錯） */
+const MAX_FLEX_SINGLE_TEXT_CHARS = 1500;
 
 /**
  * Gemini 單次「輸出」token 上限（硬切，與 Prompt 字數、clamp 不同道）。
