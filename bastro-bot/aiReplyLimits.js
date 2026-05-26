@@ -13,7 +13,7 @@ const MAX_TAROT_ZIWEI_BODY_CHARS = 10000;
 const MAX_NUMEROLOGY_INTERPRETATION_CHARS = 800;
 
 /** Flex 主文 type:text 上限（安全字元數以防 LINE 渲染出錯） */
-const MAX_FLEX_SINGLE_TEXT_CHARS = 1500;
+const MAX_FLEX_SINGLE_TEXT_CHARS = 1900;
 
 /**
  * Gemini 單次「輸出」token 上限（硬切，與 Prompt 字數、clamp 不同道）。
