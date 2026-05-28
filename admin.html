@@ -145,7 +145,7 @@
                 <button class="nav-tab" onclick="switchTab('tab-overview')">📈 戰情中心</button>
                 <button class="nav-tab active" onclick="switchTab('tab-logs')">🗂️ 日誌</button>
                 <button class="nav-tab" onclick="switchTab('tab-ai')">🧠 AI 大腦</button>
-                <button class="nav-tab" onclick="alert('建設中...')">🏪 O2O 門市</button>
+                <button class="nav-tab" onclick="switchTab('tab-user-rights')">👥 用戶權益管理</button>
             </div>
             <div class="user-profile">
                 <span id="admin-name" style="display:none;"></span> <img id="admin-avatar" src="" alt="Avatar">
@@ -378,6 +378,109 @@
                     <button onclick="saveCampaignSettings()" class="btn-primary" style="width: 100%; padding: 12px; font-size: 14px; background: #2e7d32; border-color: #2e7d32;">
                         💾 儲存折扣活動設定
                     </button>
+                </div>
+            </div>
+
+            <div id="tab-user-rights" class="tab-content">
+                <h3 style="margin-top: 0; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 10px;">👥 用戶權益與效期管理</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top:-5px; margin-bottom:20px;">
+                    請輸入用戶的 LINE UID (格式如 U1234567...) 進行查詢，以手動調整其靈力點數或雙大腦特權效期。
+                </p>
+
+                <!-- 搜尋列 -->
+                <div style="display:flex; gap:12px; margin-bottom:24px; align-items:center; flex-wrap:wrap; background:#f8f9fa; padding:15px; border-radius:6px; border:1px solid var(--border);">
+                    <div style="flex:1; min-width:240px; display:flex; align-items:center; gap:8px;">
+                        <label style="font-weight:bold; font-size:13px; white-space:nowrap;">LINE UID:</label>
+                        <input type="text" id="rights-search-uid" placeholder="請輸入 U 開頭的 33 碼 LINE ID" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:4px; font-size:13px;">
+                    </div>
+                    <button class="btn-primary" onclick="searchUserRights()">🔍 搜尋用戶</button>
+                </div>
+
+                <!-- 用戶基本與效期資訊 -->
+                <div id="rights-user-panel" style="display:none; background:#fff; border:1px solid var(--border); border-radius:8px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04); margin-bottom:20px;">
+                    <div style="display:flex; gap:24px; align-items:center; flex-wrap:wrap; border-bottom:1px solid #eee; padding-bottom:16px; margin-bottom:20px;">
+                        <img id="rights-user-avatar" src="" style="width:72px; height:72px; border-radius:50%; border:2px solid var(--gold); object-fit:cover; background:#eee;">
+                        <div style="flex:1; min-width:200px; line-height:1.6; font-size:13px;">
+                            <div style="font-size:18px; font-weight:bold; color:#333; display:flex; align-items:center; gap:8px;">
+                                <span id="rights-user-name">--</span>
+                                <span id="rights-calculated-tier-badge" class="badge" style="margin-bottom:0;">--</span>
+                            </div>
+                            <div style="margin-top:6px; color:#666;"><strong>LINE UID:</strong> <span id="rights-user-uid-lbl" style="font-family:monospace; background:#f4f4f4; padding:2px 6px; border-radius:4px;">--</span></div>
+                            <div style="color:#666;"><strong>註冊時間:</strong> <span id="rights-user-created">--</span></div>
+                        </div>
+                        <div style="min-width:180px; text-align:center; background:#e8f5e9; border:1px solid #c8e6c9; padding:12px 20px; border-radius:8px;">
+                            <div style="font-size:12px; color:#2e7d32;">當前可用靈力</div>
+                            <div style="font-size:28px; font-weight:bold; color:#1b5e20; margin:4px 0;" id="rights-user-points">0</div>
+                            <div style="font-size:11px; color:#4caf50;">點</div>
+                        </div>
+                    </div>
+
+                    <!-- 雙大腦效期 -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px; margin-bottom:24px;">
+                        <!-- Pro -->
+                        <div style="background:#f3e5f5; border:1px solid #e1bee7; border-left:4px solid #8e24aa; padding:16px; border-radius:6px; position:relative;">
+                            <div style="font-size:11px; color:#7b1fa2; font-weight:bold; margin-bottom:4px;">🚀 雙子星旗艦大腦 (Pro 效期)</div>
+                            <div style="font-size:14px; font-weight:bold; color:#4a148c;" id="rights-pro-expiry-lbl">無特權 (未開通)</div>
+                            <div style="font-size:11px; color:#888; margin-top:6px;">開通此特權可使用雙子星旗艦 AI 大腦</div>
+                        </div>
+                        <!-- Flash -->
+                        <div style="background:#fff8e1; border:1px solid #ffe082; border-left:4px solid #f57f17; padding:16px; border-radius:6px;">
+                            <div style="font-size:11px; color:#b7791f; font-weight:bold; margin-bottom:4px;">⚡ 智能快速大腦 (Flash 效期)</div>
+                            <div style="font-size:14px; font-weight:bold; color:#7f4f17;" id="rights-flash-expiry-lbl">無特權 (未開通)</div>
+                            <div style="font-size:11px; color:#888; margin-top:6px;">
+                                最後購買等級: <span id="rights-last-flash-tier-lbl" style="font-weight:bold;">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 管理操作面板 -->
+                    <div style="display:flex; gap:20px; flex-wrap:wrap; border-top:1px solid #eee; padding-top:20px;">
+                        <!-- 點數調整 -->
+                        <div style="flex:1; min-width:280px; background:#fafafa; border:1px solid #eee; border-radius:6px; padding:16px;">
+                            <h4 style="margin:0 0 12px 0; color:#2e7d32; display:flex; align-items:center; gap:6px; font-size:14px;">🔋 手動調整點數</h4>
+                            <div style="margin-bottom:12px;">
+                                <label style="display:block; font-size:11px; color:#666; margin-bottom:4px;">增減數量 (例如 +50 或 -30)</label>
+                                <input type="number" id="rights-points-change" placeholder="輸入整數" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:13px;">
+                            </div>
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block; font-size:11px; color:#666; margin-bottom:4px;">調整原因</label>
+                                <input type="text" id="rights-points-reason" placeholder="如：線下收款、客服補償" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:13px;">
+                            </div>
+                            <button class="btn-primary" onclick="updateUserPoints()" style="width:100%; padding:10px; background:#2e7d32; border-color:#2e7d32;">提交點數變更</button>
+                        </div>
+
+                        <!-- 效期開通與展延 -->
+                        <div style="flex:1; min-width:280px; background:#fafafa; border:1px solid #eee; border-radius:6px; padding:16px;">
+                            <h4 style="margin:0 0 12px 0; color:#512da8; display:flex; align-items:center; gap:6px; font-size:14px;">⏳ 手動調整大腦效期</h4>
+                            <div style="margin-bottom:12px; display:flex; gap:10px;">
+                                <div style="flex:1;">
+                                    <label style="display:block; font-size:11px; color:#666; margin-bottom:4px;">大腦類型</label>
+                                    <select id="rights-tier-type" onchange="toggleRightsFlashFields()" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:13px; background: white;">
+                                        <option value="pro">Pro 大腦 (199元)</option>
+                                        <option value="flash">Flash 大腦 (49/99元)</option>
+                                    </select>
+                                </div>
+                                <div style="flex:1; display:none;" id="rights-flash-select-group">
+                                    <label style="display:block; font-size:11px; color:#666; margin-bottom:4px;">Flash 方案等級</label>
+                                    <select id="rights-flash-tier" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:13px; background: white;">
+                                        <option value="galaxy_scout">行星動能 (49元)</option>
+                                        <option value="universe_explorer">恆星光芒 (99元)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="margin-bottom:16px;">
+                                <label style="display:block; font-size:11px; color:#666; margin-bottom:4px;">
+                                    變更天數 (正數天代表延長，0 代表清除效期)
+                                </label>
+                                <input type="number" id="rights-days-change" value="30" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:13px;">
+                                <span style="font-size:10px; color:#999; display:block; margin-top:4px;">
+                                    * 累加方式：若用戶已有未過期效期將在其基礎上累加天數，否則自今日 (now) 起算。若輸入 0 天，則代表直接清空該大腦效期。
+                                </span>
+                            </div>
+                            <button class="btn-primary" onclick="updateUserTier()" style="width:100%; padding:10px; background:#512da8; border-color:#512da8;">提交效期調整</button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -931,6 +1034,179 @@
                 loadOverview();
             }
         }
+
+        window.toggleRightsFlashFields = function() {
+            const type = document.getElementById('rights-tier-type').value;
+            const group = document.getElementById('rights-flash-select-group');
+            if (type === 'flash') {
+                group.style.display = 'block';
+            } else {
+                group.style.display = 'none';
+            }
+        };
+
+        window.searchUserRights = async function() {
+            const uid = document.getElementById('rights-search-uid').value.trim();
+            if (!uid) {
+                alert('請輸入 LINE UID。');
+                return;
+            }
+            showLoading(true);
+            try {
+                const r = await fetch(`${API_URL}/api/admin/user/search?userId=${uid}`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+                const j = await r.json();
+                if (!j.success) {
+                    alert('查詢失敗：' + (j.msg || '找不到該用戶'));
+                    document.getElementById('rights-user-panel').style.display = 'none';
+                    return;
+                }
+                
+                const u = j.data;
+                document.getElementById('rights-user-name').textContent = u.displayName || '未命名用戶';
+                document.getElementById('rights-user-avatar').src = u.pictureUrl || 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg';
+                document.getElementById('rights-user-uid-lbl').textContent = u.userId;
+                document.getElementById('rights-user-created').textContent = u.createdAt ? new Date(u.createdAt).toLocaleString('zh-TW') : '無資料';
+                document.getElementById('rights-user-points').textContent = u.points || 0;
+                
+                const proExp = u.proExpiry ? new Date(u.proExpiry) : null;
+                const flashExp = u.flashExpiry ? new Date(u.flashExpiry) : null;
+                const now = new Date();
+                
+                if (proExp) {
+                    const isProActive = proExp > now;
+                    document.getElementById('rights-pro-expiry-lbl').innerHTML = `${proExp.toLocaleString('zh-TW')} ${isProActive ? '<span style="color:green;font-weight:bold;">[有效]</span>' : '<span style="color:red;">[已過期]</span>'}`;
+                } else {
+                    document.getElementById('rights-pro-expiry-lbl').textContent = '無特權 (未開通)';
+                }
+                
+                if (flashExp) {
+                    const isFlashActive = flashExp > now;
+                    document.getElementById('rights-flash-expiry-lbl').innerHTML = `${flashExp.toLocaleString('zh-TW')} ${isFlashActive ? '<span style="color:green;font-weight:bold;">[有效]</span>' : '<span style="color:red;">[已過期]</span>'}`;
+                } else {
+                    document.getElementById('rights-flash-expiry-lbl').textContent = '無特權 (未開通)';
+                }
+                
+                const tierNames = {
+                    'galaxy_legend': '🌌 銀河傳奇 (Pro 大腦)',
+                    'universe_explorer': '恆星光芒 (Flash 大腦)',
+                    'galaxy_scout': '行星動能 (Flash 大腦)',
+                    'none': '普通用戶'
+                };
+                document.getElementById('rights-calculated-tier-badge').textContent = tierNames[u.calculatedTier] || u.calculatedTier;
+                document.getElementById('rights-calculated-tier-badge').className = `badge ${u.calculatedTier === 'galaxy_legend' ? 'badge-ai' : (u.calculatedTier !== 'none' ? 'badge-pay' : '')}`;
+                
+                const flashTierNames = {
+                    'galaxy_scout': '行星動能 (49元)',
+                    'universe_explorer': '恆星光芒 (99元)',
+                    'none': '無'
+                };
+                document.getElementById('rights-last-flash-tier-lbl').textContent = flashTierNames[u.lastFlashTier] || u.lastFlashTier;
+                
+                document.getElementById('rights-points-change').value = '';
+                document.getElementById('rights-points-reason').value = '';
+                document.getElementById('rights-days-change').value = '30';
+                
+                document.getElementById('rights-user-panel').style.display = 'block';
+            } catch(e) {
+                alert('網路錯誤：' + e.message);
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        window.updateUserPoints = async function() {
+            const uid = document.getElementById('rights-user-uid-lbl').textContent;
+            const pointsChange = parseInt(document.getElementById('rights-points-change').value, 10);
+            const reason = document.getElementById('rights-points-reason').value.trim();
+            
+            if (!uid || uid === '--') {
+                alert('請先搜尋並載入用戶資訊。');
+                return;
+            }
+            if (isNaN(pointsChange)) {
+                alert('請輸入有效的增減點數數值（整數）。');
+                return;
+            }
+            
+            if (!confirm(`確定要將此用戶的靈力點數調整 ${pointsChange >= 0 ? '+' : ''}${pointsChange} 點嗎？`)) {
+                return;
+            }
+            
+            showLoading(true);
+            try {
+                const r = await fetch(`${API_URL}/api/admin/user/update-points`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentIdToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId: uid, pointsChange, reason })
+                });
+                const j = await r.json();
+                if (j.success) {
+                    alert('點數更新成功！');
+                    await searchUserRights();
+                } else {
+                    alert('更新失敗：' + j.msg);
+                }
+            } catch(e) {
+                alert('網路錯誤：' + e.message);
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        window.updateUserTier = async function() {
+            const uid = document.getElementById('rights-user-uid-lbl').textContent;
+            const days = parseInt(document.getElementById('rights-days-change').value, 10);
+            const tierType = document.getElementById('rights-tier-type').value;
+            const lastFlashTier = tierType === 'flash' ? document.getElementById('rights-flash-tier').value : null;
+            
+            if (!uid || uid === '--') {
+                alert('請先搜尋並載入用戶資訊。');
+                return;
+            }
+            if (isNaN(days)) {
+                alert('請輸入有效的調整天數數值。');
+                return;
+            }
+            
+            const msg = days === 0 ? 
+                `確定要清除該用戶的 ${tierType === 'pro' ? 'Pro' : 'Flash'} 大腦效期嗎？` :
+                `確定要為此用戶的 ${tierType === 'pro' ? 'Pro' : 'Flash'} 大腦效期調整 ${days} 天嗎？`;
+                
+            if (!confirm(msg)) {
+                return;
+            }
+            
+            showLoading(true);
+            try {
+                const payload = { userId: uid, days, tierType };
+                if (lastFlashTier) payload.lastFlashTier = lastFlashTier;
+                
+                const r = await fetch(`${API_URL}/api/admin/user/update-tier`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentIdToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const j = await r.json();
+                if (j.success) {
+                    alert('效期調整成功！');
+                    await searchUserRights();
+                } else {
+                    alert('調整失敗：' + j.msg);
+                }
+            } catch(e) {
+                alert('網路錯誤：' + e.message);
+            } finally {
+                showLoading(false);
+            }
+        };
 
         function showLoading(show) {
             document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
