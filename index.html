@@ -543,7 +543,10 @@
             margin-top: 20px;
         }
         @media (min-width: 768px) {
-            .tier-showcase { grid-template-columns: repeat(3, 1fr); }
+            .tier-showcase { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 1024px) {
+            .tier-showcase { grid-template-columns: repeat(4, 1fr); }
         }
         .tier-card-show {
             position: relative;
@@ -1144,6 +1147,33 @@
         function fillTierShowcase(el, tiers) {
             if (!el || !tiers) return;
             el.innerHTML = '';
+            
+            // 1. 先產生免費方案 (Free) 卡片
+            var freeDiv = document.createElement('div');
+            freeDiv.className = 'tier-card-show tier-free';
+            var freeFeatures = [
+                "🚀 <b>雙子星基礎 AI 大腦</b> 每日一算簡析",
+                "📜 個人解碼報告儲存記錄 (顯示最近 <b>50 筆</b>)",
+                "🎁 每日一算(簽到)，「<b>無法</b>」累積修行靈力"
+            ];
+            var freeFeaturesHtml = freeFeatures.map(function(f) { return '<li><span>' + f + '</span></li>'; }).join('');
+            freeDiv.innerHTML =
+                '<div class="tier-header-wrap">' +
+                    '<div class="tier-title-container">' +
+                        '<span class="tier-icon" aria-hidden="true">✨</span>' +
+                        '<span class="tier-title">免費方案 (Free)</span>' +
+                    '</div>' +
+                    '<div class="tier-price-tag">' +
+                        '<span class="currency">NT$</span>' +
+                        '<span class="amount">0</span>' +
+                    '</div>' +
+                '</div>' +
+                '<ul class="tier-features-list">' +
+                    freeFeaturesHtml +
+                '</ul>';
+            el.appendChild(freeDiv);
+
+            // 2. 遍歷渲染其他付費方案卡片
             tiers.filter(function (t) { return !t.testPack; }).forEach(function (t) {
                 var div = document.createElement('div');
                 
@@ -1161,7 +1191,7 @@
                         "🚀 <b>雙子星高速智能</b> AI 大腦精準解析",
                         "🔋 包含 <b>" + Number(points).toLocaleString() + " 點</b>靈力額度",
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>50 筆</b>)",
-                        "🎁 每日免費一抽簽到，累積修行靈力",
+                        "🎁 每日一算(簽到)，可累積修行靈力",
                         "🎖️ 尊享「行星動能」專屬頭銜與金色微光邊框"
                     ];
                 } else if (price === 99) {
@@ -1171,7 +1201,7 @@
                         "🚀 <b>雙子星高速智能</b> AI 大腦深度解析",
                         "🔋 包含 <b>" + Number(points).toLocaleString() + " 點</b>靈力額度",
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>100 筆</b>)",
-                        "🎁 每日免費一抽簽到，累積修行靈力",
+                        "🎁 每日一算(簽到)，可累積修行靈力",
                         "🎖️ 尊享「恆星光芒」專屬頭銜與金色微光邊框"
                     ];
                 } else if (price === 199) {
@@ -1181,7 +1211,7 @@
                         "🧠 <b>雙子星旗艦智能</b> 深度推理最強大腦",
                         "🔋 包含 <b>" + Number(points).toLocaleString() + " 點</b>靈力額度",
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>150 筆</b>)",
-                        "🎁 每日免費一抽簽到，累積修行靈力",
+                        "🎁 每日一算(簽到)，可累積修行靈力",
                         "👑 尊享 <b>VIP流光頭像邊框</b> 與 <b>紫金星空流星雨皮膚</b>",
                         "🎖️ 尊享「銀河傳奇」尊貴頭銜與流光邊框特權"
                     ];
@@ -1189,7 +1219,7 @@
                     planName = t.productName || ("NT$ " + price + " 方案");
                     features = [
                         "🔋 包含 <b>" + Number(points).toLocaleString() + " 點</b>靈力額度",
-                        "🎁 每日免費一抽簽到，累積修行靈力"
+                        "🎁 每日一算(簽到)，可累積修行靈力"
                     ];
                 }
 
