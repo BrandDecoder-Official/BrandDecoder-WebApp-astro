@@ -1294,8 +1294,24 @@
                 updateDemoCosts(liveCosts);
                 if (contactEl && j.contact) renderContact(contactEl, j.contact);
             } catch (e) {
-                console.warn('[index] manifest 載入失敗', e);
+                console.warn('[index] manifest 載入失敗，使用預設後備方案與客服資料', e);
                 if (dedEl) dedEl.innerHTML = '<tr><td colspan="3" class="note">無法載入說明資料，請稍後再試。</td></tr>';
+                
+                // 本地 file:// 協議或網路失敗時的後備渲染
+                var fallbackTiers = [
+                    { price: 49, points: 490, isPopular: false },
+                    { price: 99, points: 990, isPopular: false },
+                    { price: 199, points: 2000, isPopular: true }
+                ];
+                if (tierEl) fillTierShowcase(tierEl, fallbackTiers);
+                if (priEl) fillPricingTable(priEl, fallbackTiers);
+                if (contactEl) {
+                    renderContact(contactEl, {
+                        email: 'brand.decoderai@gmail.com',
+                        entityName: 'BrandDecoder 命運解碼室',
+                        phone: '0983-826-576'
+                    });
+                }
             }
         }
 
