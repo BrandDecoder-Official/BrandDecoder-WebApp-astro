@@ -539,37 +539,131 @@
         .tier-showcase {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 15px;
-            margin-top: 14px;
+            gap: 20px;
+            margin-top: 20px;
         }
-        @media (min-width: 640px) {
-            .tier-showcase { grid-template-columns: repeat(2, 1fr); }
+        @media (min-width: 768px) {
+            .tier-showcase { grid-template-columns: repeat(3, 1fr); }
         }
         .tier-card-show {
+            position: relative;
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 18px 16px;
-            background: rgba(212, 175, 55, 0.05);
-            transition: 0.3s;
+            border-radius: 16px;
+            padding: 24px 20px;
+            background: rgba(14, 16, 24, 0.85);
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .tier-card-show:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(123, 94, 168, 0.15);
+        }
+        .tier-card-show.tier-49 {
+            border-color: rgba(212, 175, 55, 0.25);
+        }
+        .tier-card-show.tier-99 {
+            border-color: rgba(123, 94, 168, 0.35);
         }
         .tier-card-show.popular {
-            border-color: var(--gold);
-            box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+            border: 2px solid var(--gold);
+            background: linear-gradient(180deg, rgba(212, 175, 55, 0.06) 0%, rgba(26, 16, 48, 0.8) 100%);
+            box-shadow: 0 8px 32px rgba(212, 175, 55, 0.1);
         }
-        .tier-card-show .tier-points {
-            display: inline-block;
-            font-size: 1.05rem;
-            color: var(--gold-light);
+        .tier-card-show.popular:hover {
+            border-color: var(--gold-light);
+            box-shadow: 0 12px 40px rgba(212, 175, 55, 0.25);
+        }
+        .popular-badge {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: linear-gradient(135deg, #ffd700, var(--gold));
+            color: #07080d;
+            font-size: 0.68rem;
             font-weight: 700;
+            padding: 4px 12px;
+            border-bottom-right-radius: 12px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
         }
-        .tier-card-show .tier-price {
-            font-size: 1.2rem;
+        .tier-header-wrap {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 16px;
+            margin-bottom: 18px;
+            gap: 8px;
+        }
+        .tier-title-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tier-icon {
+            font-size: 1.1rem;
+            color: var(--gold-light);
+        }
+        .tier-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: 0.03em;
+        }
+        .tier-price-tag {
+            font-size: 1.15rem;
             color: var(--gold);
             font-weight: 600;
-            background: #222;
+            background: rgba(7, 8, 13, 0.9);
             border: 1px solid var(--gold);
-            padding: 2px 12px;
-            border-radius: 16px;
+            padding: 4px 14px;
+            border-radius: 20px;
+            white-space: nowrap;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+        .tier-price-tag .currency {
+            font-size: 0.72rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+        .tier-price-tag .amount {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .tier-features-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .tier-features-list li {
+            position: relative;
+            padding-left: 24px;
+            font-size: 0.8rem;
+            color: rgba(236, 236, 240, 0.85);
+            line-height: 1.5;
+            text-align: left;
+        }
+        .tier-features-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            top: 1px;
+            color: var(--gold);
+            font-weight: 900;
+            font-size: 0.9rem;
+        }
+        .tier-card-show.popular .tier-features-list li::before {
+            color: var(--gold-light);
         }
         .live-badge {
             display: inline-block;
@@ -1052,51 +1146,70 @@
             el.innerHTML = '';
             tiers.filter(function (t) { return !t.testPack; }).forEach(function (t) {
                 var div = document.createElement('div');
-                div.className = 'tier-card-show' + (t.isPopular ? ' popular' : '');
                 
-                var planName = "體驗方案";
-                var features = [];
                 var price = Number(t.price);
                 var points = Number(t.points);
-                
+                var planName = "體驗方案";
+                var features = [];
+                var cardClass = 'tier-card-show';
+                var isPopular = t.isPopular || price === 199;
+
                 if (price === 49) {
                     planName = "行星動能方案";
+                    cardClass += ' tier-49';
                     features = [
                         "🚀 <b>雙子星高速智能</b> AI 大腦精準解析",
-                        "🔋 包含 <b>" + points + " 點</b>靈力額度",
+                        "🔋 包含 <b>" + Number(points).toLocaleString() + " 點</b>靈力額度",
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>50 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
                         "🎖️ 尊享「行星動能」專屬頭銜與金色微光邊框"
                     ];
                 } else if (price === 99) {
                     planName = "恆星光芒方案";
+                    cardClass += ' tier-99';
                     features = [
                         "🚀 <b>雙子星高速智能</b> AI 大腦深度解析",
-                        "🔋 包含 <b>" + points + " 點</b>靈力額度",
+                        "🔋 包含 <b>" + Number(points).toLocaleString() + " 點</b>靈力額度",
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>100 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
                         "🎖️ 尊享「恆星光芒」專屬頭銜與金色微光邊框"
                     ];
                 } else if (price === 199) {
                     planName = "銀河傳奇方案";
+                    cardClass += ' popular';
                     features = [
                         "🧠 <b>雙子星旗艦智能</b> 深度推理最強大腦",
-                        "🔋 包含 <b>" + points + " 點</b>靈力額度",
+                        "🔋 包含 <b>" + Number(points).toLocaleString() + " 點</b>靈力額度",
                         "📜 個人解碼報告儲存記錄 (顯示最近 <b>150 筆</b>)",
                         "🎁 每日免費一抽簽到，累積修行靈力",
                         "👑 尊享 <b>VIP流光頭像邊框</b> 與 <b>紫金星空流星雨皮膚</b>",
                         "🎖️ 尊享「銀河傳奇」尊貴頭銜與流光邊框特權"
                     ];
+                } else {
+                    planName = t.productName || ("NT$ " + price + " 方案");
+                    features = [
+                        "🔋 包含 <b>" + Number(points).toLocaleString() + " 點</b>靈力額度",
+                        "🎁 每日免費一抽簽到，累積修行靈力"
+                    ];
                 }
 
-                var featuresHtml = features.map(function(f) { return '<li>' + f + '</li>'; }).join('');
+                var badgeHtml = isPopular ? '<div class="popular-badge">推薦主力</div>' : '';
+                var featuresHtml = features.map(function(f) { return '<li><span>' + f + '</span></li>'; }).join('');
 
+                div.className = cardClass;
                 div.innerHTML =
-                    '<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:8px;">' +
-                        '<span class="tier-points">✨ ' + esc(planName) + '</span>' +
-                        '<div class="tier-price">NT$ ' + esc(t.price) + '</div>' +
+                    badgeHtml +
+                    '<div class="tier-header-wrap">' +
+                        '<div class="tier-title-container">' +
+                            '<span class="tier-icon" aria-hidden="true">✨</span>' +
+                            '<span class="tier-title">' + esc(planName) + '</span>' +
+                        '</div>' +
+                        '<div class="tier-price-tag">' +
+                            '<span class="currency">NT$</span>' +
+                            '<span class="amount">' + esc(price) + '</span>' +
+                        '</div>' +
                     '</div>' +
-                    '<ul style="margin:0; padding:0 0 0 16px; font-size:12px; color:#ccc; text-align:left; line-height:1.5;">' +
+                    '<ul class="tier-features-list">' +
                         featuresHtml +
                     '</ul>';
                 el.appendChild(div);
