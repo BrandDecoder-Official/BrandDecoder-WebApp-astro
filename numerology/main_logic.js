@@ -5,9 +5,102 @@ let userId = "";
 /** LIFF OAuth access token（後端若驗 LINE 使用者須用此，勿用 ID Token） */
 let currentAccessToken = "";
 let dynamicCost = 10; 
+let userProfile = null;
+let confirmActionCallback = null;
 
 // UI 元素 Ref（DOMContentLoaded 後再綁定，避免腳本提早執行）
 let btnActivate = null;
+
+function updateBrainSelectorUI() {
+    const hasPro = userProfile && (userProfile.tier === 'galaxy_legend' || userProfile.brainType === 'pro');
+    const flashRadio = document.querySelector('input[name="brain-select"][value="flash"]');
+    const proRadio = document.querySelector('input[name="brain-select"][value="pro"]');
+    const proLabel = document.getElementById('brain-opt-pro-label');
+    const flashLabel = document.getElementById('brain-opt-flash-label');
+    const proTitle = document.getElementById('brain-pro-title');
+    const proDesc = document.getElementById('brain-pro-desc');
+    const proBadge = document.getElementById('brain-pro-badge');
+    const lockedHint = document.getElementById('pro-locked-hint');
+
+    if (!proRadio || !flashRadio) return;
+
+    const updateStyles = () => {
+        if (flashRadio.checked) {
+            flashLabel.style.borderColor = '#E5C07B';
+            flashLabel.style.background = 'rgba(229,192,123,0.1)';
+            proLabel.style.borderColor = 'rgba(255,255,255,0.1)';
+            proLabel.style.background = 'rgba(255,255,255,0.02)';
+        } else if (proRadio.checked && !proRadio.disabled) {
+            proLabel.style.borderColor = '#9B51E0';
+            proLabel.style.background = 'rgba(155,81,224,0.15)';
+            flashLabel.style.borderColor = 'rgba(255,255,255,0.1)';
+            flashLabel.style.background = 'rgba(255,255,255,0.02)';
+        }
+    };
+
+    flashRadio.onchange = updateStyles;
+    proRadio.onchange = updateStyles;
+
+    proLabel.onclick = null;
+
+    if (hasPro) {
+        proRadio.disabled = false;
+        proRadio.checked = true;
+        proTitle.style.color = '#fff';
+        proDesc.style.color = '#aaa';
+        proBadge.innerText = '已解鎖';
+        proBadge.style.color = '#E0B0FF';
+        proBadge.style.borderColor = 'rgba(155, 81, 224, 0.4)';
+        lockedHint.style.display = 'none';
+        proLabel.style.cursor = 'pointer';
+        proLabel.style.opacity = '1';
+        updateStyles();
+    } else {
+        proRadio.disabled = true;
+        proRadio.checked = false;
+        flashRadio.checked = true;
+        proTitle.style.color = '#555';
+        proDesc.style.color = '#555';
+        proBadge.innerText = '🔒 鎖定';
+        proBadge.style.color = '#FF6B6B';
+        proBadge.style.borderColor = 'rgba(255, 107, 107, 0.2)';
+        lockedHint.style.display = 'block';
+        proLabel.style.cursor = 'not-allowed';
+        proLabel.style.opacity = '0.5';
+        proLabel.onclick = (e) => {
+            if (proRadio.disabled) {
+                e.preventDefault();
+                alert('雙子星旗艦大腦 (Pro) 僅限銀河傳奇 199 方案會員使用，請先至會員中心選購方案以開通特權！');
+            }
+        };
+        updateStyles();
+    }
+}
+
+function showCustomConfirm(title, desc, cost, callback) {
+    document.getElementById('confirm-title').innerText = title;
+    document.getElementById('confirm-desc').innerHTML = `
+        ${desc}<br>
+        <div class="confirm-cost">消耗靈力：<span id="confirm-cost-value">${cost}</span> 點</div>
+    `;
+    confirmActionCallback = callback;
+    updateBrainSelectorUI();
+    document.getElementById('custom-confirm-overlay').classList.add('show');
+}
+
+function closeCustomConfirm() {
+    document.getElementById('custom-confirm-overlay').classList.remove('show');
+    confirmActionCallback = null; 
+}
+
+function executeCustomConfirm() {
+    document.getElementById('custom-confirm-overlay').classList.remove('show');
+    if (confirmActionCallback) {
+        const action = confirmActionCallback; 
+        confirmActionCallback = null; 
+        action(); 
+    }
+}
 
 // PixiJS 狀態
 let pixiApp;
@@ -36,6 +129,19 @@ async function initAll() {
     try {
         const session = await BdLiff.requireLiffSession(ENV.NUMEROLOGY_LIFF_ID, { withProfile: true });
         currentAccessToken = session.token;
+        
+        try {
+            const resp = await fetch(`${ENV.API_BASE}/api/user/profile`, {
+                headers: { 'Authorization': `Bearer ${currentAccessToken}` }
+            });
+            const profileResult = await resp.json();
+            if (profileResult.success && profileResult.data) {
+                userProfile = profileResult.data;
+                console.log("🌌 [CTO 雷達] 成功加載用戶資料:", userProfile);
+            }
+        } catch (preloadErr) {
+            console.warn("無法讀取用戶資料:", preloadErr);
+        }
         
         let profile = null;
         if (session.profile) {
@@ -113,65 +219,67 @@ function bindActivateButton() {
 
 async function onActivateClick(e) {
     if (!btnActivate) return;
-    // 阻止事件冒泡與預設行為，防止意外重整
     e.preventDefault(); 
     if (btnActivate.disabled) return;
 
-    // A. 按鈕狀態改變：鎖定、文字變更、加強發光 (不切換畫面，保持沉浸感)
-    btnActivate.disabled = true;
-    btnActivate.innerHTML = "宇宙頻率共振中...<br><span style='font-size:12px; color:#ccc;'>(請稍候)</span>";
-    btnActivate.style.boxShadow = "0 0 30px #E5C07B"; 
-    
-    // 🌟 B. 啟動爆發動畫：魔法陣瞬間加速旋轉並脈衝！
-    startPixiBlast(); 
-    
-    try {
-        const cloudRunUrl = `${ENV.API_BASE}/api/numerology/generate`; 
-        const response = await fetch(cloudRunUrl, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${currentAccessToken}`
-            },
-            body: JSON.stringify({ userId: userId })
-        });
-
-        const result = await response.json();
-
-        if (result.status === "success") {
-            stopPixiBlast();
-            btnActivate.innerHTML = "✨ 能量矩陣已解碼！";
-            btnActivate.style.color = "#000";
-            btnActivate.style.background = "linear-gradient(135deg, #4CAF50, #2E7D32)"; 
-            btnActivate.style.boxShadow = "0 0 40px #4CAF50";
-            btnActivate.style.border = "none";
-
-            const luckyStr = (result.aiData.luckySet || ['--','--','--']).join(' · ');
-            const wealthStr = (result.aiData.wealthSet || ['--','--']).join(' · ');
-            
-            BdLiff.showResultReport({
-                title: '🔢 律動能量解碼報告',
-                score: result.aiData.score,
-                subtitle: `核心能量數：【${result.aiData.coreNumber}】`,
-                detailsHtml: `幸運共振：${luckyStr} <br> 財富金鑰：${wealthStr}`,
-                rawText: result.aiData.interpretation,
-                flexMessage: result.flexMessage
+    const desc = "大師將啟動數字律動，透過共振頻率分析您的流年大運、天命格局與幸運之鑰。";
+    showCustomConfirm("【 🌌 律動能量解碼 】", desc, dynamicCost, async () => {
+        btnActivate.disabled = true;
+        btnActivate.innerHTML = "宇宙頻率共振中...<br><span style='font-size:12px; color:#ccc;'>(請稍候)</span>";
+        btnActivate.style.boxShadow = "0 0 30px #E5C07B"; 
+        
+        startPixiBlast(); 
+        
+        try {
+            const cloudRunUrl = `${ENV.API_BASE}/api/numerology/generate`; 
+            const response = await fetch(cloudRunUrl, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentAccessToken}`
+                },
+                body: JSON.stringify({ 
+                    userId: userId,
+                    brainType: document.querySelector('input[name="brain-select"]:checked')?.value || 'flash'
+                })
             });
 
-        } else {
-            throw new Error(result.message || "靈力共振失敗");
-        }
+            const result = await response.json();
 
-    } catch (error) {
-        console.error("Fetch Error:", error);
-        // 失敗時恢復原狀，魔法陣降速回待機狀態
-        stopPixiBlast();
-        btnActivate.disabled = false;
-        btnActivate.innerHTML = `啟動律動能量 <br><span class="cost-text" style="color: rgba(255,255,255,0.6);">(消耗 ${dynamicCost} 點靈力)</span>`;
-        btnActivate.style.background = ""; 
-        btnActivate.style.boxShadow = "";
-        alert("🚨 系統異常：" + error.message);
-    }
+            if (result.status === "success") {
+                stopPixiBlast();
+                btnActivate.innerHTML = "✨ 能量矩陣已解碼！";
+                btnActivate.style.color = "#000";
+                btnActivate.style.background = "linear-gradient(135deg, #4CAF50, #2E7D32)"; 
+                btnActivate.style.boxShadow = "0 0 40px #4CAF50";
+                btnActivate.style.border = "none";
+
+                const luckyStr = (result.aiData.luckySet || ['--','--','--']).join(' · ');
+                const wealthStr = (result.aiData.wealthSet || ['--','--']).join(' · ');
+                
+                BdLiff.showResultReport({
+                    title: '🔢 律動能量解碼報告',
+                    score: result.aiData.score,
+                    subtitle: `核心能量數：【${result.aiData.coreNumber}】`,
+                    detailsHtml: `幸運共振：${luckyStr} <br> 財富金鑰：${wealthStr}`,
+                    rawText: result.aiData.interpretation,
+                    flexMessage: result.flexMessage
+                });
+
+            } else {
+                throw new Error(result.message || "靈力共振失敗");
+            }
+
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            stopPixiBlast();
+            btnActivate.disabled = false;
+            btnActivate.innerHTML = `啟動律動能量 <br><span class="cost-text" style="color: rgba(255,255,255,0.6);">(消耗 ${dynamicCost} 點靈力)</span>`;
+            btnActivate.style.background = ""; 
+            btnActivate.style.boxShadow = "";
+            alert("🚨 系統異常：" + error.message);
+        }
+    });
 }
 
 // ==========================================

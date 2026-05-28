@@ -2,7 +2,7 @@
 // BrandDecoder - 塔羅牌核心模組 (tarot.js)
 // ==========================================
 const fetch = require('node-fetch');
-const { mergeModuleKey } = require('./aiSettingsDefaults');
+const { mergeModuleKey, getActiveModelForUser } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
     buildShareLiffUri,
@@ -272,7 +272,7 @@ exports.processTarotDraw = async function(event, userId, userData, userRef, db, 
 // 4. 同步版塔羅牌主邏輯處理函數
 exports.processTarotDrawSync = async function(req, res, db, client, genAI, FieldValue, recordDivinationLog) {
     const userId = req.user.userId;
-    const { topic, cards } = req.body;
+    const { topic, cards, brainType } = req.body;
     if (!topic || !cards || cards.length !== 3) {
         return res.status(400).json({ success: false, message: "宇宙訊號不完整" });
     }
@@ -310,8 +310,19 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
         const systemPrompt = tarotConfig.prompt || "你是一位充滿溫度的神祕塔羅解碼師。";
         const prompt = `${systemPrompt}\n\n【本次使用者占卜資訊】\n- 探詢領域：【${topic}】\n- 抽出的牌陣：1.過去【${cards[0]}】 2.現在【${cards[1]}】 3.未來【${cards[2]}】${buildTarotZiweiOutputSuffix(topic)}`;
 
+        let selectedModelName;
+        try {
+            selectedModelName = await getActiveModelForUser(db, userId, 'tarot', brainType);
+        } catch (err) {
+            if (err.message === 'UNAUTHORIZED_PRO_BRAIN') {
+                await rollbackPoints();
+                return res.status(403).json({ success: false, message: '您尚未開通或已過期雙子星旗艦大腦特權，請先訂閱方案。' });
+            }
+            throw err;
+        }
+
         const dynamicModel = genAI.getGenerativeModel({
-            model: tarotConfig.model,
+            model: selectedModelName,
             generationConfig: { temperature: 0.7, maxOutputTokens: MAX_AI_OUTPUT_TOKENS },
         });
         const result = await dynamicModel.generateContent(prompt);
@@ -333,7 +344,7 @@ exports.processTarotDrawSync = async function(req, res, db, client, genAI, Field
                 latency_ms: aiLatency,
                 tokens_in: usage.promptTokenCount || 0,
                 tokens_out: usage.candidatesTokenCount || 0,
-                model: tarotConfig.model,
+                model: selectedModelName,
             },
         });
 

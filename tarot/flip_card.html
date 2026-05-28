@@ -305,8 +305,44 @@
     <div id="custom-confirm-overlay">
         <div class="confirm-box">
             <div class="confirm-title" id="confirm-title">【 🔮 塔羅星陣解碼 】</div>
-            <div class="confirm-desc" id="confirm-desc">
+            <div class="confirm-desc" id="confirm-desc"></div>
+            
+            <!-- 大腦選擇器 -->
+            <div id="brain-selector-container" style="margin: 15px 0; padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(212,175,55,0.15); text-align: left;">
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                    🧠 運算大腦選擇
                 </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Flash 大腦 -->
+                    <label id="brain-opt-flash-label" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--gold); background: rgba(212,175,55,0.1); cursor: pointer; transition: 0.2s;">
+                        <span style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <input type="radio" name="brain-select" value="flash" checked style="accent-color: var(--gold); margin: 0; cursor: pointer;">
+                            <div>
+                                <strong style="color: #fff; display: block; font-size: 12px;">⚡ 智能快速大腦 (Flash)</strong>
+                                <span style="font-size: 10px; color: #aaa; font-weight: normal; display: block; margin-top: 1px;">精準解析，速度極快</span>
+                            </div>
+                        </span>
+                        <span style="font-size: 10px; color: var(--gold-light); font-weight: bold; border: 1px solid rgba(212,175,55,0.3); padding: 1px 4px; border-radius: 4px; scale: 0.9;">預設</span>
+                    </label>
+                    <!-- Pro 大腦 -->
+                    <label id="brain-opt-pro-label" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); cursor: pointer; transition: 0.2s;">
+                        <span style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <input type="radio" name="brain-select" value="pro" style="accent-color: var(--gold); margin: 0; cursor: pointer;">
+                            <div>
+                                <strong id="brain-pro-title" style="color: #ddd; display: block; font-size: 12px;">🚀 雙子星旗艦大腦 (Pro)</strong>
+                                <span id="brain-pro-desc" style="font-size: 10px; color: #888; font-weight: normal; display: block; margin-top: 1px;">深度推理，適合複雜解碼</span>
+                            </div>
+                        </span>
+                        <span id="brain-pro-badge" style="font-size: 10px; color: #888; border: 1px solid rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; scale: 0.9;"></span>
+                    </label>
+                </div>
+                <!-- Pro 鎖定導購提示 -->
+                <div id="pro-locked-hint" style="display: none; font-size: 11px; color: #FF8B8B; margin-top: 8px; text-align: center; border-top: 1px dashed rgba(255,107,107,0.2); padding-top: 6px; line-height: 1.5;">
+                    僅限銀河傳奇 199 方案會員使用。<br>
+                    <a href="/member/profile.html" target="_blank" style="color: #F9E498; font-weight: bold; text-decoration: underline;">點此開通特權 ➔</a>
+                </div>
+            </div>
+
             <div class="confirm-actions">
                 <button class="btn-confirm-cancel" onclick="closeCustomConfirm()">取消</button>
                 <button class="btn-confirm-ok" onclick="executeCustomConfirm()">確認啟動</button>
@@ -346,6 +382,7 @@
         // 🌌 沉浸式彈窗控制器 (修復版)
         // ==========================================
         let confirmActionCallback = null;
+        let userProfile = null; // 儲存當前用戶 profile 資料
 
         // 🌟 讓前端去後端問現在的價格 (強制破除快取版)
         async function fetchAiConfig() {
@@ -365,6 +402,89 @@
                 console.error("🚨 [CTO 雷達] 無法取得動態定價:", e); 
             }
         }
+
+        async function fetchUserProfile() {
+            if (!lineAccessToken) return;
+            try {
+                const response = await fetch(`${ENV.API_BASE}/api/user/profile`, {
+                    headers: { 'Authorization': `Bearer ${lineAccessToken}` }
+                });
+                const result = await response.json();
+                if (result.success && result.data) {
+                    userProfile = result.data;
+                    console.log("🔥 [CTO 雷達] 取得用戶資料:", userProfile);
+                }
+            } catch (e) {
+                console.error("🚨 [CTO 雷達] 無法取得用戶資料:", e);
+            }
+        }
+
+        function updateBrainSelectorUI() {
+            const hasPro = userProfile && (userProfile.tier === 'galaxy_legend' || userProfile.brainType === 'pro');
+            const flashRadio = document.querySelector('input[name="brain-select"][value="flash"]');
+            const proRadio = document.querySelector('input[name="brain-select"][value="pro"]');
+            const proLabel = document.getElementById('brain-opt-pro-label');
+            const flashLabel = document.getElementById('brain-opt-flash-label');
+            const proTitle = document.getElementById('brain-pro-title');
+            const proDesc = document.getElementById('brain-pro-desc');
+            const proBadge = document.getElementById('brain-pro-badge');
+            const lockedHint = document.getElementById('pro-locked-hint');
+
+            if (!proRadio || !flashRadio) return;
+
+            const updateStyles = () => {
+                if (flashRadio.checked) {
+                    flashLabel.style.borderColor = 'var(--gold)';
+                    flashLabel.style.background = 'rgba(212,175,55,0.1)';
+                    proLabel.style.borderColor = 'rgba(255,255,255,0.1)';
+                    proLabel.style.background = 'rgba(255,255,255,0.02)';
+                } else if (proRadio.checked && !proRadio.disabled) {
+                    proLabel.style.borderColor = '#9B51E0';
+                    proLabel.style.background = 'rgba(155,81,224,0.15)';
+                    flashLabel.style.borderColor = 'rgba(255,255,255,0.1)';
+                    flashLabel.style.background = 'rgba(255,255,255,0.02)';
+                }
+            };
+
+            flashRadio.onchange = updateStyles;
+            proRadio.onchange = updateStyles;
+
+            // 移除舊的點擊處理器，防止重複綁定
+            proLabel.onclick = null;
+
+            if (hasPro) {
+                proRadio.disabled = false;
+                proRadio.checked = true;
+                proTitle.style.color = '#fff';
+                proDesc.style.color = '#aaa';
+                proBadge.innerText = '已解鎖';
+                proBadge.style.color = '#E0B0FF';
+                proBadge.style.borderColor = 'rgba(155, 81, 224, 0.4)';
+                lockedHint.style.display = 'none';
+                proLabel.style.cursor = 'pointer';
+                proLabel.style.opacity = '1';
+                updateStyles();
+            } else {
+                proRadio.disabled = true;
+                proRadio.checked = false;
+                flashRadio.checked = true;
+                proTitle.style.color = '#555';
+                proDesc.style.color = '#555';
+                proBadge.innerText = '🔒 鎖定';
+                proBadge.style.color = '#FF6B6B';
+                proBadge.style.borderColor = 'rgba(255, 107, 107, 0.2)';
+                lockedHint.style.display = 'block';
+                proLabel.style.cursor = 'not-allowed';
+                proLabel.style.opacity = '0.5';
+                proLabel.onclick = (e) => {
+                    if (proRadio.disabled) {
+                        e.preventDefault();
+                        alert('雙子星旗艦大腦 (Pro) 僅限銀河傳奇 199 方案會員使用，請先至會員中心選購方案以開通特權！');
+                    }
+                };
+                updateStyles();
+            }
+        }
         
 
         function showCustomConfirm(title, desc, cost, callback) {
@@ -374,6 +494,10 @@
                 <div class="confirm-cost">消耗靈力：<span id="confirm-cost-value">${cost}</span> 點</div>
             `;
             confirmActionCallback = callback;
+            
+            // 每次彈窗顯示前，根據用戶最新的權益動態重新渲染大腦選擇器
+            updateBrainSelectorUI();
+            
             document.getElementById('custom-confirm-overlay').classList.add('show');
         }
 
@@ -573,6 +697,7 @@
                     lineUserIdForTracking = profile.userId;
                     sendTrackingLog("Stage 1: Page View");
                     await fetchAiConfig();
+                    await fetchUserProfile();
                 } catch (err) {
                     console.warn("LIFF 附加初始化略過（不阻斷塔羅流程）", err);
                 }
@@ -752,7 +877,8 @@
                         },
                         body: JSON.stringify({
                             topic: currentTopic,
-                            cards: cardNames
+                            cards: cardNames,
+                            brainType: document.querySelector('input[name="brain-select"]:checked')?.value || 'flash'
                         })
                     });
 

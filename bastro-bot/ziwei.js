@@ -2,7 +2,7 @@
 // BrandDecoder - 紫微斗數核心模組 (ziwei.js)
 // ==========================================
 const fetch = require('node-fetch');
-const { mergeModuleKey } = require('./aiSettingsDefaults');
+const { mergeModuleKey, getActiveModelForUser } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
     buildShareLiffUri,
@@ -140,7 +140,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
             throw e;
         }
 
-        const { birthData, agreeSaveBirth } = req.body;
+        const { birthData, agreeSaveBirth, brainType } = req.body;
         const topicStr = birthData.topic || '本命格局';
         const genderStr = birthData.gender === 'M' ? '乾造 (男命)' : '坤造 (女命)';
         const calStr = birthData.calendar === 'solar' ? '國曆' : '農曆';
@@ -172,8 +172,19 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
             const systemPrompt = aiConfig.prompt || "你是一位精通紫微斗數的國學大師...";
             const finalPrompt = `${systemPrompt}\n\n【命主生辰與探詢資訊】\n- 探詢領域：${topicStr}\n- 生理性別：${genderStr}\n- 曆法時間：${calStr} ${birthData.date} ${birthData.time}時${buildTarotZiweiOutputSuffix(topicStr)}`;
             
+            let selectedModelName;
+            try {
+                selectedModelName = await getActiveModelForUser(db, userId, 'ziwei', brainType);
+            } catch (err) {
+                if (err.message === 'UNAUTHORIZED_PRO_BRAIN') {
+                    await rollbackPoints();
+                    return res.status(403).json({ success: false, msg: '您尚未開通或已過期雙子星旗艦大腦特權，請先訂閱方案。' });
+                }
+                throw err;
+            }
+
             const dynamicModel = genAI.getGenerativeModel({
-                model: aiConfig.model,
+                model: selectedModelName,
                 generationConfig: { temperature: 0.7, maxOutputTokens: MAX_AI_OUTPUT_TOKENS },
             });
             const result = await dynamicModel.generateContent(finalPrompt);
@@ -207,7 +218,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                     latency_ms: aiLatency,
                     tokens_in: usage.promptTokenCount || 0,
                     tokens_out: usage.candidatesTokenCount || 0,
-                    model: aiConfig.model,
+                    model: selectedModelName,
                 },
             });
 
@@ -247,7 +258,7 @@ exports.processZiweiDivination = async function(req, res, db, client, genAI, Fie
                     return String(bgError && bgError.message ? bgError.message : bgError);
                 }
             })();
-            console.error('紫微背景失敗:', { model: aiConfig.model, message: bgError && bgError.message, stack: bgError && bgError.stack, errStr });
+            console.error('紫微背景失敗:', { model: selectedModelName, message: bgError && bgError.message, stack: bgError && bgError.stack, errStr });
 
             const looksLikeModel404 =
                 /404|"Not Found"|NOT_FOUND|is not found|not supported for generateContent/i.test(errStr) ||

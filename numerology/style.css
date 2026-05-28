@@ -211,3 +211,36 @@ body.ritual-blast .digit-floater {
     animation: spinButton 1s linear infinite;
 }
 @keyframes spinButton { 100% { transform: rotate(360deg); } }
+
+/* ==========================================
+   🌌 沉浸式確認彈窗
+   ========================================== */
+#custom-confirm-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
+    z-index: 999; display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+}
+#custom-confirm-overlay.show { opacity: 1; pointer-events: auto; }
+
+.confirm-box {
+    background: #111; border: 1px solid rgba(229, 192, 123, 0.3);
+    border-radius: 16px; width: 85%; max-width: 320px;
+    padding: 25px 20px; text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(229,192,123,0.1) inset;
+    transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#custom-confirm-overlay.show .confirm-box { transform: scale(1); }
+
+.confirm-title { color: #E5C07B; font-size: 18px; font-weight: bold; margin-bottom: 12px; letter-spacing: 2px; }
+.confirm-desc { color: #ccc; font-size: 14px; line-height: 1.6; margin-bottom: 25px; }
+.confirm-cost { color: #F9E498; font-weight: bold; font-size: 16px; margin: 8px 0; background: rgba(229,192,123,0.1); display: inline-block; padding: 4px 12px; border-radius: 20px;}
+
+.confirm-actions { display: flex; gap: 12px; }
+.btn-confirm-cancel, .btn-confirm-ok {
+    flex: 1; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; border: none; letter-spacing: 1px;
+}
+.btn-confirm-cancel { background: rgba(255,255,255,0.1); color: #aaa; }
+.btn-confirm-cancel:active { background: rgba(255,255,255,0.2); }
+.btn-confirm-ok { background: linear-gradient(135deg, #E5C07B, #AA7C11); color: #000; }
+.btn-confirm-ok:active { opacity: 0.8; }

@@ -329,11 +329,138 @@
         }
         .shimmer-line.long { width: 140px; margin-bottom: 8px; }
         .shimmer-line.short { width: 80px; }
-        .shimmer-circle {
-            width: 32px;
-            height: 16px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 8px;
+        /* 🚀 方案特權效期狀態卡 CSS */
+        .subscription-card {
+            position: relative;
+            overflow: hidden;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            transition: all 0.5s ease;
+        }
+
+        .sub-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .sub-card-title {
+            font-size: 11px;
+            color: #aaa;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .sub-card-status-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .sub-card-tier-name {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .sub-card-expiry {
+            font-size: 12px;
+            color: #bbb;
+        }
+
+        /* Pro 大腦紫金微光與流星雨 (199 方案) */
+        .subscription-card.pro-active {
+            border: 1px solid rgba(155, 81, 224, 0.4);
+            box-shadow: 0 0 15px rgba(155, 81, 224, 0.2), 0 0 25px rgba(212, 175, 55, 0.1) inset;
+            background: linear-gradient(135deg, rgba(15, 10, 25, 0.8), rgba(30, 15, 45, 0.8));
+            animation: proShimmer 4s infinite alternate;
+        }
+
+        @keyframes proShimmer {
+            0% { border-color: rgba(155, 81, 224, 0.4); box-shadow: 0 0 10px rgba(155, 81, 224, 0.15); }
+            100% { border-color: rgba(212, 175, 55, 0.6); box-shadow: 0 0 20px rgba(155, 81, 224, 0.35); }
+        }
+
+        .subscription-card.pro-active #ui-sub-status-badge {
+            background: linear-gradient(135deg, #D4AF37, #9B51E0);
+            color: #fff;
+            box-shadow: 0 0 8px rgba(155, 81, 224, 0.5);
+        }
+
+        .subscription-card.pro-active .sub-card-tier-name {
+            background: linear-gradient(90deg, #F9E498, #D8B4E2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Flash 大腦金色微光 (49/99 方案) */
+        .subscription-card.flash-active {
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+            background: rgba(255, 255, 255, 0.04);
+            animation: flashShimmer 4s infinite alternate;
+        }
+
+        @keyframes flashShimmer {
+            0% { border-color: rgba(212, 175, 55, 0.3); }
+            100% { border-color: rgba(212, 175, 55, 0.6); }
+        }
+
+        .subscription-card.flash-active #ui-sub-status-badge {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--gold-light);
+            border: 1px solid var(--glass-border);
+        }
+
+        .subscription-card.flash-active .sub-card-tier-name {
+            color: var(--gold-light);
+        }
+
+        /* 無特權或已過期暗灰色 */
+        .subscription-card.inactive {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+            box-shadow: none;
+        }
+
+        /* Tabs 切換樣式 */
+        .tabs-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 8px;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active {
+            color: var(--gold-light);
+            background: rgba(212, 175, 55, 0.15);
+            text-shadow: 0 0 10px rgba(212,175,55,0.3);
+        }
+        
+        .tab-content {
+            animation: fadeIn 0.4s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -374,6 +501,20 @@
             </div>
         </div>
 
+        <!-- 🚀 方案特權效期狀態卡 -->
+        <div class="glass-card subscription-card" id="ui-subscription-card" style="display: none;">
+            <div class="sub-card-content">
+                <div class="sub-card-header">
+                    <span class="sub-card-title"><span id="ui-sub-brain-icon">⚡</span> AI 大腦特權效期</span>
+                    <span class="sub-card-status-badge" id="ui-sub-status-badge">已開通</span>
+                </div>
+                <div class="sub-card-body">
+                    <div class="sub-card-tier-name" id="ui-sub-tier-name">行星動能 (Flash 大腦)</div>
+                    <div class="sub-card-expiry" id="ui-sub-expiry">剩餘 -- 天 (到期日: --)</div>
+                </div>
+            </div>
+        </div>
+
         <div class="glass-card energy-section">
             <div class="energy-title">當前靈力存量 (Points)</div>
             <div class="energy-points" id="ui-points">--</div>
@@ -388,29 +529,40 @@
         </div>
 
         <div class="glass-card history-section">
-            <h3>📜 命運回顧</h3>
-            <div class="history-list" id="ui-history-list">
-                <!-- 載入骨架屏流光效果 (Shimmer) -->
-                <div class="shimmer-card">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <div class="shimmer-line long"></div>
-                        <div class="shimmer-line short"></div>
+            <div class="tabs-container">
+                <button type="button" class="tab-btn active" id="tab-btn-divinations" onclick="switchTab('divinations')">🔮 解碼紀錄</button>
+                <button type="button" class="tab-btn" id="tab-btn-recharges" onclick="switchTab('recharges')">💎 方案單據</button>
+            </div>
+            
+            <div class="tab-content" id="tab-divinations">
+                <div class="history-list" id="ui-divinations-list">
+                    <!-- Shimmer 骨架 -->
+                    <div class="shimmer-card">
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <div class="shimmer-line long"></div>
+                            <div class="shimmer-line short"></div>
+                        </div>
+                        <div class="shimmer-circle"></div>
                     </div>
-                    <div class="shimmer-circle"></div>
+                    <div class="shimmer-card">
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <div class="shimmer-line long"></div>
+                            <div class="shimmer-line short"></div>
+                        </div>
+                        <div class="shimmer-circle"></div>
+                    </div>
                 </div>
-                <div class="shimmer-card">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <div class="shimmer-line long"></div>
-                        <div class="shimmer-line short"></div>
+            </div>
+            <div class="tab-content" id="tab-recharges" style="display: none;">
+                <div class="history-list" id="ui-recharges-list">
+                    <!-- Shimmer 骨架 -->
+                    <div class="shimmer-card">
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <div class="shimmer-line long"></div>
+                            <div class="shimmer-line short"></div>
+                        </div>
+                        <div class="shimmer-circle"></div>
                     </div>
-                    <div class="shimmer-circle"></div>
-                </div>
-                <div class="shimmer-card">
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <div class="shimmer-line long"></div>
-                        <div class="shimmer-line short"></div>
-                    </div>
-                    <div class="shimmer-circle"></div>
                 </div>
             </div>
         </div>
@@ -610,9 +762,9 @@
         /** 計費檔位後備：與 legal-service-manifest.json 一致；fetch 失敗時沿用。條款內文以 manifest 為單一來源，見 embeddedTermsGateFallback 註解。 */
         const DEFAULT_PRICING_TIERS = [
             { price: 5, points: 50, isPopular: false, testPack: true },
-            { price: 49, points: 490, isPopular: false },
-            { price: 99, points: 990, isPopular: false },
-            { price: 199, points: 2000, isPopular: true }
+            { price: 49, points: 500, isPopular: false },
+            { price: 99, points: 1100, isPopular: false },
+            { price: 199, points: 2600, isPopular: true }
         ];
         let pricingTiers = [];
 
@@ -755,8 +907,8 @@
                     userProfileData = data; 
                     rawHistoryData = data.logs || [];
 
-                    // 👤 渲染會員卡片
-                    renderProfile(profile, data.points, data.birthData, rawHistoryData);
+                    // 👤 渲染會員卡片與特權狀態
+                    renderProfile(profile, data, rawHistoryData);
                     
                     // 📜 命運回顧清單：吃 profile 有限的資料 (保持畫面輕量)
                     renderHistory(rawHistoryData);
@@ -787,18 +939,17 @@
             }
         }
 
-        // 👤 渲染頂部名片與點數
-        function renderProfile(liffProfile, points, birthData, historyArray) {
+        // 👤 渲染頂部名片、點數與方案大腦特權
+        function renderProfile(liffProfile, profileData, historyArray) {
             document.getElementById('ui-avatar').src = liffProfile.pictureUrl || "https://static.line-scdn.net/liff/edge/2/images/logo.svg";
             document.getElementById('ui-name').innerText = liffProfile.displayName || "神祕旅人";
-            document.getElementById('ui-points').innerText = points || 0;
-
-            const history = historyArray || [];
-
-            // 🌟 判定使用者儲值最高方案，賦予對應的流光邊框、勳章與尊榮皮膚
-            const rechargeLogs = history.filter(item => item.type === "recharge");
-            const paidAmounts = rechargeLogs.map(item => Number(item.amount_paid || 0));
-            const maxRecharge = paidAmounts.length > 0 ? Math.max(...paidAmounts) : 0;
+            
+            const points = profileData.points || 0;
+            const birthData = profileData.birthData || null;
+            const tier = profileData.tier || 'none';
+            const tierExpiry = profileData.tierExpiry || null;
+            
+            document.getElementById('ui-points').innerText = points;
 
             const avatarContainer = document.getElementById('ui-avatar-container');
             const avatarBadge = document.getElementById('ui-avatar-badge');
@@ -817,7 +968,7 @@
                 }
                 window.enablePurpleGoldShower = false;
 
-                if (maxRecharge >= 199) {
+                if (tier === 'galaxy_legend') {
                     avatarContainer.classList.add('vip-flow');
                     if (avatarBadge) {
                         avatarBadge.style.display = 'flex';
@@ -830,7 +981,7 @@
                         titleBadge.innerText = '銀河傳奇';
                     }
                     window.enablePurpleGoldShower = true; // 開啟 VIP 紫金流星雨
-                } else if (maxRecharge === 99) {
+                } else if (tier === 'universe_explorer') {
                     avatarContainer.classList.add('gold-shimmer');
                     if (avatarBadge) {
                         avatarBadge.style.display = 'flex';
@@ -842,7 +993,7 @@
                         titleBadge.classList.add('mentor');
                         titleBadge.innerText = '恆星光芒';
                     }
-                } else if (maxRecharge === 49) {
+                } else if (tier === 'galaxy_scout') {
                     avatarContainer.classList.add('gold-shimmer');
                     if (avatarBadge) {
                         avatarBadge.style.display = 'flex';
@@ -856,7 +1007,53 @@
                     }
                 }
             }
+
+            // 🚀 渲染大腦特權效期狀態卡 (動態感知重疊與降級)
+            const subCard = document.getElementById('ui-subscription-card');
+            if (subCard) {
+                subCard.style.display = 'block';
+                subCard.className = 'glass-card subscription-card';
+                
+                const brainIcon = document.getElementById('ui-sub-brain-icon');
+                const statusBadge = document.getElementById('ui-sub-status-badge');
+                const tierName = document.getElementById('ui-sub-tier-name');
+                const expiryText = document.getElementById('ui-sub-expiry');
+                
+                if (tier === 'galaxy_legend') {
+                    subCard.classList.add('pro-active');
+                    if (brainIcon) brainIcon.innerText = '🚀';
+                    if (statusBadge) {
+                        statusBadge.innerText = '旗艦 Pro';
+                        statusBadge.style.display = 'block';
+                    }
+                    if (tierName) tierName.innerText = '銀河傳奇 (Pro 大腦)';
+                    
+                    const days = Math.ceil((new Date(tierExpiry) - new Date()) / (1000 * 60 * 60 * 24));
+                    const formattedDate = new Date(tierExpiry).toLocaleDateString('zh-TW');
+                    if (expiryText) expiryText.innerText = `剩餘效期 ${days} 天 (到期日: ${formattedDate})`;
+                } else if (tier === 'universe_explorer' || tier === 'galaxy_scout') {
+                    subCard.classList.add('flash-active');
+                    if (brainIcon) brainIcon.innerText = '⚡';
+                    if (statusBadge) {
+                        statusBadge.innerText = '快速 Flash';
+                        statusBadge.style.display = 'block';
+                    }
+                    const name = tier === 'universe_explorer' ? '恆星光芒' : '行星動能';
+                    if (tierName) tierName.innerText = `${name} (Flash 大腦)`;
+                    
+                    const days = Math.ceil((new Date(tierExpiry) - new Date()) / (1000 * 60 * 60 * 24));
+                    const formattedDate = new Date(tierExpiry).toLocaleDateString('zh-TW');
+                    if (expiryText) expiryText.innerText = `剩餘效期 ${days} 天 (到期日: ${formattedDate})`;
+                } else {
+                    subCard.classList.add('inactive');
+                    if (brainIcon) brainIcon.innerText = '🔒';
+                    if (statusBadge) statusBadge.style.display = 'none';
+                    if (tierName) tierName.innerHTML = `未解鎖大腦特權`;
+                    if (expiryText) expiryText.innerHTML = `<span style="color:var(--gold); cursor:pointer; font-weight:bold; font-size:11px;" onclick="openRechargeTermsGate()">點此選購方案，解鎖專屬 AI 大腦 ➔</span>`;
+                }
+            }
             
+            const history = historyArray || [];
             const paidDivinationsCount = history.filter(function (item) {
                 return item.type === "tarot" || 
                        item.type === "ziwei" || 
@@ -874,7 +1071,7 @@
             
             document.getElementById('ui-rank').innerText = rank;
 
-            // 🌟 顯示最新的一筆生辰座標與管理按鈕
+            // 顯示最新的一筆生辰座標與管理按鈕
             const dateEl = document.getElementById('ui-date');
             if (dateEl) {
                 if (birthData) {
@@ -899,84 +1096,119 @@
             }
         }
 
-        // 📜 渲染歷史列表 (完美結合防彈時間與紫微斗數邏輯)
+        // 📜 渲染歷史列表 (解碼與儲值單據分流)
         function renderHistory(historyArray) {
-            const list = document.getElementById('ui-history-list');
-            list.innerHTML = "";
+            const divinationsList = document.getElementById('ui-divinations-list');
+            const rechargesList = document.getElementById('ui-recharges-list');
+            
+            if (divinationsList) divinationsList.innerHTML = "";
+            if (rechargesList) rechargesList.innerHTML = "";
 
-            if (historyArray.length === 0) {
-                list.innerHTML = `<div style="text-align:center; color:#666; padding: 20px 0; font-size:12px;">星盤尚無軌跡，快去進行第一次占卜吧。</div>`;
-                return;
+            const rechargeLogs = historyArray.filter(item => item.type === "recharge").slice(0, 30);
+            const divinationLogs = historyArray.filter(item => item.type !== "recharge").slice(0, 30);
+
+            // 1. 渲染占卜解碼紀錄
+            if (divinationsList) {
+                if (divinationLogs.length === 0) {
+                    divinationsList.innerHTML = `<div style="text-align:center; color:#666; padding: 20px 0; font-size:12px;">星盤尚無軌跡，快去進行第一次占卜吧。</div>`;
+                } else {
+                    divinationLogs.forEach((item) => {
+                        const rawIndex = historyArray.indexOf(item);
+                        let typeText, topicText, extraHtml = "";
+                        
+                        const pointsValue = item.points_change !== undefined ? item.points_change : (item.points || 0);
+                        const pointsClass = pointsValue > 0 ? "points-plus" : "points-minus";
+                        const pointsText = pointsValue > 0 ? `+${pointsValue}` : pointsValue;
+                        
+                        if (item.type === "ziwei" || item.serviceType === "ziwei") {
+                            typeText = "🏮 紫微斗數";
+                            topicText = item.summary || "排盤解碼";
+                            extraHtml = `<span style="font-size: 10px; color: #d8b4e2; border: 1px solid rgba(216,180,226,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">深度解析</span>`;
+                        }
+                        else if (item.type === "numerology") {
+                            typeText = "🌌 律動能量";
+                            topicText = item.summary || `核心能量：${item.result_card || '?'}`;
+                            const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
+                            extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
+                        }
+                        else if (item.type === "tarot") {
+                            typeText = "🔮 塔羅解碼";
+                            topicText = `領域：${item.topic}`;
+                            const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
+                            extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
+                        }
+                        else {
+                            typeText = "✨ 每日一抽";
+                            topicText = `指引：${item.result_card || item.topic || '抽牌'}`;
+                            const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
+                            if (score !== '--') {
+                                extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
+                            }
+                        }
+                        
+                        let dateStr = "未知時間";
+                        if (item.timestamp) {
+                            try {
+                                const d = item.timestamp._seconds 
+                                          ? new Date(item.timestamp._seconds * 1000) 
+                                          : new Date(item.timestamp);
+                                dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                            } catch(e) {}
+                        }
+
+                        const html = `
+                            <div class="history-item" onclick="showHistoryModal(${rawIndex})">
+                                <div class="history-left">
+                                    <div class="history-type">${typeText} ${extraHtml}</div>
+                                    <div class="history-topic">${esc(topicText)}</div>
+                                    <div class="history-date">${esc(dateStr)}</div>
+                                </div>
+                                <div class="history-points ${pointsClass}">${esc(pointsText)}</div>
+                            </div>
+                        `;
+                        divinationsList.insertAdjacentHTML('beforeend', html);
+                    });
+                }
             }
 
-            const displayList = historyArray.slice(0, 30);
+            // 2. 渲染儲值方案紀錄
+            if (rechargesList) {
+                if (rechargeLogs.length === 0) {
+                    rechargesList.innerHTML = `<div style="text-align:center; color:#666; padding: 20px 0; font-size:12px;">尚無儲值記錄。</div>`;
+                } else {
+                    rechargeLogs.forEach((item) => {
+                        const pointsValue = item.points_change !== undefined ? item.points_change : (item.points || 0);
+                        const pointsClass = "points-plus";
+                        const pointsText = `+${pointsValue}`;
+                        
+                        const typeText = "💎 選購解碼方案";
+                        const topicText = `💸 成功支付 NT$ ${item.amount_paid || 0}`;
+                        const extraHtml = `<span style="font-size: 10px; color: #4CAF50; border: 1px solid rgba(76,175,80,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">🎉 方案開通</span>`;
+                        
+                        let dateStr = "未知時間";
+                        if (item.timestamp) {
+                            try {
+                                const d = item.timestamp._seconds 
+                                          ? new Date(item.timestamp._seconds * 1000) 
+                                          : new Date(item.timestamp);
+                                dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                            } catch(e) {}
+                        }
 
-            displayList.forEach((item, index) => {
-                let typeText, topicText, extraHtml = "";
-                
-                // 修正新舊點數欄位
-                const pointsValue = item.points_change !== undefined ? item.points_change : (item.points || 0);
-                const pointsClass = pointsValue > 0 ? "points-plus" : "points-minus";
-                const pointsText = pointsValue > 0 ? `+${pointsValue}` : pointsValue;
-                
-                // 🌟 分流判斷 1：儲值
-                if (item.type === "recharge") {
-                    typeText = "💎 選購解碼方案";
-                    topicText = `💸 成功支付 NT$ ${item.amount_paid || 0}`;
-                    extraHtml = `<span style="font-size: 10px; color: #4CAF50; border: 1px solid rgba(76,175,80,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">🎉 方案開通</span>`;
-                }  
-                else if (item.type === "ziwei" || item.serviceType === "ziwei") {
-                    typeText = "🏮 紫微斗數";
-                    topicText = item.summary || "排盤解碼";
-                    extraHtml = `<span style="font-size: 10px; color: #d8b4e2; border: 1px solid rgba(216,180,226,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">深度解析</span>`;
+                        const html = `
+                            <div class="history-item" style="cursor:default; border-color: rgba(76,175,80,0.3);">
+                                <div class="history-left">
+                                    <div class="history-type">${typeText} ${extraHtml}</div>
+                                    <div class="history-topic">${esc(topicText)}</div>
+                                    <div class="history-date">${esc(dateStr)}</div>
+                                </div>
+                                <div class="history-points ${pointsClass}">${esc(pointsText)}</div>
+                            </div>
+                        `;
+                        rechargesList.insertAdjacentHTML('beforeend', html);
+                    });
                 }
-                else if (item.type === "numerology") {
-                    typeText = "🌌 律動能量";
-                    topicText = item.summary || `核心能量：${item.result_card || '?'}`;
-                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
-                    extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
-                }
-                else if (item.type === "tarot") {
-                    typeText = "🔮 塔羅解碼";
-                    topicText = `領域：${item.topic}`;
-                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
-                    extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
-                }
-                else {
-                    typeText = "✨ 每日一抽";
-                    topicText = `指引：${item.result_card || item.topic || '抽牌'}`;
-                    const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
-                    if (score !== '--') {
-                        extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
-                    }
-                }
-                
-                // 防彈版時間解析 (支援 _seconds 或純字串)
-                let dateStr = "未知時間";
-                if (item.timestamp) {
-                    try {
-                        const d = item.timestamp._seconds 
-                                  ? new Date(item.timestamp._seconds * 1000) 
-                                  : new Date(item.timestamp);
-                        dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                    } catch(e) {}
-                }
-
-                const clickAction = item.type === "recharge" ? "" : `onclick="showHistoryModal(${index})"`;
-                const activeStyle = item.type === "recharge" ? "style='cursor:default; border-color: rgba(76,175,80,0.3);'" : "";
-
-                const html = `
-                    <div class="history-item" ${clickAction} ${activeStyle}>
-                        <div class="history-left">
-                            <div class="history-type">${typeText} ${extraHtml}</div>
-                            <div class="history-topic">${esc(topicText)}</div>
-                            <div class="history-date">${esc(dateStr)}</div>
-                        </div>
-                        <div class="history-points ${pointsClass}">${esc(pointsText)}</div>
-                    </div>
-                `;
-                list.insertAdjacentHTML('beforeend', html);
-            });
+            }
         }
 
         function emptyChartDayBucket() {
@@ -1202,6 +1434,14 @@
 
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
+        }
+
+        function switchTab(type) {
+            document.getElementById('tab-btn-divinations').classList.toggle('active', type === 'divinations');
+            document.getElementById('tab-btn-recharges').classList.toggle('active', type === 'recharges');
+            
+            document.getElementById('tab-divinations').style.display = type === 'divinations' ? 'block' : 'none';
+            document.getElementById('tab-recharges').style.display = type === 'recharges' ? 'block' : 'none';
         }
 
         // 🌌 生辰座標手動填寫與編輯控制器

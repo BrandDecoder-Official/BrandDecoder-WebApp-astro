@@ -387,13 +387,39 @@
                     請輸入用戶的 LINE UID (格式如 U1234567...) 進行查詢，以手動調整其靈力點數或雙大腦特權效期。
                 </p>
 
-                <!-- 搜尋列 -->
-                <div style="display:flex; gap:12px; margin-bottom:24px; align-items:center; flex-wrap:wrap; background:#f8f9fa; padding:15px; border-radius:6px; border:1px solid var(--border);">
-                    <div style="flex:1; min-width:240px; display:flex; align-items:center; gap:8px;">
-                        <label style="font-weight:bold; font-size:13px; white-space:nowrap;">LINE UID:</label>
-                        <input type="text" id="rights-search-uid" placeholder="請輸入 U 開頭的 33 碼 LINE ID" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:4px; font-size:13px;">
+                <!-- 搜尋與用戶列表區域 -->
+                <div style="background:#fff; border:1px solid var(--border); border-radius:8px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.04); margin-bottom:20px;">
+                    <!-- 搜尋列 -->
+                    <div style="display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:240px; display:flex; align-items:center; gap:8px;">
+                            <label style="font-weight:bold; font-size:13px; white-space:nowrap;">搜尋用戶:</label>
+                            <input type="text" id="rights-search-keyword" placeholder="請輸入用戶暱稱 (支援前綴) 或 LINE UID" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:4px; font-size:13px;">
+                        </div>
+                        <button class="btn-primary" onclick="loadUsersList()">🔍 搜尋</button>
+                        <button class="btn-primary" onclick="clearUsersSearch()" style="background:#6c757d; border-color:#6c757d;">重設</button>
                     </div>
-                    <button class="btn-primary" onclick="searchUserRights()">🔍 搜尋用戶</button>
+
+                    <!-- 用戶列表表格 -->
+                    <div class="table-responsive" style="max-height: 280px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+                        <table style="margin-bottom:0;">
+                            <thead>
+                                <tr style="position: sticky; top: 0; z-index: 1;">
+                                    <th style="background:#f8f9fa;">用戶資訊</th>
+                                    <th style="background:#f8f9fa;">LINE UID</th>
+                                    <th style="background:#f8f9fa;">可用靈力</th>
+                                    <th style="background:#f8f9fa;">當前特權</th>
+                                    <th style="background:#f8f9fa; text-align:center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rights-users-list-body">
+                                <tr>
+                                    <td colspan="5" style="text-align:center; padding:20px; color:#888;">
+                                        載入用戶清單中...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- 用戶基本與效期資訊 -->
@@ -1033,6 +1059,9 @@
             if (tabId === 'tab-overview') {
                 loadOverview();
             }
+            if (tabId === 'tab-user-rights') {
+                loadUsersList();
+            }
         }
 
         window.toggleRightsFlashFields = function() {
@@ -1045,21 +1074,89 @@
             }
         };
 
-        window.searchUserRights = async function() {
-            const uid = document.getElementById('rights-search-uid').value.trim();
-            if (!uid) {
-                alert('請輸入 LINE UID。');
-                return;
-            }
+        window.loadUsersList = async function() {
+            if (!currentIdToken) return;
+            const keyword = document.getElementById('rights-search-keyword').value.trim();
             showLoading(true);
             try {
-                const r = await fetch(`${API_URL}/api/admin/user/search?userId=${uid}`, {
+                let query = '';
+                if (keyword) query = `?query=${encodeURIComponent(keyword)}`;
+                
+                const response = await fetch(`${API_URL}/api/admin/users${query}`, {
+                    headers: { 'Authorization': `Bearer ${currentIdToken}` }
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    renderUsersListTable(result.data);
+                } else {
+                    alert('載入用戶清單失敗：' + result.msg);
+                }
+            } catch (e) {
+                console.error("載入用戶清單錯誤", e);
+            } finally {
+                showLoading(false);
+            }
+        };
+
+        window.clearUsersSearch = function() {
+            document.getElementById('rights-search-keyword').value = '';
+            loadUsersList();
+        };
+
+        function renderUsersListTable(users) {
+            const tbody = document.getElementById('rights-users-list-body');
+            tbody.innerHTML = '';
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px; color:#888;">找不到相符的用戶</td></tr>';
+                return;
+            }
+            
+            const tierNames = {
+                'galaxy_legend': '🌌 銀河傳奇',
+                'universe_explorer': '恆星光芒',
+                'galaxy_scout': '行星動能',
+                'none': '普通用戶'
+            };
+            
+            users.forEach(u => {
+                const tr = document.createElement('tr');
+                const avatar = u.pictureUrl || 'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg';
+                
+                let badgeClass = '';
+                if (u.calculatedTier === 'galaxy_legend') badgeClass = 'badge-ai';
+                else if (u.calculatedTier !== 'none') badgeClass = 'badge-pay';
+                
+                const tierBadge = u.calculatedTier !== 'none' 
+                    ? `<span class="badge ${badgeClass}">${tierNames[u.calculatedTier]}</span>`
+                    : `<span class="badge" style="background:#eee; color:#666;">普通用戶</span>`;
+                
+                tr.innerHTML = `
+                    <td style="display:flex; align-items:center; gap:10px;">
+                        <img src="${esc(avatar)}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; background:#eee;">
+                        <span style="font-weight:bold; color:#333;">${esc(u.displayName)}</span>
+                    </td>
+                    <td style="font-family:monospace; color:#666; font-size:12px; vertical-align:middle;">${esc(u.userId)}</td>
+                    <td style="font-weight:bold; color:var(--success); vertical-align:middle;">${esc(u.points)} 點</td>
+                    <td style="vertical-align:middle;">${tierBadge}</td>
+                    <td style="text-align:center; vertical-align:middle;">
+                        <button class="btn-primary" onclick="selectUserForRights('${esc(u.userId)}')" style="padding:4px 10px; font-size:11px;">管理權益</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.selectUserForRights = async function(userId) {
+            showLoading(true);
+            try {
+                const r = await fetch(`${API_URL}/api/admin/user/search?userId=${userId}`, {
                     headers: { 'Authorization': `Bearer ${currentIdToken}` }
                 });
                 const j = await r.json();
                 if (!j.success) {
-                    alert('查詢失敗：' + (j.msg || '找不到該用戶'));
-                    document.getElementById('rights-user-panel').style.display = 'none';
+                    alert('載入用戶詳情失敗：' + (j.msg || '找不到該用戶'));
                     return;
                 }
                 
@@ -1108,7 +1205,10 @@
                 document.getElementById('rights-points-reason').value = '';
                 document.getElementById('rights-days-change').value = '30';
                 
-                document.getElementById('rights-user-panel').style.display = 'block';
+                const panel = document.getElementById('rights-user-panel');
+                panel.style.display = 'block';
+                
+                panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch(e) {
                 alert('網路錯誤：' + e.message);
             } finally {
@@ -1147,7 +1247,8 @@
                 const j = await r.json();
                 if (j.success) {
                     alert('點數更新成功！');
-                    await searchUserRights();
+                    await selectUserForRights(uid);
+                    await loadUsersList();
                 } else {
                     alert('更新失敗：' + j.msg);
                 }
@@ -1197,7 +1298,8 @@
                 const j = await r.json();
                 if (j.success) {
                     alert('效期調整成功！');
-                    await searchUserRights();
+                    await selectUserForRights(uid);
+                    await loadUsersList();
                 } else {
                     alert('調整失敗：' + j.msg);
                 }

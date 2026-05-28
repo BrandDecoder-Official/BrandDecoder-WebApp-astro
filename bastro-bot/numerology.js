@@ -9,7 +9,7 @@ const { Client } = require('@line/bot-sdk');
 const { recordDivinationLog } = require('./logger');
 const { createShareSnapshot } = require('./shareSnapshot');
 const fetch = require('node-fetch');
-const { mergeModuleKey } = require('./aiSettingsDefaults');
+const { mergeModuleKey, getActiveModelForUser } = require('./aiSettingsDefaults');
 const {
     formatTaipeiDateTimeLine,
     buildShareLiffUri,
@@ -55,6 +55,7 @@ const lineClient = new Client({
 
 router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
     const userId = req.user.userId;
+    const { brainType } = req.body;
 
     try {
         const userRef = db.collection('users').doc(userId);
@@ -92,8 +93,19 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
 
         try {
             const aiStartTime = Date.now();
+            let selectedModelName;
+            try {
+                selectedModelName = await getActiveModelForUser(db, userId, 'numerology', brainType);
+            } catch (err) {
+                if (err.message === 'UNAUTHORIZED_PRO_BRAIN') {
+                    await rollbackPoints();
+                    return res.status(403).json({ success: false, message: '您尚未開通或已過期雙子星旗艦大腦特權，請先訂閱方案。' });
+                }
+                throw err;
+            }
+
             const model = genAI.getGenerativeModel({
-                model: aiConfig.model,
+                model: selectedModelName,
                 generationConfig: {
                     temperature: 0.75,
                     maxOutputTokens: MAX_AI_OUTPUT_TOKENS,
@@ -139,7 +151,7 @@ router.post('/generate', verifyLineToken, aiDecodeLimiter, async (req, res) => {
             await recordDivinationLog({
                 userId: userId, userName: userName, type: 'numerology', summary: `數字能量：核心數[${aiData.coreNumber}]`,
                 points_change: -actualCost, cost: actualCost, aiText: aiData.interpretation, fortune_score: fortuneScore,
-                metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: aiConfig.model }
+                metrics: { latency_ms: aiLatency, tokens_in: usage.promptTokenCount || 0, tokens_out: usage.candidatesTokenCount || 0, model: selectedModelName }
             });
 
             await userRef.collection('history').add({

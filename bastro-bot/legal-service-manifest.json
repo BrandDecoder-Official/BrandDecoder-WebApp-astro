@@ -12,9 +12,9 @@
   },
   "pricingTiers": [
     { "price": 5, "points": 50, "testPack": true, "productName": "線上命理與占卜解碼服務(體驗方案)(NT 5)", "tradeDesc": "線上命理與占卜解碼服務體驗方案" },
-    { "price": 49, "points": 490, "testPack": false, "productName": "線上命理與占卜解碼服務(行星動能方案)(NT 49)", "tradeDesc": "線上命理與占卜解碼服務行星動能方案" },
-    { "price": 99, "points": 990, "testPack": false, "productName": "線上命理與占卜解碼服務(恆星光芒方案)(NT 99)", "tradeDesc": "線上命理與占卜解碼服務恆星光芒方案" },
-    { "price": 199, "points": 2000, "testPack": false, "isPopular": true, "productName": "線上命理與占卜解碼服務(銀河傳奇方案)(NT 199)", "tradeDesc": "線上命理與占卜解碼服務銀河傳奇方案" }
+    { "price": 49, "points": 500, "testPack": false, "productName": "線上命理與占卜解碼服務(行星動能方案)(NT 49)", "tradeDesc": "線上命理與占卜解碼服務行星動能方案" },
+    { "price": 99, "points": 1100, "testPack": false, "productName": "線上命理與占卜解碼服務(恆星光芒方案)(NT 99)", "tradeDesc": "線上命理與占卜解碼服務恆星光芒方案" },
+    { "price": 199, "points": 2600, "testPack": false, "isPopular": true, "productName": "線上命理與占卜解碼服務(銀河傳奇方案)(NT 199)", "tradeDesc": "線上命理與占卜解碼服務銀河傳奇方案" }
   ],
   "deductionServices": [
     {

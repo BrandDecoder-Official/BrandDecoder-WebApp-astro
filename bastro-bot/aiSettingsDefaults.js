@@ -39,10 +39,33 @@ function toPublicAiConfig(merged) {
     return out;
 }
 
+async function getActiveModelForUser(db, userId, moduleKey, requestedBrainType) {
+    const moduleSettings = AI_SETTINGS[moduleKey] || {};
+    
+    if (requestedBrainType === 'pro') {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            const now = new Date();
+            let proExpiryTime = null;
+            if (userData.proExpiry) {
+                proExpiryTime = userData.proExpiry.toDate ? userData.proExpiry.toDate() : new Date(userData.proExpiry);
+            }
+            if (proExpiryTime && proExpiryTime > now) {
+                return moduleSettings.proModel || moduleSettings.model || 'gemini-3.5-flash';
+            }
+        }
+        throw new Error('UNAUTHORIZED_PRO_BRAIN');
+    }
+    
+    return moduleSettings.model || 'gemini-3.5-flash';
+}
+
 module.exports = {
     DEFAULT_AI_SETTINGS,
     mergeAiSettingsFromDoc,
     mergeModuleKey,
     mergePromptField,
     toPublicAiConfig,
+    getActiveModelForUser,
 };

@@ -152,16 +152,19 @@ const AI_SETTINGS = Object.freeze({
     },
     tarot: {
         model: 'gemini-3.5-flash',
+        proModel: 'gemini-3.1-pro-preview',
         cost: 15,
         prompt: TAROT_PROMPT,
     },
     ziwei: {
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-3.5-flash',
+        proModel: 'gemini-3.1-pro-preview',
         cost: 50,
         prompt: ZIWEI_PROMPT,
     },
     numerology: {
         model: 'gemini-3.5-flash',
+        proModel: 'gemini-3.1-pro-preview',
         cost: 10,
         prompt: NUMEROLOGY_PROMPT,
     },

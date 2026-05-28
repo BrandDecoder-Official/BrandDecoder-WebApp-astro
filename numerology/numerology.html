@@ -30,6 +30,54 @@
         </div>
     </div>
 
+    <div id="custom-confirm-overlay">
+        <div class="confirm-box">
+            <div class="confirm-title" id="confirm-title">【🌌 律動能量解碼】</div>
+            <div class="confirm-desc" id="confirm-desc"></div>
+            
+            <!-- 大腦選擇器 -->
+            <div id="brain-selector-container" style="margin: 15px 0; padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(229,192,123,0.2); text-align: left;">
+                <div style="font-size: 12px; color: #aaa; margin-bottom: 8px; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                    🧠 運算大腦選擇
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Flash 大腦 -->
+                    <label id="brain-opt-flash-label" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; border: 1px solid #E5C07B; background: rgba(229,192,123,0.1); cursor: pointer; transition: 0.2s;">
+                        <span style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <input type="radio" name="brain-select" value="flash" checked style="accent-color: #E5C07B; margin: 0; cursor: pointer;">
+                            <div>
+                                <strong style="color: #fff; display: block; font-size: 12px;">⚡ 智能快速大腦 (Flash)</strong>
+                                <span style="font-size: 10px; color: #aaa; font-weight: normal; display: block; margin-top: 1px;">精準解析，速度極快</span>
+                            </div>
+                        </span>
+                        <span style="font-size: 10px; color: #F9E498; font-weight: bold; border: 1px solid rgba(229,192,123,0.3); padding: 1px 4px; border-radius: 4px; scale: 0.9;">預設</span>
+                    </label>
+                    <!-- Pro 大腦 -->
+                    <label id="brain-opt-pro-label" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); cursor: pointer; transition: 0.2s;">
+                        <span style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                            <input type="radio" name="brain-select" value="pro" style="accent-color: #E5C07B; margin: 0; cursor: pointer;">
+                            <div>
+                                <strong id="brain-pro-title" style="color: #ddd; display: block; font-size: 12px;">🚀 雙子星旗艦大腦 (Pro)</strong>
+                                <span id="brain-pro-desc" style="font-size: 10px; color: #888; font-weight: normal; display: block; margin-top: 1px;">深度推理，適合複雜解碼</span>
+                            </div>
+                        </span>
+                        <span id="brain-pro-badge" style="font-size: 10px; color: #888; border: 1px solid rgba(255,255,255,0.1); padding: 1px 4px; border-radius: 4px; scale: 0.9;"></span>
+                    </label>
+                </div>
+                <!-- Pro 鎖定導購提示 -->
+                <div id="pro-locked-hint" style="display: none; font-size: 11px; color: #FF8B8B; margin-top: 8px; text-align: center; border-top: 1px dashed rgba(255,107,107,0.2); padding-top: 6px; line-height: 1.5;">
+                    僅限銀河傳奇 199 方案會員使用。<br>
+                    <a href="/member/profile.html" target="_blank" style="color: #F9E498; font-weight: bold; text-decoration: underline;">點此開通特權 ➔</a>
+                </div>
+            </div>
+
+            <div class="confirm-actions">
+                <button class="btn-confirm-cancel" onclick="closeCustomConfirm()">取消</button>
+                <button class="btn-confirm-ok" onclick="executeCustomConfirm()">確認啟動</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <script src="/pixi.min.js"></script> 
     <script src="/env.js?v=8"></script>      

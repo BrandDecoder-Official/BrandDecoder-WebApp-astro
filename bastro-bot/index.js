@@ -161,15 +161,51 @@ async function fulfillRechargeOrder(orderId, ecpayBody) {
         completedAt: Timestamp.now(),
     });
 
+    const userDocRef = await db.collection('users').doc(userId).get();
+    const userData = userDocRef.exists ? userDocRef.data() : {};
+    const userName = userDocRef.exists ? (userData.displayName || '未知用戶') : '未知用戶';
+
     const userUpdateData = { points: FieldValue.increment(pointsGiven) };
     if (periodCode) userUpdateData.lastFirstRechargePeriod = periodCode;
+
+    // 🚀 更新特權與效期邏輯 (雙效期重疊與降級機制)
+    const now = new Date();
+    if (amount === 199) {
+        let currentProExpiry = null;
+        if (userData.proExpiry) {
+            currentProExpiry = userData.proExpiry.toDate ? userData.proExpiry.toDate() : new Date(userData.proExpiry);
+        }
+        let newProExpiry;
+        if (currentProExpiry && currentProExpiry > now) {
+            newProExpiry = new Date(currentProExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+        } else {
+            newProExpiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        }
+        userUpdateData.proExpiry = Timestamp.fromDate(newProExpiry);
+    } else if (amount === 49 || amount === 99) {
+        let currentFlashExpiry = null;
+        if (userData.flashExpiry) {
+            currentFlashExpiry = userData.flashExpiry.toDate ? userData.flashExpiry.toDate() : new Date(userData.flashExpiry);
+        }
+        let newFlashExpiry;
+        if (currentFlashExpiry && currentFlashExpiry > now) {
+            newFlashExpiry = new Date(currentFlashExpiry.getTime() + 30 * 24 * 60 * 60 * 1000);
+        } else {
+            newFlashExpiry = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        }
+        userUpdateData.flashExpiry = Timestamp.fromDate(newFlashExpiry);
+        userUpdateData.lastFlashTier = amount === 99 ? 'universe_explorer' : 'galaxy_scout';
+    }
+
     batch.update(db.collection('users').doc(userId), userUpdateData);
 
-    const userDocRef = await db.collection('users').doc(userId).get();
-    const userName = userDocRef.exists ? (userDocRef.data().displayName || '未知用戶') : '未知用戶';
-
     const historyRef = db.collection('users').doc(userId).collection('history').doc();
-    batch.set(historyRef, { type: 'recharge', amount_paid: amount, points_change: pointsGiven, timestamp: Timestamp.now() });
+    batch.set(historyRef, { 
+        type: 'recharge', 
+        amount_paid: amount, 
+        points_change: pointsGiven, 
+        timestamp: Timestamp.now() 
+    });
 
     const globalLogRef = db.collection('divination_logs').doc();
     batch.set(globalLogRef, {
@@ -218,6 +254,10 @@ app.get('/api/user/profile', verifyLineToken, async (req, res) => {
         let lastDrawDate = null;
         let lastFirstRechargePeriod = null;
         let birthData = null;
+        let proExpiry = null;
+        let flashExpiry = null;
+        let lastFlashTier = 'none';
+
         if (userDoc.exists) {
             const data = userDoc.data();
             displayName = data.displayName || displayName;
@@ -227,11 +267,34 @@ app.get('/api/user/profile', verifyLineToken, async (req, res) => {
             lastDrawDate = data.lastDrawDate;
             lastFirstRechargePeriod = data.lastFirstRechargePeriod || null;
             birthData = data.birthData || null; // 優先使用 userDoc 儲存的生辰資料
+
+            if (data.proExpiry) proExpiry = data.proExpiry.toDate ? data.proExpiry.toDate() : new Date(data.proExpiry);
+            if (data.flashExpiry) flashExpiry = data.flashExpiry.toDate ? data.flashExpiry.toDate() : new Date(data.flashExpiry);
+            lastFlashTier = data.lastFlashTier || 'none';
         }
         const dailyStreak = userDoc.exists ? (userDoc.data().dailyStreak || 0) : 0;
         const { logs } = await loadDivinationLogsForDashboard(userId);
         
         const finalBirthData = birthData;
+
+        // 🚀 動態判定目前的方案特權
+        const now = new Date();
+        const isProActive = proExpiry && proExpiry > now;
+        const isFlashActive = flashExpiry && flashExpiry > now;
+
+        let tier = 'none';
+        let tierExpiry = null;
+        let brainType = 'flash';
+
+        if (isProActive) {
+            tier = 'galaxy_legend';
+            tierExpiry = proExpiry.toISOString();
+            brainType = 'pro';
+        } else if (isFlashActive) {
+            tier = lastFlashTier === 'universe_explorer' ? 'universe_explorer' : 'galaxy_scout';
+            tierExpiry = flashExpiry.toISOString();
+            brainType = 'flash';
+        }
 
         res.status(200).json({
             success: true,
@@ -245,6 +308,13 @@ app.get('/api/user/profile', verifyLineToken, async (req, res) => {
                 lastFirstRechargePeriod,
                 birthData: finalBirthData,
                 logs,
+                // 新增特權與效期回傳
+                tier,
+                tierExpiry,
+                brainType,
+                proExpiry: proExpiry ? proExpiry.toISOString() : null,
+                flashExpiry: flashExpiry ? flashExpiry.toISOString() : null,
+                lastFlashTier,
             },
         });
     } catch (error) {
