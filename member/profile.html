@@ -617,11 +617,11 @@
         let pricingTiers = [];
 
         function legalManifestFetchUrl() {
+            var url = '/bastro-bot/legal-service-manifest.json';
             try {
-                return new URL('/bastro-bot/legal-service-manifest.json', window.location.origin).href;
-            } catch (e) {
-                return '/bastro-bot/legal-service-manifest.json';
-            }
+                url = new URL(url, window.location.origin).href;
+            } catch (e) {}
+            return url + '?t=' + Date.now();
         }
 
         function tpl(str, vars) {

@@ -648,8 +648,15 @@
         <div class="panels">
         <article class="panel" id="purpose">
             <h2>關於本頁</h2>
-            <p class="panel-intro">服務條款、操作說明與服務方案對照，供您查閱與選擇前確認。</p>
-            <p>所列服務靈力點數與方案金額為<strong>目前公告參考</strong>；實際金額與靈力點數消耗，以您於 <strong>LINE 官方帳號或會員中心</strong>操作當下畫面為準。</p>
+            <p class="panel-intro">本站為「命運解碼室｜BrandDecoder」之服務條款與官方說明頁，提供您本服務的核心功能介紹、使用者權益及服務條款說明。</p>
+            <h3>四大核心占卜服務</h3>
+            <ul>
+                <li><strong>🔮 塔羅星陣</strong>：提供感情糾葛、事業財富或綜合指引之天命牌陣與 AI 智能解碼服務。</li>
+                <li><strong>🏮 紫微斗數</strong>：融合傳統星曜命理與現代深度推理，為您剖析本命格局、感情姻緣與事業軌跡。</li>
+                <li><strong>🔢 律動能量</strong>：啟動個人每日數字矩陣，探索數字共振帶來的能量共鳴與指引。</li>
+                <li><strong>✨ 每日一抽</strong>：每日專屬心靈指引，提供心靈調頻與日常指引之能量卡牌。</li>
+            </ul>
+            <p style="margin-top: 16px;">本站所有占卜與解碼服務皆在 <strong>LINE 官方帳號</strong>中進行，您可於官方帳號或本服務相關網頁中享受完整體驗。</p>
             <p class="note">最後更新：<span id="mj-page-updated-date">2026年05月26日</span></p>
         </article>
 
@@ -715,17 +722,14 @@
         </article>
 
         <article class="panel" id="refund">
-            <h2>退費與客服</h2>
+            <h2>退費政策與客服聯絡</h2>
+            <p class="panel-intro">本服務之退費規範與客服聯絡管道說明。</p>
             <ul>
                 <li><strong>未使用之服務方案</strong>：依消費者保護法及公告政策辦理：<span data-mj-bind="draftPlaceholders.refundPolicy" class="placeholder">請見正式公告</span>。</li>
-                <li><strong>已使用之服務靈力</strong>：原則不予退還。</li>
-                <li><strong>客服信箱</strong>：<a href="mailto:brand.decoderai@gmail.com" data-mj-contact-email>brand.decoderai@gmail.com</a></li>
-                <li><strong>客服電話</strong>：<a href="tel:+886983826576">0983-826-576</a></li>
+                <li><strong>已使用之服務靈力</strong>：因屬於即時提供之數位內容/娛樂諮詢服務，已消耗之服務靈力原則不予退還。</li>
             </ul>
-        </article>
-
-        <article class="panel" id="contact">
-            <h2>聯絡我們</h2>
+            
+            <h3 class="section-divider">客服聯絡資訊</h3>
             <div class="contact-box" id="mj-contact-inner">
                 <p class="note" style="margin:0;">載入聯絡資訊中…</p>
             </div>
@@ -835,8 +839,9 @@
         }
 
         function manifestUrl() {
-            try { return new URL('/bastro-bot/legal-service-manifest.json', window.location.origin).href; }
-            catch (e) { return '/bastro-bot/legal-service-manifest.json'; }
+            var url = '/bastro-bot/legal-service-manifest.json';
+            try { url = new URL(url, window.location.origin).href; } catch (e) {}
+            return url + '?t=' + Date.now();
         }
 
         function esc(s) {
@@ -890,19 +895,16 @@
         function renderServiceCards(el, liveCosts) {
             if (!el) return;
             var items = [
-                { icon: '🔮', name: '塔羅星陣', key: 'tarot', def: 15, hint: '抽牌解碼指引' },
-                { icon: '🏮', name: '紫微斗數', key: 'ziwei', def: 50, hint: '深度命盤解讀' },
-                { icon: '🔢', name: '律動能量', key: 'numerology', def: 10, hint: '數字矩陣解碼' },
-                { icon: '✨', name: '每日一抽', key: 'daily', def: 0, hint: '簽到送靈力' },
+                { icon: '🔮', name: '塔羅星陣', hint: '抽牌解碼指引' },
+                { icon: '🏮', name: '紫微斗數', hint: '深度命盤解讀' },
+                { icon: '🔢', name: '律動能量', hint: '數字矩陣解碼' },
+                { icon: '✨', name: '每日一抽', hint: '每日調頻指引' },
             ];
             el.innerHTML = items.map(function (item) {
-                var cost = demoCostLabel(item.key, liveCosts, item.def);
-                if (item.key === 'daily') cost = '0 點 · 簽到贈 +1 點';
                 return (
                     '<a class="service-card" href="#features">' +
                         '<span class="icon" aria-hidden="true">' + item.icon + '</span>' +
                         '<h3>' + esc(item.name) + '</h3>' +
-                        '<p class="cost">' + esc(cost) + '</p>' +
                         '<p class="hint">' + esc(item.hint) + '</p>' +
                     '</a>'
                 );
@@ -912,14 +914,12 @@
         function renderFeatureDemos(container, items, liveCosts) {
             if (!container) return;
             container.innerHTML = items.map(function (item) {
-                var costText = demoCostLabel(item.costKey, liveCosts, item.defaultCost);
                 return (
                     '<article class="video-card" data-demo-key="' + esc(item.key) + '">' +
                         '<header class="video-card-head">' +
                             '<span class="video-card-icon" aria-hidden="true">' + item.icon + '</span>' +
                             '<div>' +
                                 '<h3>' + esc(item.title) + '</h3>' +
-                                '<p class="video-card-cost" data-cost-key="' + esc(item.costKey) + '">參考消耗：' + esc(costText) + '</p>' +
                             '</div>' +
                         '</header>' +
                         '<p class="video-card-desc">' + esc(item.desc) + '</p>' +
@@ -995,12 +995,7 @@
         }
 
         function updateDemoCosts(liveCosts) {
-            document.querySelectorAll('.video-card-cost[data-cost-key]').forEach(function (el) {
-                var key = el.getAttribute('data-cost-key');
-                var item = FEATURE_DEMOS.find(function (d) { return d.costKey === key; });
-                var def = item ? item.defaultCost : 0;
-                el.textContent = '參考消耗：' + demoCostLabel(key, liveCosts, def);
-            });
+            // 已為金流合規移除點數與消耗顯示
         }
 
         function formatCostLabel(serviceKey, cost, fromLive) {
@@ -1137,7 +1132,7 @@
 
         async function fetchLiveCosts() {
             try {
-                var res = await fetch(apiBase() + '/api/public/config/ai', { cache: 'no-store' });
+                var res = await fetch(apiBase() + '/api/public/config/ai?t=' + Date.now(), { cache: 'no-store' });
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 var j = await res.json();
                 if (!j.success || !j.data) return null;
