@@ -1137,6 +1137,11 @@
                             const score = item.fortune_score !== undefined && item.fortune_score !== null ? item.fortune_score : '--';
                             extraHtml = `<span style="font-size: 10px; color: #F9E498; border: 1px solid rgba(212,175,55,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">能量 ${esc(score)} 分</span>`;
                         }
+                        else if (item.type === "admin_adjustment") {
+                            typeText = "⚙️ 靈力點數調整";
+                            topicText = item.topic || "點數變動";
+                            extraHtml = `<span style="font-size: 10px; color: #8ec5ff; border: 1px solid rgba(74,144,226,0.4); padding: 1px 5px; border-radius: 8px; margin-left: 8px; vertical-align: middle;">系統變更</span>`;
+                        }
                         else {
                             typeText = "✨ 每日一抽";
                             topicText = `指引：${item.result_card || item.topic || '抽牌'}`;
@@ -1422,6 +1427,10 @@
                 // 🌌 數字學 (律動能量)
                 title.innerText = `🌌 律動能量：核心數 [${item.result_card || '?'}]`;
                 body.innerText = contentText;
+                
+            } else if (item.type === 'admin_adjustment') {
+                title.innerText = `⚙️ 靈力點數調整`;
+                body.innerText = item.topic || "點數變動";
                 
             } else {
                 // ✨ 每日一抽或其他

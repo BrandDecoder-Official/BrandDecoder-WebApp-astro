@@ -390,7 +390,7 @@ app.get('/api/user/history', verifyLineToken, async (req, res) => {
             return {
                 id: doc.id,
                 type: data.type, 
-                topic: data.topic || null,
+                topic: data.topic || data.summary || null,
                 cards: data.cards || null,
                 result_card: data.result_card || null,
                 aiText: data.aiText || null,
